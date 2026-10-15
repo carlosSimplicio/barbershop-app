@@ -503,6 +503,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [ ] Criar testes unitários de backend com o pacote `testing`.
 - [ ] Criar testes unitários de frontend com Vitest.
+- [ ] Orientar testes unitários a comportamentos observáveis e regras de negócio, evitando detalhes internos e casos sem risco ou requisito identificável.
 - [ ] Cobrir prioritariamente isolamento de tenant, autorização, autenticação e política de assinatura.
 - [ ] Cobrir disponibilidade, concorrência lógica, snapshots e transições de agendamento.
 - [ ] Cobrir receitas, despesas, comissões, arredondamento, anulação e indicadores.

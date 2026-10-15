@@ -83,6 +83,7 @@
 - O escopo atual contém somente testes unitários: `testing` no backend e Vitest no frontend.
 - Não adicione integração, banco efêmero, testcontainers ou E2E sem decisão nova.
 - Regras devem ser testáveis sem rede, HTTP ou banco reais.
+- Testes unitários verificam comportamentos observáveis e regras de negócio, cobrindo fluxos, recusas e invariantes relevantes. Evite acoplá-los a detalhes internos, casos sem risco ou requisito identificável e comportamento de bibliotecas.
 - Priorize agenda e conflitos, estados, autorização e isolamento, faturamento e comissão.
 - Correções incluem teste de regressão quando aplicável.
 - Backend: `gofmt`, testes unitários e `go vet ./...`.

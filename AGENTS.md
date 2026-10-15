@@ -47,6 +47,7 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 
 - O escopo atual inclui apenas testes unitários: pacote `testing` no Go e Vitest no frontend.
 - Não introduza testes de integração, testcontainers ou E2E sem uma nova decisão.
+- Escreva testes unitários orientados a comportamentos observáveis e regras de negócio. Priorize fluxos, recusas e invariantes relevantes; evite testar detalhes internos, casos sem risco ou requisito identificável e comportamento de bibliotecas.
 - Toda correção de bug deve incluir teste unitário de regressão quando tecnicamente aplicável.
 - Antes de concluir mudanças no backend, execute os testes unitários, `gofmt` e `go vet ./...`.
 - Antes de concluir mudanças no frontend, execute testes unitários, ESLint, Prettier e checagem de tipos.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planejador de tarefas"
+  short_description: "Cria planos executáveis para tarefas do projeto"
+  default_prompt: "Use $barbershop-task-planner para especificar o plano de implementação desta tarefa."
