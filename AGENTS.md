@@ -9,6 +9,7 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 - Leia `docs/product.md` ao alterar usuários, permissões, clientes, agenda, disponibilidade, serviços, profissionais, atendimentos ou financeiro.
 - Leia `docs/architecture.md` ao alterar frontend, backend, API, autenticação, banco de dados, estrutura do monorepo ou multi-tenancy.
 - Leia `docs/operations.md` ao alterar Docker Compose, Caddy, configuração, logs, CI/CD, deploy, migrations de produção ou verificações automatizadas.
+- Leia `docs/implementation-scope.md` ao planejar trabalho, iniciar um novo escopo ou verificar o que ainda precisa ser construído. Atualize seus checkboxes no mesmo trabalho que concluir ou reabrir um item.
 - Consulte somente os documentos relacionados à tarefa. Se uma mudança cruzar áreas, leia todos os documentos aplicáveis.
 - Quando uma decisão do produto ou da arquitetura mudar, atualize no mesmo trabalho o documento correspondente e este arquivo apenas se a regra for universal.
 - Trate `AGENTS.md` e os arquivos em `docs/` como documentação viva e parte obrigatória da entrega. Toda alteração que modifique comportamento, regra de negócio, contrato, arquitetura, operação ou processo deve atualizar os documentos afetados no mesmo pull request ou commit.
