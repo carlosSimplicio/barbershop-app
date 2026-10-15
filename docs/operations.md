@@ -1,0 +1,97 @@
+# Operação e entrega
+
+## Infraestrutura
+
+- Produção roda em uma única VPS com Docker Compose.
+- Serviços: frontend, backend, PostgreSQL e Caddy.
+- O Compose de desenvolvimento inclui também o Mailpit, preferencialmente por arquivo de override ou profile próprio; ele não faz parte do deploy de produção.
+- Exponha a interface web do Mailpit somente no ambiente local e mantenha seu SMTP acessível apenas pela rede interna do Compose.
+- Somente Caddy expõe portas HTTP/HTTPS publicamente. Frontend, backend e PostgreSQL permanecem nas redes internas necessárias.
+- PostgreSQL e dados operacionais do Caddy usam volumes persistentes.
+- Logos enviados pelos estabelecimentos usam um volume persistente local próprio, preservado em deploys e não incorporado às imagens.
+- Adicione health checks. `depends_on` não substitui verificação real de prontidão.
+- Considere os recursos da VPS e não introduza serviços gerenciados ou dependências externas sem justificativa e decisão explícita.
+- Mantenha o deploy agnóstico ao provedor da VPS. Não dependa de serviços proprietários do fornecedor sem uma decisão arquitetural explícita.
+- Ao criar cada componente, selecione a versão estável mais recente disponível naquele momento e fixe-a explicitamente em Dockerfiles, imagens, módulos e lockfiles.
+- Não use tags `latest`, intervalos flutuantes ou resolução dinâmica de versão em build e deploy. Atualizações são mudanças deliberadas, revisadas e verificadas antes da release.
+
+## Caddy e HTTPS
+
+- Caddy é o único ponto público de entrada e termina HTTPS.
+- Encaminhe `/api/v1` ao backend e as demais rotas ao frontend.
+- Use HTTPS automático para o domínio único do MVP e persista `/data` do Caddy.
+- Preserve cabeçalhos de host, protocolo e cliente necessários, mas confie neles somente quando vierem do proxy controlado.
+- Uma futura adoção de wildcard/subdomínios exige DNS-01 e é uma mudança separada de infraestrutura.
+
+## Configuração e segredos
+
+- Produção usa `.env` somente na VPS, com permissões restritas.
+- Versione `.env.example` com todas as chaves, sem valores sensíveis.
+- Ignore arquivos `.env` reais e nunca os copie para imagens ou logs.
+- Cada aplicação valida configuração obrigatória na inicialização e falha claramente se estiver ausente ou inválida.
+- Segredos nunca usam `NEXT_PUBLIC_*`.
+- Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
+- Ao adicionar configuração obrigatória, atualize `.env.example` e a documentação operacional.
+
+## CI/CD e releases
+
+- GitHub Actions executa verificações e inicia deploy por SSH na VPS.
+- Produção é acionada somente pela publicação de uma GitHub Release estável.
+- Use SemVer em tags `vMAJOR.MINOR.PATCH`; não mantenha fluxo de deploy para drafts ou pre-releases.
+- O deploy usa exatamente o commit referenciado pela tag.
+- Antes do SSH, execute geração, testes, lint, formato, tipos e builds aplicáveis; qualquer falha impede o deploy.
+- Host, usuário, chave SSH e credenciais ficam em GitHub Actions Secrets e não aparecem em logs.
+- Use um usuário de deploy com permissões mínimas.
+- A VPS recebe o código, faz checkout explícito do commit e constrói as imagens localmente com Docker Compose.
+- Não use registry no fluxo inicial. Adoção futura de GHCR ou equivalente é uma mudança de processo.
+- Valide a configuração Compose antes de substituir containers e registre apenas o hash do commit implantado.
+- Preserve volumes do PostgreSQL e Caddy e evite comandos destrutivos.
+
+### Migrations no deploy
+
+- Com PostgreSQL saudável, execute `goose up` como tarefa isolada antes de atualizar o backend.
+- Falha de migration interrompe o deploy e mantém a versão anterior em execução.
+- Migrations precisam ser compatíveis com a versão ainda ativa durante a atualização.
+- Para mudanças destrutivas, use etapas expansivas e contrativas em releases separadas.
+
+## Persistência
+
+- Não existe rotina de backup do PostgreSQL no escopo inicial.
+- Não introduza backup externo ou sua automação sem nova decisão.
+- Preserve o volume em deploys e manutenções.
+- A ausência de backup também se aplica ao volume de logos no escopo inicial.
+- Antes de alteração destrutiva, destaque a ausência de backup e prefira alternativa reversível.
+
+## Logs e desempenho
+
+- Use somente logs dos containers via Docker Compose; não adicione plataforma externa no MVP.
+- Configure rotação para todos os containers com `max-size: 10m` e `max-file: 5`, evitando crescimento ilimitado no disco da VPS.
+- Aplicações e Caddy escrevem em `stdout`/`stderr`; não mantenha arquivos de log próprios dentro dos containers.
+- Backend escreve JSON estruturado em `stdout`/`stderr` em produção.
+- Gere ou propague `request_id` em todo o fluxo.
+- Para cada requisição, registre método, rota parametrizada, status, duração total e `request_id`.
+- Cronometre etapas relevantes com nomes estáveis, incluindo tempo acumulado e quantidade de consultas PostgreSQL.
+- Quando útil, separe validação, disponibilidade e cálculos financeiros.
+- Use relógio monotônico e milissegundos de forma consistente.
+- Evite dupla contagem e indique se tempo de aplicação inclui ou exclui banco.
+- Não registre corpos completos, senhas, JWTs, telefones, parâmetros SQL, dados pessoais ou segredos.
+- Use rota parametrizada, nunca URL concreta, para evitar cardinalidade e vazamentos.
+- Logs de acesso do Caddy não contêm dados sensíveis; telefones e segredos nunca vão em URL ou query string.
+
+## Testes e qualidade
+
+- O escopo atual contém somente testes unitários: `testing` no backend e Vitest no frontend.
+- Não adicione integração, banco efêmero, testcontainers ou E2E sem decisão nova.
+- Regras devem ser testáveis sem rede, HTTP ou banco reais.
+- Priorize agenda e conflitos, estados, autorização e isolamento, faturamento e comissão.
+- Correções incluem teste de regressão quando aplicável.
+- Backend: `gofmt`, testes unitários e `go vet ./...`.
+- Frontend: testes unitários, ESLint, Prettier e checagem de tipos.
+- Verifique builds quando a mudança afetar compilação ou empacotamento.
+
+## Git e pull requests
+
+- Não há formato obrigatório ou Conventional Commits.
+- O único gate obrigatório de pull request são os testes unitários aplicáveis.
+- Lint, formato, tipos, geração e builds continuam parte da validação e do pipeline de release.
+- Commits devem ser focados e não misturar alterações não relacionadas.
