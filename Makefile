@@ -1,8 +1,11 @@
-.PHONY: setup generate generate-check migrate-up dev test check build compose-config
+.PHONY: setup auth-keys generate generate-check migrate-up dev test check build compose-config
 
 setup:
 	cd frontend && npm ci
 	cd backend && go mod download
+
+auth-keys:
+	cd backend && go run ./cmd/authkeys
 
 generate:
 	cd backend && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 --config openapi/oapi-codegen.yaml openapi/openapi.yaml

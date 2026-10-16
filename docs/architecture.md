@@ -98,6 +98,18 @@
 - Reset de senha invalida credenciais previamente emitidas.
 - Desativar um usuário revoga seus refresh tokens, incrementa sua versão de credencial e faz o backend rejeitar imediatamente access tokens ainda não expirados.
 
+### Contrato de sessão
+
+- A API expõe `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
+- Access JWTs usam Ed25519/EdDSA, incluem `kid` no header e são validados por um keyring de chaves públicas. A chave privada ativa e as chaves públicas anteriores são configuração exclusiva do backend.
+- As claims são limitadas a usuário, estabelecimento, papel, expiração e versão da credencial. Em cada requisição autenticada, o backend também consulta o usuário atual e compara estado, tenant, papel e versão para permitir revogação imediata.
+- A configuração inicial do Argon2id usa `m=19456 KiB`, `t=2`, `p=1`, salt aleatório de 16 bytes e saída de 32 bytes em formato PHC. Os limites configuráveis não podem ficar abaixo desse perfil.
+- Os cookies são host-only e `SameSite=Strict`: `__Secure-barbershop_access` usa `Path=/api/v1`, `__Secure-barbershop_refresh` usa `Path=/api/v1/auth` e ambos são `HttpOnly`; `__Secure-barbershop_csrf` usa `Path=/` e pode ser lido pelo frontend somente para envio no header `X-CSRF-Token`. Todos usam `Secure`, inclusive no desenvolvimento local.
+- Mutações validam uma allowlist exata de `Origin`. Refresh, logout e troca de senha também exigem igualdade entre cookie e header CSRF e assinatura válida do token.
+- O rate limiting de login usa chaves HMAC separadas para IP e e-mail normalizado, sem persistir esses valores na tabela de tentativas. Depois de 5 falhas em 15 minutos, 10 em 1 hora ou 20 em 24 horas, novas tentativas recebem `429` e `Retry-After` pela maior janela ativa.
+- Várias sessões por usuário são permitidas, sem prazo absoluto. Cada refresh estende a inatividade por 7 dias, consome definitivamente o token anterior e revoga a família da sessão se houver reutilização.
+- Um profissional com senha temporária pode consultar e manter sua sessão, trocar a senha ou sair, mas não acessar recursos de domínio. A troca rejeita a mesma senha, revoga todas as sessões, incrementa a versão da credencial e reemite somente a sessão atual.
+
 ### Proprietário e profissional
 
 - Proprietário confirma e-mail e recupera senha por link enviado por e-mail.
@@ -105,7 +117,7 @@
 - Respostas de recuperação não revelam se o e-mail existe; aplique rate limiting.
 - Profissional não possui recuperação autônoma. O proprietário define uma senha temporária e a troca é obrigatória no próximo login.
 - Ao reativar um profissional, o proprietário deve definir uma nova senha temporária; nunca restaure a validade da senha ou das sessões anteriores.
-- Até a troca, o profissional só pode definir uma nova senha ou encerrar a sessão.
+- Até a troca, o profissional só pode consultar ou manter a sessão, definir uma nova senha ou encerrar a sessão; recursos de domínio permanecem bloqueados.
 - A senha temporária nunca é recuperável ou armazenada em texto puro.
 
 ### E-mail transacional

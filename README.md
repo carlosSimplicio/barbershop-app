@@ -20,16 +20,33 @@ Pré-requisitos: Docker com Compose e `make`.
 
 ```sh
 cp .env.example .env
+make auth-keys # copie a saída para as variáveis correspondentes do .env
 make dev
 ```
 
-A aplicação fica em <http://localhost:8088> e o Mailpit em
+A aplicação fica em <https://localhost:8443> e o Mailpit em
 <http://localhost:8025>. Quando houver migrations de domínio, aplique-as em
 outro terminal:
 
 ```sh
 make migrate-up
 ```
+
+O Caddy usa uma CA interna no ambiente local. Depois do primeiro `make dev`,
+use outro terminal para copiar o certificado e instale-o manualmente como
+autoridade confiável no sistema ou navegador:
+
+```sh
+docker compose -f compose.yaml -f compose.dev.yaml cp \
+  caddy:/data/caddy/pki/authorities/local/root.crt \
+  /tmp/barbershop-caddy-root.crt
+```
+
+No Linux, a instalação normalmente consiste em copiar esse arquivo para
+`/usr/local/share/ca-certificates/barbershop-caddy-root.crt` e executar
+`sudo update-ca-certificates`. Outros sistemas e alguns navegadores possuem
+repositório próprio. Nunca versione a CA ou as chaves exibidas por
+`make auth-keys`, e gere valores diferentes em produção.
 
 O Caddy é o único ponto público da aplicação. Ele encaminha `/api/v1` para o
 backend e as demais rotas para o Next.js. PostgreSQL, backend, frontend e SMTP

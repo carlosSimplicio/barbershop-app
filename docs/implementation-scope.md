@@ -178,7 +178,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Criar migrations pequenas, determinísticas e imutáveis depois de aplicadas.
 - [ ] Usar UUIDs aleatórios e não sequenciais para identificadores expostos.
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
-- [ ] Criar persistência para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
+- [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
 - [ ] Criar persistência para clientes, serviços, profissionais e associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
@@ -207,29 +207,30 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 5. Autenticação
 
 - [ ] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
-- [ ] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
-- [ ] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
-- [ ] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
+- [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
+- [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
+- [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
 - [ ] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
 - [ ] Iniciar o trial somente depois da confirmação do e-mail.
-- [ ] Implementar login de proprietário e profissional com resposta genérica para credenciais inválidas.
-- [ ] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
-- [ ] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
-- [ ] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
-- [ ] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
+- [x] Implementar login de proprietário e profissional com resposta genérica para credenciais inválidas.
+- [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
+- [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
+- [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
+- [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
 - [ ] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.
-- [ ] Restringir profissional com senha temporária à troca de senha e logout.
+- [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
-- [ ] Aplicar limitação progressiva por IP e e-mail normalizado em login, confirmação e recuperação, com `429` e `Retry-After`.
+- [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
+- [ ] Estender a limitação progressiva à confirmação e recuperação quando esses fluxos forem implementados.
 - [ ] Não implementar MFA, troca periódica ou consulta de senha comprometida no MVP.
 
 ## 6. Autorização e multi-tenancy
 
-- [ ] Implementar papéis `owner` e `professional`; clientes permanecem anônimos.
-- [ ] Garantir que cada usuário pertença a exatamente um estabelecimento.
-- [ ] Derivar estabelecimento e permissões da sessão ou do slug resolvido, nunca de identificador enviado como autorização.
+- [x] Implementar papéis `owner` e `professional`; clientes permanecem anônimos.
+- [x] Garantir que cada usuário pertença a exatamente um estabelecimento.
+- [x] Derivar estabelecimento e permissões da sessão autenticada, nunca de identificador enviado como autorização; o resolvedor público por slug permanece pendente.
 - [ ] Aplicar isolamento do estabelecimento em toda consulta e mutação, inclusive em SQL e recursos relacionados.
 - [ ] Garantir ao proprietário administração completa apenas do próprio estabelecimento.
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.

@@ -1,5 +1,7 @@
 # Autenticação backend: sessões seguras e isolamento de tenant
 
+**Status:** implementado e verificado.
+
 Entregar a fundação de autenticação para proprietários e profissionais: login, sessão atual, JWT, refresh rotativo, logout, senha temporária, CSRF, rate limiting e middleware de autorização. Cadastro, confirmação e recuperação por e-mail, criação de profissionais, trial e telas ficam para etapas posteriores.
 
 ## Interfaces públicas

@@ -58,6 +58,7 @@ services:
       CSRF_SIGNING_KEY_BASE64: ${CSRF_SIGNING_KEY_BASE64}
       RATE_LIMIT_HMAC_KEY_BASE64: ${RATE_LIMIT_HMAC_KEY_BASE64}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS}
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS}
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,7 +99,7 @@ services:
       APP_ADDRESS: ${APP_ADDRESS}
     ports:
       - "${CADDY_HTTP_PORT:-80}:80"
-      - "${CADDY_HTTPS_PORT:-443}:443"
+      - "${CADDY_HTTPS_PORT:-443}:${CADDY_HTTPS_PORT:-443}"
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -109,8 +110,9 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - proxy
-      - edge
+      proxy:
+        ipv4_address: 172.30.0.4
+      edge:
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:2019/config/"]
       interval: 10s
@@ -123,6 +125,9 @@ networks:
     internal: true
   proxy:
     internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
   edge:
 
 volumes:

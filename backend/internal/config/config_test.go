@@ -93,5 +93,6 @@ func validValues(t *testing.T) map[string]string {
 		"CSRF_SIGNING_KEY_BASE64":    encodedKey,
 		"RATE_LIMIT_HMAC_KEY_BASE64": encodedKey,
 		"TRUSTED_ORIGINS":            "https://localhost:8443",
+		"TRUSTED_PROXY_CIDRS":        "172.30.0.4/32",
 	}
 }

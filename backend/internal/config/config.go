@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -28,6 +29,7 @@ type Config struct {
 	CSRFSigningKey    []byte
 	RateLimitHMACKey  []byte
 	TrustedOrigins    []string
+	TrustedProxyCIDRs []string
 }
 
 func Load() (Config, error) {
@@ -138,6 +140,13 @@ func loadAuthenticationConfig(config *Config, lookup func(string) (string, bool)
 			return errors.New("TRUSTED_ORIGINS must contain comma-separated HTTPS origins without paths")
 		}
 		config.TrustedOrigins = append(config.TrustedOrigins, origin)
+	}
+	for _, cidr := range strings.Split(valueOrDefault(lookup, "TRUSTED_PROXY_CIDRS", ""), ",") {
+		cidr = strings.TrimSpace(cidr)
+		if _, _, parseErr := net.ParseCIDR(cidr); parseErr != nil {
+			return errors.New("TRUSTED_PROXY_CIDRS must contain comma-separated CIDR blocks")
+		}
+		config.TrustedProxyCIDRs = append(config.TrustedProxyCIDRs, cidr)
 	}
 	return nil
 }
