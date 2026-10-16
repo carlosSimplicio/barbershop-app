@@ -8,9 +8,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/config"
 	"barbershop-app/backend/internal/health"
+	"barbershop-app/backend/internal/httpapi"
 	"barbershop-app/backend/internal/platform/database"
 	"barbershop-app/backend/internal/platform/httpserver"
 
@@ -45,7 +49,33 @@ func run() error {
 	}
 	defer pool.Close()
 
-	server := httpserver.New(configuration.HTTPAddress, logger, health.NewHandler(pool))
+	passwords, err := security.NewPasswordHasher(security.PasswordParameters{
+		MemoryKiB: configuration.Argon2MemoryKiB, Iterations: configuration.Argon2Iterations,
+		Parallelism: configuration.Argon2Parallelism, SaltLength: 16, KeyLength: 32,
+	})
+	if err != nil {
+		return err
+	}
+	accessTokens, err := security.NewJWTManager(configuration.JWTActiveKeyID, configuration.JWTPrivateKey, configuration.JWTPublicKeys, 15*time.Minute)
+	if err != nil {
+		return err
+	}
+	csrfTokens, err := security.NewHMACSigner(configuration.CSRFSigningKey)
+	if err != nil {
+		return err
+	}
+	rateKeys, err := security.NewHMACSigner(configuration.RateLimitHMACKey)
+	if err != nil {
+		return err
+	}
+	dummyPasswordHash, err := passwords.Hash("invalid-password-probe")
+	if err != nil {
+		return err
+	}
+	authStore := auth.NewStore(pool)
+	login := auth.NewLoginService(authStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
+	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login))
+	server := httpserver.New(configuration.HTTPAddress, logger, handler)
 	serverErrors := make(chan error, 1)
 	go func() {
 		logger.Info("http_server_started", "address", configuration.HTTPAddress)

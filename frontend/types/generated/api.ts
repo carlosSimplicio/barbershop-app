@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Autentica proprietário ou profissional */
+        post: operations["postAuthLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -25,6 +42,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        LoginRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        /** @enum {string} */
+        UserRole: "owner" | "professional";
+        AuthPrincipal: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            establishment_id: string;
+            /** Format: email */
+            email: string;
+            role: components["schemas"]["UserRole"];
+            password_change_required: boolean;
+        };
         HealthResponse: {
             /** @enum {string} */
             status: "ok";
@@ -42,6 +76,43 @@ export interface components {
         };
     };
     responses: {
+        /** @description Requisição inválida */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Credenciais ou sessão inválidas */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Operação não permitida */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Limite temporário de tentativas excedido */
+        TooManyRequests: {
+            headers: {
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
         /** @description Servico temporariamente indisponivel */
         ServiceUnavailable: {
             headers: {
@@ -59,6 +130,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    postAuthLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Sessão criada */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthPrincipal"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;

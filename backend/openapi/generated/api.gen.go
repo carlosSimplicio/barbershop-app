@@ -5,6 +5,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthResponseStatus.
@@ -20,6 +21,33 @@ func (e HealthResponseStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Defines values for UserRole.
+const (
+	Owner        UserRole = "owner"
+	Professional UserRole = "professional"
+)
+
+// Valid indicates whether the value is a known member of the UserRole enum.
+func (e UserRole) Valid() bool {
+	switch e {
+	case Owner:
+		return true
+	case Professional:
+		return true
+	default:
+		return false
+	}
+}
+
+// AuthPrincipal defines model for AuthPrincipal.
+type AuthPrincipal struct {
+	Email                  openapi_types.Email `json:"email"`
+	EstablishmentId        openapi_types.UUID  `json:"establishment_id"`
+	PasswordChangeRequired bool                `json:"password_change_required"`
+	Role                   UserRole            `json:"role"`
+	UserId                 openapi_types.UUID  `json:"user_id"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
@@ -45,11 +73,38 @@ type HealthResponse struct {
 // HealthResponseStatus defines model for HealthResponse.Status.
 type HealthResponseStatus string
 
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Email    openapi_types.Email `json:"email"`
+	Password string              `json:"password"`
+}
+
+// UserRole defines model for UserRole.
+type UserRole string
+
+// BadRequest defines model for BadRequest.
+type BadRequest = ErrorResponse
+
+// Forbidden defines model for Forbidden.
+type Forbidden = ErrorResponse
+
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorResponse
 
+// TooManyRequests defines model for TooManyRequests.
+type TooManyRequests = ErrorResponse
+
+// Unauthorized defines model for Unauthorized.
+type Unauthorized = ErrorResponse
+
+// PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
+type PostAuthLoginJSONRequestBody = LoginRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// PostAuthLogin Autentica proprietário ou profissional
+	// (POST /auth/login)
+	PostAuthLogin(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -63,6 +118,19 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// PostAuthLogin operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthLogin(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthLogin(c)
+}
 
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
@@ -104,5 +172,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

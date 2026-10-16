@@ -112,12 +112,13 @@ RETURNING credential_version;
 INSERT INTO auth_login_attempts (dimension, key_hash, attempted_at)
 VALUES ($1, $2, $3);
 
--- name: CountLoginAttemptsSince :one
-SELECT count(*)
+-- name: ListLoginAttemptsSince :many
+SELECT attempted_at
 FROM auth_login_attempts
 WHERE dimension = $1
   AND key_hash = $2
-  AND attempted_at >= $3;
+  AND attempted_at >= $3
+ORDER BY attempted_at DESC;
 
 -- name: DeleteLoginAttemptsBefore :exec
 DELETE FROM auth_login_attempts

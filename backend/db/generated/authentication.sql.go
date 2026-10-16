@@ -31,27 +31,6 @@ func (q *Queries) ConsumeRefreshToken(ctx context.Context, arg ConsumeRefreshTok
 	return err
 }
 
-const countLoginAttemptsSince = `-- name: CountLoginAttemptsSince :one
-SELECT count(*)
-FROM auth_login_attempts
-WHERE dimension = $1
-  AND key_hash = $2
-  AND attempted_at >= $3
-`
-
-type CountLoginAttemptsSinceParams struct {
-	Dimension   string             `json:"dimension"`
-	KeyHash     []byte             `json:"key_hash"`
-	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
-}
-
-func (q *Queries) CountLoginAttemptsSince(ctx context.Context, arg CountLoginAttemptsSinceParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countLoginAttemptsSince, arg.Dimension, arg.KeyHash, arg.AttemptedAt)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createAuthSession = `-- name: CreateAuthSession :one
 INSERT INTO auth_sessions (user_id, idle_expires_at)
 VALUES ($1, $2)
@@ -271,6 +250,41 @@ func (q *Queries) GetRefreshTokenForUpdate(ctx context.Context, tokenHash []byte
 		&i.SessionRevokedAt,
 	)
 	return i, err
+}
+
+const listLoginAttemptsSince = `-- name: ListLoginAttemptsSince :many
+SELECT attempted_at
+FROM auth_login_attempts
+WHERE dimension = $1
+  AND key_hash = $2
+  AND attempted_at >= $3
+ORDER BY attempted_at DESC
+`
+
+type ListLoginAttemptsSinceParams struct {
+	Dimension   string             `json:"dimension"`
+	KeyHash     []byte             `json:"key_hash"`
+	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
+}
+
+func (q *Queries) ListLoginAttemptsSince(ctx context.Context, arg ListLoginAttemptsSinceParams) ([]pgtype.Timestamptz, error) {
+	rows, err := q.db.Query(ctx, listLoginAttemptsSince, arg.Dimension, arg.KeyHash, arg.AttemptedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Timestamptz{}
+	for rows.Next() {
+		var attempted_at pgtype.Timestamptz
+		if err := rows.Scan(&attempted_at); err != nil {
+			return nil, err
+		}
+		items = append(items, attempted_at)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const recordLoginAttempt = `-- name: RecordLoginAttempt :exec
