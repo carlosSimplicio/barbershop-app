@@ -23,3 +23,19 @@ func (handler *Handler) GetHealth(c *gin.Context) {
 func (handler *Handler) PostAuthLogin(c *gin.Context) {
 	handler.authentication.PostAuthLogin(c)
 }
+
+func (handler *Handler) PostAuthRefresh(c *gin.Context) {
+	handler.authentication.PostAuthRefresh(c)
+}
+
+func (handler *Handler) PostAuthLogout(c *gin.Context) {
+	handler.authentication.PostAuthLogout(c)
+}
+
+func (handler *Handler) GetAuthMe(c *gin.Context) {
+	handler.authentication.GetAuthMe(c)
+}
+
+func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
+	handler.authentication.PostAuthPasswordChange(c)
+}

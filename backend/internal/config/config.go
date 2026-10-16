@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,6 +27,7 @@ type Config struct {
 	JWTPublicKeys     map[string]ed25519.PublicKey
 	CSRFSigningKey    []byte
 	RateLimitHMACKey  []byte
+	TrustedOrigins    []string
 }
 
 func Load() (Config, error) {
@@ -125,7 +128,18 @@ func loadAuthenticationConfig(config *Config, lookup func(string) (string, bool)
 		return err
 	}
 	config.RateLimitHMACKey, err = requiredBase64AtLeast(lookup, "RATE_LIMIT_HMAC_KEY_BASE64", 32)
-	return err
+	if err != nil {
+		return err
+	}
+	for _, origin := range strings.Split(valueOrDefault(lookup, "TRUSTED_ORIGINS", ""), ",") {
+		origin = strings.TrimSpace(origin)
+		parsed, parseErr := url.Parse(origin)
+		if parseErr != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			return errors.New("TRUSTED_ORIGINS must contain comma-separated HTTPS origins without paths")
+		}
+		config.TrustedOrigins = append(config.TrustedOrigins, origin)
+	}
+	return nil
 }
 
 func valueOrDefault(lookup func(string) (string, bool), key, fallback string) string {

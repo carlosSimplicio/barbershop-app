@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"strconv"
 	"strings"
+	"time"
 
 	"barbershop-app/backend/internal/auth/security"
 	api "barbershop-app/backend/openapi/generated"
@@ -26,11 +27,12 @@ const (
 )
 
 type Handler struct {
-	login *LoginService
+	login    *LoginService
+	sessions *SessionService
 }
 
-func NewHandler(login *LoginService) *Handler {
-	return &Handler{login: login}
+func NewHandler(login *LoginService, sessions *SessionService) *Handler {
+	return &Handler{login: login, sessions: sessions}
 }
 
 func (handler *Handler) PostAuthLogin(c *gin.Context) {
@@ -73,25 +75,120 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 		return
 	}
 
-	userID, userIDError := uuid.Parse(result.Principal.UserID)
-	establishmentID, establishmentIDError := uuid.Parse(result.Principal.EstablishmentID)
-	if userIDError != nil || establishmentIDError != nil {
+	response, err := principalResponse(result.Principal)
+	if err != nil {
 		slog.Error("authentication_principal_invalid", "request_id", requestID(c))
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return
 	}
 	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
-	c.JSON(http.StatusOK, api.AuthPrincipal{
-		UserId: userID, EstablishmentId: establishmentID,
-		Email: openapiTypes.Email(result.Principal.Email), Role: api.UserRole(result.Principal.Role),
-		PasswordChangeRequired: result.Principal.PasswordChangeRequired,
-	})
+	c.JSON(http.StatusOK, response)
+}
+
+func (handler *Handler) PostAuthRefresh(c *gin.Context) {
+	refreshToken, _ := c.Cookie(refreshCookieName)
+	result, err := handler.sessions.Refresh(c.Request.Context(), refreshToken)
+	if err != nil {
+		if errors.Is(err, ErrInvalidSession) || errors.Is(err, ErrRefreshTokenReused) {
+			if errors.Is(err, ErrRefreshTokenReused) {
+				slog.Warn("refresh_token_reuse_detected", "request_id", requestID(c))
+			}
+			clearSessionCookies(c)
+			writeError(c, http.StatusUnauthorized, "invalid_session", "Entre novamente para continuar.")
+			return
+		}
+		slog.Error("authentication_refresh_failed", "request_id", requestID(c), "error", err)
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		return
+	}
+	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
+	c.Status(http.StatusNoContent)
+}
+
+func (handler *Handler) PostAuthLogout(c *gin.Context) {
+	refreshToken, _ := c.Cookie(refreshCookieName)
+	if err := handler.sessions.Logout(c.Request.Context(), refreshToken); err != nil {
+		slog.Error("authentication_logout_failed", "request_id", requestID(c), "error", err)
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		return
+	}
+	clearSessionCookies(c)
+	c.Status(http.StatusNoContent)
+}
+
+func (handler *Handler) GetAuthMe(c *gin.Context) {
+	principal, ok := PrincipalFromContext(c)
+	if !ok {
+		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	response, err := principalResponse(principal)
+	if err != nil {
+		slog.Error("authentication_principal_invalid", "request_id", requestID(c))
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
+	principal, ok := PrincipalFromContext(c)
+	if !ok {
+		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	var request api.ChangePasswordRequest
+	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	result, err := handler.sessions.ChangeTemporaryPassword(c.Request.Context(), principal, request.NewPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, security.ErrInvalidPassword):
+			writeFieldError(c, "new_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+		case errors.Is(err, ErrPasswordUnchanged):
+			writeFieldError(c, "new_password", "password_unchanged", "Escolha uma senha diferente da senha temporária.")
+		case errors.Is(err, ErrPasswordChangeDenied), errors.Is(err, ErrInvalidSession):
+			writeError(c, http.StatusForbidden, "password_change_not_allowed", "A troca de senha não está disponível.")
+		default:
+			slog.Error("authentication_password_change_failed", "request_id", requestID(c), "error", err)
+			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		}
+		return
+	}
+	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
+	c.Status(http.StatusNoContent)
 }
 
 func setSessionCookies(c *gin.Context, accessToken, refreshToken, csrfToken string) {
 	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Value: accessToken, Path: "/api/v1", MaxAge: 15 * 60, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 	http.SetCookie(c.Writer, &http.Cookie{Name: refreshCookieName, Value: refreshToken, Path: "/api/v1/auth", MaxAge: 7 * 24 * 60 * 60, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Value: csrfToken, Path: "/", MaxAge: 7 * 24 * 60 * 60, Secure: true, SameSite: http.SameSiteStrictMode})
+}
+
+func clearSessionCookies(c *gin.Context) {
+	expires := time.Unix(1, 0).UTC()
+	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Path: "/api/v1", MaxAge: -1, Expires: expires, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(c.Writer, &http.Cookie{Name: refreshCookieName, Path: "/api/v1/auth", MaxAge: -1, Expires: expires, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Path: "/", MaxAge: -1, Expires: expires, Secure: true, SameSite: http.SameSiteStrictMode})
+}
+
+func principalResponse(principal Principal) (api.AuthPrincipal, error) {
+	userID, err := uuid.Parse(principal.UserID)
+	if err != nil {
+		return api.AuthPrincipal{}, err
+	}
+	establishmentID, err := uuid.Parse(principal.EstablishmentID)
+	if err != nil {
+		return api.AuthPrincipal{}, err
+	}
+	return api.AuthPrincipal{
+		UserId: userID, EstablishmentId: establishmentID, Email: openapiTypes.Email(principal.Email),
+		Role: api.UserRole(principal.Role), PasswordChangeRequired: principal.PasswordChangeRequired,
+	}, nil
 }
 
 func writeError(c *gin.Context, status int, code, message string) {

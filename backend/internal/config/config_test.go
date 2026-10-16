@@ -92,5 +92,6 @@ func validValues(t *testing.T) map[string]string {
 		"JWT_PUBLIC_KEYS_JSON":       string(publicKeys),
 		"CSRF_SIGNING_KEY_BASE64":    encodedKey,
 		"RATE_LIMIT_HMAC_KEY_BASE64": encodedKey,
+		"TRUSTED_ORIGINS":            "https://localhost:8443",
 	}
 }

@@ -50,6 +50,11 @@ type AuthPrincipal struct {
 	UserId                 openapi_types.UUID  `json:"user_id"`
 }
 
+// ChangePasswordRequest defines model for ChangePasswordRequest.
+type ChangePasswordRequest struct {
+	NewPassword string `json:"new_password"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Code      string        `json:"code"`
@@ -100,11 +105,26 @@ type Unauthorized = ErrorResponse
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody = LoginRequest
 
+// PostAuthPasswordChangeJSONRequestBody defines body for PostAuthPasswordChange for application/json ContentType.
+type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// PostAuthLogin Autentica proprietário ou profissional
 	// (POST /auth/login)
 	PostAuthLogin(c *gin.Context)
+	// PostAuthLogout Encerra a sessão atual
+	// (POST /auth/logout)
+	PostAuthLogout(c *gin.Context)
+	// GetAuthMe Consulta o usuário da sessão atual
+	// (GET /auth/me)
+	GetAuthMe(c *gin.Context)
+	// PostAuthPasswordChange Substitui a senha temporária obrigatória
+	// (POST /auth/password/change)
+	PostAuthPasswordChange(c *gin.Context)
+	// PostAuthRefresh Renova e rotaciona a sessão atual
+	// (POST /auth/refresh)
+	PostAuthRefresh(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -130,6 +150,58 @@ func (siw *ServerInterfaceWrapper) PostAuthLogin(c *gin.Context) {
 	}
 
 	siw.Handler.PostAuthLogin(c)
+}
+
+// PostAuthLogout operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthLogout(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthLogout(c)
+}
+
+// GetAuthMe operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthMe(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAuthMe(c)
+}
+
+// PostAuthPasswordChange operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthPasswordChange(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthPasswordChange(c)
+}
+
+// PostAuthRefresh operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRefresh(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthRefresh(c)
 }
 
 // GetHealth operation middleware
@@ -173,5 +245,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
+	router.POST(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
+	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
+	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
+	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

@@ -57,6 +57,7 @@ services:
       JWT_PUBLIC_KEYS_JSON: ${JWT_PUBLIC_KEYS_JSON}
       CSRF_SIGNING_KEY_BASE64: ${CSRF_SIGNING_KEY_BASE64}
       RATE_LIMIT_HMAC_KEY_BASE64: ${RATE_LIMIT_HMAC_KEY_BASE64}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS}
     depends_on:
       postgres:
         condition: service_healthy

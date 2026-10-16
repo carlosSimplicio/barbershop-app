@@ -30,6 +30,23 @@ FROM users AS u
 JOIN user_credentials AS c ON c.user_id = u.id
 WHERE u.id = $1;
 
+-- name: GetAuthUserByIDForUpdate :one
+SELECT
+    u.id,
+    u.establishment_id,
+    u.email,
+    u.normalized_email,
+    u.role,
+    u.active,
+    u.email_confirmed_at,
+    u.credential_version,
+    u.password_change_required,
+    c.password_hash
+FROM users AS u
+JOIN user_credentials AS c ON c.user_id = u.id
+WHERE u.id = $1
+FOR UPDATE OF u, c;
+
 -- name: CreateAuthSession :one
 INSERT INTO auth_sessions (user_id, idle_expires_at)
 VALUES ($1, $2)
@@ -95,18 +112,23 @@ WHERE rt.session_id = s.id
   AND s.user_id = $1;
 
 -- name: UpdateUserPassword :one
-WITH updated_credential AS (
-    UPDATE user_credentials
+WITH updated_user AS (
+    UPDATE users
+    SET password_change_required = false,
+        credential_version = credential_version + 1,
+        updated_at = $3
+    WHERE id = $1
+      AND credential_version = $4
+      AND password_change_required = true
+    RETURNING credential_version
+), updated_credential AS (
+    UPDATE user_credentials AS c
     SET password_hash = $2,
         updated_at = $3
-    WHERE user_id = $1
+    FROM updated_user
+    WHERE c.user_id = $1
 )
-UPDATE users
-SET password_change_required = false,
-    credential_version = credential_version + 1,
-    updated_at = $3
-WHERE id = $1
-RETURNING credential_version;
+SELECT credential_version FROM updated_user;
 
 -- name: RecordLoginAttempt :exec
 INSERT INTO auth_login_attempts (dimension, key_hash, attempted_at)

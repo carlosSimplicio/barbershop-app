@@ -74,8 +74,10 @@ func run() error {
 	}
 	authStore := auth.NewStore(pool)
 	login := auth.NewLoginService(authStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
-	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login))
-	server := httpserver.New(configuration.HTTPAddress, logger, handler)
+	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
+	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login, sessions))
+	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
+	server := httpserver.New(configuration.HTTPAddress, logger, handler, authMiddleware.Handle())
 	serverErrors := make(chan error, 1)
 	go func() {
 		logger.Info("http_server_started", "address", configuration.HTTPAddress)

@@ -36,6 +36,74 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+  /auth/refresh:
+    post:
+      operationId: postAuthRefresh
+      summary: Renova e rotaciona a sessão atual
+      tags: [authentication]
+      responses:
+        "204":
+          description: Sessão renovada
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /auth/logout:
+    post:
+      operationId: postAuthLogout
+      summary: Encerra a sessão atual
+      tags: [authentication]
+      responses:
+        "204":
+          description: Sessão encerrada ou já ausente
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      summary: Consulta o usuário da sessão atual
+      tags: [authentication]
+      responses:
+        "200":
+          description: Identidade autenticada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPrincipal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /auth/password/change:
+    post:
+      operationId: postAuthPasswordChange
+      summary: Substitui a senha temporária obrigatória
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Senha alterada e sessão reemitida
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /health:
     get:
       operationId: getHealth
@@ -62,6 +130,15 @@ components:
           format: email
           maxLength: 254
         password:
+          type: string
+          minLength: 8
+          maxLength: 32
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [new_password]
+      properties:
+        new_password:
           type: string
           minLength: 8
           maxLength: 32
