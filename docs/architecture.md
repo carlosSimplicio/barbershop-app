@@ -181,4 +181,6 @@
 - Código, arquivos, pacotes, tipos, variáveis, tabelas, colunas, endpoints, enums técnicos e códigos de erro usam inglês.
 - Interface e mensagens ao usuário usam `pt-BR`; traduza valores técnicos na apresentação.
 - Comentários técnicos usam inglês. Documentação de produto e operação pode usar português.
-- Versões concretas das tecnologias ainda devem ser definidas quando o projeto for inicializado.
+- A fundação usa Go `1.27.2`, Gin `1.12.0`, pgx `5.11.0`, sqlc `1.31.1`, Goose `3.29.0` e oapi-codegen `2.8.0` no backend.
+- O frontend usa Node.js `24.21.0` LTS, Next.js `16.4.2`, React `19.3.1`, TypeScript `5.9.3` e Vitest `5.0.5`.
+- PostgreSQL `18.6`, Caddy `2.11.7` e Mailpit `1.31.5` completam a base operacional. Atualizações são mudanças deliberadas e devem manter manifests, imagens, lockfiles e esta documentação alinhados.

@@ -151,21 +151,21 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 1. Fundação do monorepo
 
-- [ ] Criar `backend/` e `frontend/` como aplicações separadas no mesmo repositório.
-- [ ] Selecionar as versões estáveis atuais das tecnologias e fixá-las explicitamente, sem tags `latest` ou intervalos flutuantes.
-- [ ] Configurar arquivos ignorados, `.editorconfig` e comandos de desenvolvimento sem incluir segredos.
-- [ ] Criar `.env.example` completo e validar toda configuração obrigatória na inicialização.
-- [ ] Documentar comandos locais para instalar, gerar código, migrar banco, testar, executar e construir o projeto.
-- [ ] Garantir que código, schema, endpoints e identificadores técnicos usem inglês e que a interface use `pt-BR`.
+- [x] Criar `backend/` e `frontend/` como aplicações separadas no mesmo repositório.
+- [x] Selecionar as versões estáveis atuais das tecnologias e fixá-las explicitamente, sem tags `latest` ou intervalos flutuantes.
+- [x] Configurar arquivos ignorados, `.editorconfig` e comandos de desenvolvimento sem incluir segredos.
+- [x] Criar `.env.example` completo e validar toda configuração obrigatória na inicialização.
+- [x] Documentar comandos locais para instalar, gerar código, migrar banco, testar, executar e construir o projeto.
+- [x] Garantir que código, schema, endpoints e identificadores técnicos usem inglês e que a interface use `pt-BR`.
 
 ## 2. Backend e API
 
-- [ ] Inicializar o backend em Go com Gin e organização por Vertical Slice Architecture simples.
-- [ ] Configurar encerramento gracioso, timeouts HTTP, tratamento de panic e health checks.
-- [ ] Publicar a API REST sob `/api/v1`.
-- [ ] Criar `backend/openapi/openapi.yaml` como fonte da verdade do contrato.
-- [ ] Configurar `oapi-codegen` e impedir edição manual dos artefatos gerados.
-- [ ] Implementar formato uniforme de erro com código estável, mensagem em `pt-BR`, `request_id` e erros estruturados por campo.
+- [x] Inicializar o backend em Go com Gin e organização por Vertical Slice Architecture simples.
+- [x] Configurar encerramento gracioso, timeouts HTTP, tratamento de panic e health checks.
+- [x] Publicar a API REST sob `/api/v1`.
+- [x] Criar `backend/openapi/openapi.yaml` como fonte da verdade do contrato.
+- [x] Configurar `oapi-codegen` e impedir edição manual dos artefatos gerados.
+- [x] Implementar formato uniforme de erro com código estável, mensagem em `pt-BR`, `request_id` e erros estruturados por campo.
 - [ ] Implementar validação de entrada, autorização e regras no backend, independentemente das restrições do frontend.
 - [ ] Criar middleware para contexto de requisição, estabelecimento, autenticação, autorização, assinatura e correlação de logs.
 - [ ] Implementar idempotência nos casos de uso que possam duplicar agendamentos, assinaturas, renovações ou lançamentos.
@@ -173,8 +173,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 3. Banco de dados e persistência
 
-- [ ] Inicializar PostgreSQL com `pgx/v5`, SQL explícito, `sqlc` e Goose, sem ORM.
-- [ ] Configurar `sqlc` e geração verificável de código Go.
+- [x] Inicializar PostgreSQL com `pgx/v5`, SQL explícito, `sqlc` e Goose, sem ORM.
+- [x] Configurar `sqlc` e geração verificável de código Go.
 - [ ] Criar migrations pequenas, determinísticas e imutáveis depois de aplicadas.
 - [ ] Usar UUIDs aleatórios e não sequenciais para identificadores expostos.
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
@@ -190,19 +190,19 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 4. Frontend e experiência compartilhada
 
-- [ ] Inicializar Next.js App Router com React, TypeScript estrito, npm e `package-lock.json`.
-- [ ] Configurar ESLint, Prettier, Vitest e scripts `lint`, `format`, `format:check`, `typecheck`, `test` e `build`.
-- [ ] Configurar `openapi-typescript` e impedir edição manual dos tipos gerados.
-- [ ] Criar wrapper próprio e tipado sobre `fetch`, com estados consistentes de carregamento, sucesso, vazio e erro.
-- [ ] Cancelar requisições obsoletas e impedir que respostas antigas substituam estado recente.
-- [ ] Usar apenas estado, efeitos e Context nativos do React; Context não funciona como cache genérico de API.
-- [ ] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
+- [x] Inicializar Next.js App Router com React, TypeScript estrito, npm e `package-lock.json`.
+- [x] Configurar ESLint, Prettier, Vitest e scripts `lint`, `format`, `format:check`, `typecheck`, `test` e `build`.
+- [x] Configurar `openapi-typescript` e impedir edição manual dos tipos gerados.
+- [x] Criar wrapper próprio e tipado sobre `fetch`, com estados consistentes de carregamento, sucesso, vazio e erro.
+- [x] Cancelar requisições obsoletas e impedir que respostas antigas substituam estado recente.
+- [x] Usar apenas estado, efeitos e Context nativos do React; Context não funciona como cache genérico de API.
+- [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
 - [ ] Criar fundações visuais: cores, tipografia, espaçamento, formulários, botões, tabelas, modais, feedback e estados vazios.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
 - [ ] Manter página pública e agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
-- [ ] Usar Server Components para cascas e conteúdo estático e Client Components somente nas fronteiras interativas necessárias.
-- [ ] Consumir `/api/v1` diretamente; não criar BFF, Server Actions de negócio ou Route Handlers intermediários.
+- [x] Usar Server Components para cascas e conteúdo estático e Client Components somente nas fronteiras interativas necessárias.
+- [x] Consumir `/api/v1` diretamente; não criar BFF, Server Actions de negócio ou Route Handlers intermediários.
 
 ## 5. Autenticação
 
@@ -458,36 +458,36 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 23. Logs, desempenho e auditoria
 
-- [ ] Gerar ou propagar `request_id` em todas as requisições.
-- [ ] Emitir logs JSON estruturados no backend em produção.
-- [ ] Registrar método, rota parametrizada, status, duração total e `request_id`.
+- [x] Gerar ou propagar `request_id` em todas as requisições.
+- [x] Emitir logs JSON estruturados no backend em produção.
+- [x] Registrar método, rota parametrizada, status, duração total e `request_id`.
 - [ ] Medir tempo acumulado e quantidade de consultas PostgreSQL por requisição.
 - [ ] Medir etapas relevantes, como validação, disponibilidade e cálculo financeiro, com nomes estáveis.
 - [ ] Distinguir claramente tempo total, aplicação e banco sem dupla contagem.
-- [ ] Usar relógio monotônico e milissegundos consistentemente.
+- [x] Usar relógio monotônico e milissegundos consistentemente.
 - [ ] Implementar históricos de auditoria exigidos para agenda, estados, valores, despesas e anulações.
 - [ ] Manter logs do Caddy sem telefone, segredo ou parâmetros sensíveis.
-- [ ] Configurar rotação de todos os containers com `max-size: 10m` e `max-file: 5`.
-- [ ] Usar somente `stdout` e `stderr`, sem arquivos de log internos aos containers.
+- [x] Configurar rotação de todos os containers com `max-size: 10m` e `max-file: 5`.
+- [x] Usar somente `stdout` e `stderr`, sem arquivos de log internos aos containers.
 
 ## 24. Docker, proxy e ambiente local
 
-- [ ] Criar Dockerfiles reproduzíveis para frontend e backend com versões fixadas e imagens mínimas.
-- [ ] Criar Docker Compose de produção com frontend, backend, PostgreSQL e Caddy.
-- [ ] Criar override ou profile de desenvolvimento com Mailpit.
-- [ ] Manter frontend, backend, PostgreSQL e SMTP em redes internas; somente Caddy fica público em produção.
-- [ ] Expor a interface do Mailpit somente localmente.
-- [ ] Configurar volumes persistentes para PostgreSQL, dados do Caddy e logos.
-- [ ] Adicionar health checks reais e esperas por prontidão, sem depender apenas de `depends_on`.
-- [ ] Configurar Caddy para HTTPS automático, `/api/v1` no backend e demais rotas no frontend.
+- [x] Criar Dockerfiles reproduzíveis para frontend e backend com versões fixadas e imagens mínimas.
+- [x] Criar Docker Compose de produção com frontend, backend, PostgreSQL e Caddy.
+- [x] Criar override ou profile de desenvolvimento com Mailpit.
+- [x] Manter frontend, backend, PostgreSQL e SMTP em redes internas; somente Caddy fica público em produção.
+- [x] Expor a interface do Mailpit somente localmente.
+- [x] Configurar volumes persistentes para PostgreSQL, dados do Caddy e logos.
+- [x] Adicionar health checks reais e esperas por prontidão, sem depender apenas de `depends_on`.
+- [x] Configurar Caddy para HTTPS automático, `/api/v1` no backend e demais rotas no frontend.
 - [ ] Preservar cabeçalhos necessários e confiar em proxy headers somente quando vindos do Caddy controlado.
-- [ ] Manter o deploy agnóstico ao provedor da VPS.
+- [x] Manter o deploy agnóstico ao provedor da VPS.
 
 ## 25. CI/CD, migrations e releases
 
-- [ ] Criar GitHub Actions para geração de código e detecção de artefatos desatualizados.
+- [x] Criar GitHub Actions para geração de código e detecção de artefatos desatualizados.
 - [ ] Executar testes, lint, formato, tipos e builds aplicáveis antes de release.
-- [ ] Manter somente testes unitários como gate obrigatório de pull request no escopo atual.
+- [x] Manter somente testes unitários como gate obrigatório de pull request no escopo atual.
 - [ ] Disparar produção apenas por GitHub Release estável com tag SemVer `vMAJOR.MINOR.PATCH`.
 - [ ] Não implantar drafts ou pre-releases.
 - [ ] Fazer deploy por SSH com usuário dedicado e segredos do GitHub Actions.
@@ -501,17 +501,17 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 26. Testes e critérios de qualidade
 
-- [ ] Criar testes unitários de backend com o pacote `testing`.
-- [ ] Criar testes unitários de frontend com Vitest.
-- [ ] Orientar testes unitários a comportamentos observáveis e regras de negócio, evitando detalhes internos e casos sem risco ou requisito identificável.
+- [x] Criar testes unitários de backend com o pacote `testing`.
+- [x] Criar testes unitários de frontend com Vitest.
+- [x] Orientar testes unitários a comportamentos observáveis e regras de negócio, evitando detalhes internos e casos sem risco ou requisito identificável.
 - [ ] Cobrir prioritariamente isolamento de tenant, autorização, autenticação e política de assinatura.
 - [ ] Cobrir disponibilidade, concorrência lógica, snapshots e transições de agendamento.
 - [ ] Cobrir receitas, despesas, comissões, arredondamento, anulação e indicadores.
 - [ ] Cobrir validação de dados, estados vazios e comportamento dos componentes críticos.
 - [ ] Adicionar teste unitário de regressão para toda correção de bug tecnicamente testável.
-- [ ] Executar `gofmt`, testes e `go vet ./...` no backend.
-- [ ] Executar testes, ESLint, Prettier, checagem de tipos e build no frontend.
-- [ ] Não adicionar integração, testcontainers ou E2E sem nova decisão.
+- [x] Executar `gofmt`, testes e `go vet ./...` no backend.
+- [x] Executar testes, ESLint, Prettier, checagem de tipos e build no frontend.
+- [x] Não adicionar integração, testcontainers ou E2E sem nova decisão.
 
 ## 27. Fora do MVP
 

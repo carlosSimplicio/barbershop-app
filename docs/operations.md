@@ -15,6 +15,16 @@
 - Ao criar cada componente, selecione a versão estável mais recente disponível naquele momento e fixe-a explicitamente em Dockerfiles, imagens, módulos e lockfiles.
 - Não use tags `latest`, intervalos flutuantes ou resolução dinâmica de versão em build e deploy. Atualizações são mudanças deliberadas, revisadas e verificadas antes da release.
 
+### Ambiente local da fundação
+
+- Copie `.env.example` para `.env` e execute `make dev` para subir o ambiente de desenvolvimento.
+- A aplicação é publicada pelo Caddy em `http://localhost:8088`; a interface do Mailpit fica restrita a `http://127.0.0.1:8025`.
+- Quando houver migrations de domínio, execute `make migrate-up` para aplicá-las com a imagem isolada do Goose após o PostgreSQL ficar saudável.
+- `compose.yaml` representa a topologia de produção; `compose.dev.yaml` acrescenta somente o Mailpit e sua interface local.
+- PostgreSQL e SMTP ficam na rede interna de dados. Backend e frontend ficam atrás da rede interna de proxy. Somente o Caddy participa também da rede de borda e publica as portas da aplicação.
+- No PostgreSQL 18, monte o volume persistente em `/var/lib/postgresql`; o layout interno versionado é responsabilidade da imagem oficial.
+- Use `make compose-config` para validar a composição, `make test` para os testes unitários e `make check` para geração, formato, análise estática e tipos.
+
 ## Caddy e HTTPS
 
 - Caddy é o único ponto público de entrada e termina HTTPS.
