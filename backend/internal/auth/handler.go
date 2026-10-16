@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/platform/httpserver"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -69,7 +70,7 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 		case errors.Is(err, ErrEmailConfirmationRequired):
 			writeError(c, http.StatusForbidden, "email_confirmation_required", "Confirme seu e-mail para entrar.")
 		default:
-			slog.Error("authentication_login_failed", "request_id", requestID(c), "error", err)
+			slog.Error("authentication_login_failed", "request_id", httpserver.RequestID(c), "error", err)
 			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		}
 		return
@@ -77,7 +78,7 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 
 	response, err := principalResponse(result.Principal)
 	if err != nil {
-		slog.Error("authentication_principal_invalid", "request_id", requestID(c))
+		slog.Error("authentication_principal_invalid", "request_id", httpserver.RequestID(c))
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return
 	}
@@ -91,13 +92,13 @@ func (handler *Handler) PostAuthRefresh(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, ErrInvalidSession) || errors.Is(err, ErrRefreshTokenReused) {
 			if errors.Is(err, ErrRefreshTokenReused) {
-				slog.Warn("refresh_token_reuse_detected", "request_id", requestID(c))
+				slog.Warn("refresh_token_reuse_detected", "request_id", httpserver.RequestID(c))
 			}
 			clearSessionCookies(c)
 			writeError(c, http.StatusUnauthorized, "invalid_session", "Entre novamente para continuar.")
 			return
 		}
-		slog.Error("authentication_refresh_failed", "request_id", requestID(c), "error", err)
+		slog.Error("authentication_refresh_failed", "request_id", httpserver.RequestID(c), "error", err)
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return
 	}
@@ -108,7 +109,7 @@ func (handler *Handler) PostAuthRefresh(c *gin.Context) {
 func (handler *Handler) PostAuthLogout(c *gin.Context) {
 	refreshToken, _ := c.Cookie(refreshCookieName)
 	if err := handler.sessions.Logout(c.Request.Context(), refreshToken); err != nil {
-		slog.Error("authentication_logout_failed", "request_id", requestID(c), "error", err)
+		slog.Error("authentication_logout_failed", "request_id", httpserver.RequestID(c), "error", err)
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return
 	}
@@ -124,7 +125,7 @@ func (handler *Handler) GetAuthMe(c *gin.Context) {
 	}
 	response, err := principalResponse(principal)
 	if err != nil {
-		slog.Error("authentication_principal_invalid", "request_id", requestID(c))
+		slog.Error("authentication_principal_invalid", "request_id", httpserver.RequestID(c))
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return
 	}
@@ -154,7 +155,7 @@ func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
 		case errors.Is(err, ErrPasswordChangeDenied), errors.Is(err, ErrInvalidSession):
 			writeError(c, http.StatusForbidden, "password_change_not_allowed", "A troca de senha não está disponível.")
 		default:
-			slog.Error("authentication_password_change_failed", "request_id", requestID(c), "error", err)
+			slog.Error("authentication_password_change_failed", "request_id", httpserver.RequestID(c), "error", err)
 			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		}
 		return
@@ -192,18 +193,12 @@ func principalResponse(principal Principal) (api.AuthPrincipal, error) {
 }
 
 func writeError(c *gin.Context, status int, code, message string) {
-	c.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: requestID(c)})
+	c.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(c)})
 }
 
 func writeFieldError(c *gin.Context, field, code, message string) {
 	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
 	c.JSON(http.StatusBadRequest, api.ErrorResponse{
-		Code: "validation_failed", Message: "Verifique os campos informados.", RequestId: requestID(c), Fields: &fields,
+		Code: "validation_failed", Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(c), Fields: &fields,
 	})
-}
-
-func requestID(c *gin.Context) string {
-	value, _ := c.Get("request_id")
-	requestID, _ := value.(string)
-	return requestID
 }
