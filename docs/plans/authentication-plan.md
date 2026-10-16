@@ -70,3 +70,8 @@ Entregar a fundação de autenticação para proprietários e profissionais: log
 - Atualizar `docs/architecture.md` com contratos, cookies, CSRF, keyring, sessão e rate limiting; atualizar `docs/operations.md`, `README.md` e os checkboxes efetivamente concluídos de `docs/implementation-scope.md`, dividindo itens compostos quando parte deles permanecer pendente.
 - Executar geração de OpenAPI e `sqlc`, `go test ./...`, `gofmt`, `go vet ./...`, verificação de artefatos gerados, checagens do frontend afetadas pelos tipos e builds de produção.
 - Permanecem fora desta entrega: cadastro e onboarding, confirmação e recuperação por e-mail, criação e desativação de profissionais, trial e assinatura, telas e estado de sessão no frontend. Como nenhum fluxo cria usuários ainda, a capacidade será validada por testes unitários e ficará disponível para os slices seguintes, sem seed público de credenciais.
+
+## Acompanhamento identificado após a implementação
+
+- A rotação mantém o histórico de refresh tokens consumidos para detectar reutilização, mas ainda não existe rotina que remova tokens, sessões ou tentativas de login fora da janela útil. Cada renovação acrescenta uma linha e cada falha de login acrescenta duas, portanto o crescimento atual é ilimitado.
+- Antes da produção, concluir os itens de retenção e limitação de refresh registrados em `docs/implementation-scope.md`, observando a política arquitetural e a operação descritas em `docs/architecture.md` e `docs/operations.md`.

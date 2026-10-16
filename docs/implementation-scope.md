@@ -216,6 +216,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
+- [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
+- [ ] Implementar limpeza diária, idempotente e em lotes dos dados de autenticação expirados, com índices adequados, proteção contra execução concorrente e métricas agregadas.
+- [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
 - [ ] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
