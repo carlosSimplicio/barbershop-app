@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: Barbershop API
+  version: 0.1.0
+  description: API REST da plataforma de agendamento e gestao financeira.
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Verifica se a API esta em execucao
+      tags: [health]
+      responses:
+        "200":
+          description: API saudavel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+  responses:
+    ServiceUnavailable:
+      description: Servico temporariamente indisponivel
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
