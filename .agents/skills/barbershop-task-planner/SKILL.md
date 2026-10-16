@@ -25,7 +25,16 @@ Sempre questione o usuário sobre qualquer dúvida, lacuna, ambiguidade, conflit
 
 Quando uma decisão do usuário diferir da documentação vigente, aponte claramente o conflito, cite os arquivos e requisitos afetados e confirme que a decisão substitui o comportamento documentado. Depois da confirmação, inclua no plano a atualização dos documentos correspondentes na mesma entrega da implementação. Atualize `docs/product.md`, `docs/architecture.md`, `docs/operations.md` ou `docs/implementation-scope.md` conforme o assunto, e o `AGENTS.md` quando a nova regra for universal. Nunca planeje código divergente mantendo documentação sabidamente desatualizada.
 
-Planeje somente. Não altere implementação, contrato, migrations, documentação ou checklist, salvo pedido explícito para salvar ou aplicar o plano.
+Planeje somente. Não altere implementação, contrato, migrations, documentação de produto ou checklist. A única escrita autorizada pelo uso desta skill é o próprio documento de plano, conforme a seção "Arquivo do plano"; qualquer outra alteração exige pedido explícito do usuário.
+
+## Arquivo do plano
+
+- Quando o plano estiver concluído e sem decisões pendentes, grave-o em `docs/plans/<slug-da-tarefa>-plan.md` no repositório.
+- Use um slug curto, descritivo e em inglês. Por exemplo, um plano de autenticação deve ficar em `docs/plans/authentication-plan.md`.
+- Se o usuário indicar outro nome de arquivo dentro de `docs/plans/`, respeite-o.
+- Se o arquivo já existir, leia-o antes e atualize o plano completo, sem criar versões paralelas ou sobrescrever conteúdo não relacionado.
+- Não grave um plano apresentado como concluído enquanto houver decisões pendentes. Durante a fase de perguntas, não crie rascunhos no repositório, salvo solicitação explícita.
+- Ao finalizar, informe o caminho do arquivo criado ou atualizado.
 
 ## Como decompor
 
