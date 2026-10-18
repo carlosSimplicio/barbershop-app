@@ -54,6 +54,16 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 - Verifique builds de produção quando a mudança puder afetar compilação ou empacotamento.
 - Se uma verificação relevante não puder ser executada ou já estiver falhando, informe claramente na entrega.
 
+## Revisão final de features
+
+- Ao finalizar a implementação de cada feature, revise todo o diff e os fluxos afetados antes de concluir a tarefa.
+- Procure por bugs, casos-limite não tratados, erros lógicos, regressões e violações das regras de negócio, autorização ou isolamento entre estabelecimentos.
+- Avalie se nomes, responsabilidades, fluxo de controle e estrutura do código permanecem legíveis e coerentes com a arquitetura existente, evitando duplicações e abstrações desnecessárias.
+- Identifique possíveis refatorações que reduzam complexidade, acoplamento ou duplicação e melhorem a manutenibilidade sem ampliar desnecessariamente o escopo da feature.
+- Analise possíveis preocupações de performance proporcionais ao escopo, como consultas repetidas ou sem filtros adequados, operações desnecessárias, processamento redundante, renderizações excessivas e crescimento não limitado de dados em memória.
+- Corrija antes da entrega os problemas encontrados que pertençam ao escopo da feature e adicione ou ajuste testes quando houver comportamento relevante a proteger.
+- Informe claramente na entrega qualquer risco, limitação ou oportunidade de melhoria identificada que não possa ser resolvida com segurança dentro do escopo atual.
+
 ## Git
 
 - Não imponha Conventional Commits.
