@@ -42,6 +42,8 @@ Planeje somente. Não altere implementação, contrato, migrations, documentaç�
 - Cada subtarefa deve produzir um resultado observável e possuir sua própria forma de verificação.
 - Declare dependências entre subtarefas; não descreva como independente algo que só possa ser avaliado após outra entrega.
 - Prefira uma fatia vertical verificável quando ela puder ser concluída sem criar estados intermediários inconsistentes. Use etapas por camada somente quando a dependência técnica exigir.
+- Quando o escopo envolver múltiplos endpoints, prefira uma subtarefa por endpoint sempre que cada operação puder produzir um resultado observável e ser verificada isoladamente. Dentro dessa subtarefa, agrupe contrato, validação, regra de domínio, persistência, handler e testes aplicáveis, em vez de fragmentar o mesmo endpoint por camada.
+- Separe antes dos endpoints apenas as fundações realmente compartilhadas e mantenha em subtarefa transversal o que só puder ser concluído para o conjunto, como geração final, documentação e revisão. Não force essa organização em trabalhos sem API ou quando endpoints forem inseparáveis por uma única invariante atômica.
 - Agrupe alterações mecânicas inseparáveis, como atualizar o OpenAPI e regenerar seus artefatos. Nunca proponha editar código gerado diretamente.
 - Inclua documentação e os checkboxes aplicáveis de `docs/implementation-scope.md` na subtarefa que conclui o comportamento correspondente.
 - Não use suposições para completar o plano. Se uma informação não estiver explícita na solicitação, na documentação ou na implementação vigente, pergunte ao usuário antes de prosseguir.
