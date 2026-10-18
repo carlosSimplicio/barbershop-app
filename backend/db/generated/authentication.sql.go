@@ -304,20 +304,27 @@ func (q *Queries) GetRefreshTokenForUpdate(ctx context.Context, tokenHash []byte
 const listLoginAttemptsSince = `-- name: ListLoginAttemptsSince :many
 SELECT attempted_at
 FROM auth_login_attempts
-WHERE dimension = $1
-  AND key_hash = $2
-  AND attempted_at >= $3
+WHERE scope = $1
+  AND dimension = $2
+  AND key_hash = $3
+  AND attempted_at >= $4
 ORDER BY attempted_at DESC
 `
 
 type ListLoginAttemptsSinceParams struct {
+	Scope       string             `json:"scope"`
 	Dimension   string             `json:"dimension"`
 	KeyHash     []byte             `json:"key_hash"`
 	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
 }
 
 func (q *Queries) ListLoginAttemptsSince(ctx context.Context, arg ListLoginAttemptsSinceParams) ([]pgtype.Timestamptz, error) {
-	rows, err := q.db.Query(ctx, listLoginAttemptsSince, arg.Dimension, arg.KeyHash, arg.AttemptedAt)
+	rows, err := q.db.Query(ctx, listLoginAttemptsSince,
+		arg.Scope,
+		arg.Dimension,
+		arg.KeyHash,
+		arg.AttemptedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -337,18 +344,24 @@ func (q *Queries) ListLoginAttemptsSince(ctx context.Context, arg ListLoginAttem
 }
 
 const recordLoginAttempt = `-- name: RecordLoginAttempt :exec
-INSERT INTO auth_login_attempts (dimension, key_hash, attempted_at)
-VALUES ($1, $2, $3)
+INSERT INTO auth_login_attempts (scope, dimension, key_hash, attempted_at)
+VALUES ($1, $2, $3, $4)
 `
 
 type RecordLoginAttemptParams struct {
+	Scope       string             `json:"scope"`
 	Dimension   string             `json:"dimension"`
 	KeyHash     []byte             `json:"key_hash"`
 	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
 }
 
 func (q *Queries) RecordLoginAttempt(ctx context.Context, arg RecordLoginAttemptParams) error {
-	_, err := q.db.Exec(ctx, recordLoginAttempt, arg.Dimension, arg.KeyHash, arg.AttemptedAt)
+	_, err := q.db.Exec(ctx, recordLoginAttempt,
+		arg.Scope,
+		arg.Dimension,
+		arg.KeyHash,
+		arg.AttemptedAt,
+	)
 	return err
 }
 

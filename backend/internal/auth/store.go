@@ -48,9 +48,9 @@ func (store *Store) FindUserByID(ctx context.Context, userID string) (User, erro
 	return userFromIDRow(row), nil
 }
 
-func (store *Store) ListLoginAttempts(ctx context.Context, dimension string, keyHash []byte, since time.Time) ([]time.Time, error) {
+func (store *Store) ListRateLimitEvents(ctx context.Context, scope, dimension string, keyHash []byte, since time.Time) ([]time.Time, error) {
 	rows, err := store.queries.ListLoginAttemptsSince(ctx, db.ListLoginAttemptsSinceParams{
-		Dimension: dimension, KeyHash: keyHash, AttemptedAt: timestamptz(since),
+		Scope: scope, Dimension: dimension, KeyHash: keyHash, AttemptedAt: timestamptz(since),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list authentication attempts: %w", err)
@@ -62,16 +62,16 @@ func (store *Store) ListLoginAttempts(ctx context.Context, dimension string, key
 	return attempts, nil
 }
 
-func (store *Store) RecordLoginFailure(ctx context.Context, ipKey, emailKey []byte, attemptedAt time.Time) error {
+func (store *Store) RecordRateLimitEvents(ctx context.Context, scope string, keys map[string][]byte, attemptedAt time.Time) error {
 	tx, err := store.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin authentication attempt transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	queries := store.queries.WithTx(tx)
-	for dimension, key := range map[string][]byte{"ip": ipKey, "email": emailKey} {
+	for dimension, key := range keys {
 		if err := queries.RecordLoginAttempt(ctx, db.RecordLoginAttemptParams{
-			Dimension: dimension, KeyHash: key, AttemptedAt: timestamptz(attemptedAt),
+			Scope: scope, Dimension: dimension, KeyHash: key, AttemptedAt: timestamptz(attemptedAt),
 		}); err != nil {
 			return fmt.Errorf("record authentication attempt: %w", err)
 		}

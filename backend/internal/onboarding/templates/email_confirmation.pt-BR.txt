@@ -1,0 +1,6 @@
+Confirme seu e-mail
+
+Para confirmar seu cadastro, acesse o link abaixo:
+{{.ConfirmationURL}}
+
+Este link expira em 24 horas. Se você não solicitou o cadastro, ignore esta mensagem.

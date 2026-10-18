@@ -442,11 +442,11 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 21. E-mail transacional
 
-- [ ] Criar interface pequena de envio desacoplada do provedor.
+- [x] Criar interface pequena de envio desacoplada do provedor.
 - [ ] Versionar templates em `pt-BR` para confirmação e recuperação de senha.
-- [ ] Integrar Mailpit por SMTP somente no ambiente local.
+- [x] Integrar Mailpit por SMTP somente no ambiente local.
 - [ ] Não registrar endereço completo, token, link ou credencial em falhas.
-- [ ] Falhar com segurança em produção quando o envio obrigatório não possuir provedor real configurado.
+- [x] Falhar com segurança em produção quando o envio obrigatório não possuir provedor real configurado.
 - [ ] Escolher e integrar um provedor real antes da disponibilização de produção que dependa de confirmação e recuperação.
 
 ## 22. Segurança e privacidade

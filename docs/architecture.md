@@ -50,6 +50,7 @@
 - Toda alteração de schema usa migration Goose nova, pequena e determinística.
 - Não modifique migrations que possam ter sido executadas em outro ambiente.
 - Use transações quando uma operação precisar preservar invariantes entre múltiplas escritas.
+- Use constraints do PostgreSQL para integridade estrutural, como nulabilidade, referências, unicidade, cardinalidade, isolamento relacional e ordenação temporal genérica. Regras de negócio que podem evoluir — formatos e palavras reservadas, limites de produto, papéis permitidos, durações exatas e transições ou imutabilidade de domínio — pertencem ao backend Go e aos seus testes, não a `CHECK` constraints ou triggers.
 
 ## Arquivos públicos
 

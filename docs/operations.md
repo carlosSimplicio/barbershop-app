@@ -45,6 +45,7 @@
 - Segredos nunca usam `NEXT_PUBLIC_*`.
 - Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
 - Configure `JWT_ACTIVE_KEY_ID`, `JWT_PRIVATE_KEY_BASE64`, `JWT_PUBLIC_KEYS_JSON`, `CSRF_SIGNING_KEY_BASE64`, `RATE_LIMIT_HMAC_KEY_BASE64`, `TRUSTED_ORIGINS` e `TRUSTED_PROXY_CIDRS`. A chave JWT privada é um seed Ed25519 em base64 sem padding; o keyring público é um objeto JSON de `kid` para chave pública.
+- Configure `PUBLIC_APP_URL` como a origem HTTPS usada nos links transacionais. No ambiente local, `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT` e `SMTP_FROM` apontam exclusivamente para o Mailpit interno. O modo desabilitado é aceito somente em testes; produção recusa a inicialização enquanto não houver um provedor real suportado e explicitamente configurado.
 - Ao adicionar configuração obrigatória, atualize `.env.example` e a documentação operacional.
 
 ## CI/CD e releases
@@ -67,6 +68,7 @@
 - Falha de migration interrompe o deploy e mantém a versão anterior em execução.
 - Migrations precisam ser compatíveis com a versão ainda ativa durante a atualização.
 - Para mudanças destrutivas, use etapas expansivas e contrativas em releases separadas.
+- A migration `00002_owner_onboarding.sql` exige que `establishments` esteja vazia, pois os registros mínimos anteriores não possuem nome, slug ou fuso que possam ser preenchidos sem inventar dados. Se a precondição falhar, interrompa o deploy e trate explicitamente os registros antes de reaplicar; não os apague nem atribua valores fictícios.
 
 ## Persistência
 

@@ -26,11 +26,11 @@ func (stub *loginStoreStub) FindUserByNormalizedEmail(context.Context, string) (
 	return stub.user, stub.findErr
 }
 
-func (stub *loginStoreStub) ListLoginAttempts(_ context.Context, dimension string, _ []byte, _ time.Time) ([]time.Time, error) {
+func (stub *loginStoreStub) ListRateLimitEvents(_ context.Context, _ string, dimension string, _ []byte, _ time.Time) ([]time.Time, error) {
 	return stub.attempts[dimension], nil
 }
 
-func (stub *loginStoreStub) RecordLoginFailure(context.Context, []byte, []byte, time.Time) error {
+func (stub *loginStoreStub) RecordRateLimitEvents(context.Context, string, map[string][]byte, time.Time) error {
 	stub.recordedFailures++
 	return nil
 }
@@ -134,17 +134,6 @@ func TestLoginAppliesProgressiveRateLimitBeforeCheckingCredentials(t *testing.T)
 	}
 	if store.createdSession || store.recordedFailures != 0 {
 		t.Fatal("rate-limited login reached credential processing")
-	}
-}
-
-func TestRateLimitUsesIndependentDimensionsAndLongestWindow(t *testing.T) {
-	attempts := make([]time.Time, 20)
-	for index := range attempts {
-		attempts[index] = testNow.Add(-time.Duration(index+1) * time.Hour)
-	}
-	duration := rateLimitDuration(attempts, testNow)
-	if duration != 4*time.Hour {
-		t.Fatalf("duration = %s, want 4h", duration)
 	}
 }
 

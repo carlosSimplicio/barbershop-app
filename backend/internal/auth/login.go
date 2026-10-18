@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/platform/ratelimit"
 )
 
 var (
@@ -50,9 +51,8 @@ type LoginResult struct {
 }
 
 type LoginStore interface {
+	ratelimit.Store
 	FindUserByNormalizedEmail(context.Context, string) (User, error)
-	ListLoginAttempts(context.Context, string, []byte, time.Time) ([]time.Time, error)
-	RecordLoginFailure(context.Context, []byte, []byte, time.Time) error
 	CreateSession(context.Context, string, []byte, time.Time) error
 }
 
@@ -77,7 +77,7 @@ type LoginService struct {
 	passwords         PasswordVerifier
 	accessTokens      AccessTokenIssuer
 	csrfTokens        SignedTokenIssuer
-	rateKeys          RateKeyGenerator
+	rateLimiter       *ratelimit.Limiter
 	dummyPasswordHash string
 	now               func() time.Time
 }
@@ -85,28 +85,22 @@ type LoginService struct {
 func NewLoginService(store LoginStore, passwords PasswordVerifier, accessTokens AccessTokenIssuer, csrfTokens SignedTokenIssuer, rateKeys RateKeyGenerator, dummyPasswordHash string) *LoginService {
 	return &LoginService{
 		store: store, passwords: passwords, accessTokens: accessTokens, csrfTokens: csrfTokens,
-		rateKeys: rateKeys, dummyPasswordHash: dummyPasswordHash, now: time.Now,
+		rateLimiter: ratelimit.New(store, rateKeys), dummyPasswordHash: dummyPasswordHash, now: time.Now,
 	}
 }
 
 func (service *LoginService) Login(ctx context.Context, input LoginInput) (LoginResult, error) {
 	now := service.now().UTC()
 	normalizedEmail := NormalizeEmail(input.Email)
-	ipKey := service.rateKeys.Key("ip", input.IP)
-	emailKey := service.rateKeys.Key("email", normalizedEmail)
-
-	retryAfter, err := service.retryAfter(ctx, ipKey, emailKey, now)
-	if err != nil {
+	identifiers := map[string]string{"ip": input.IP, "email": normalizedEmail}
+	if err := service.rateLimiter.Check(ctx, "login", identifiers, now); err != nil {
 		return LoginResult{}, err
-	}
-	if retryAfter > 0 {
-		return LoginResult{}, RateLimitError{RetryAfter: retryAfter}
 	}
 
 	user, err := service.store.FindUserByNormalizedEmail(ctx, normalizedEmail)
 	if errors.Is(err, ErrUserNotFound) {
 		_, _ = service.passwords.Verify(input.Password, service.dummyPasswordHash)
-		if recordErr := service.store.RecordLoginFailure(ctx, ipKey, emailKey, now); recordErr != nil {
+		if recordErr := service.rateLimiter.Record(ctx, "login", identifiers, now); recordErr != nil {
 			return LoginResult{}, recordErr
 		}
 		return LoginResult{}, ErrInvalidCredentials
@@ -120,7 +114,7 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 		return LoginResult{}, err
 	}
 	if !passwordMatches || !user.Active {
-		if err := service.store.RecordLoginFailure(ctx, ipKey, emailKey, now); err != nil {
+		if err := service.rateLimiter.Record(ctx, "login", identifiers, now); err != nil {
 			return LoginResult{}, err
 		}
 		return LoginResult{}, ErrInvalidCredentials
@@ -156,52 +150,8 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 	}, nil
 }
 
-func (service *LoginService) retryAfter(ctx context.Context, ipKey, emailKey []byte, now time.Time) (time.Duration, error) {
-	var longest time.Duration
-	for dimension, key := range map[string][]byte{"ip": ipKey, "email": emailKey} {
-		attempts, err := service.store.ListLoginAttempts(ctx, dimension, key, now.Add(-24*time.Hour))
-		if err != nil {
-			return 0, err
-		}
-		if duration := rateLimitDuration(attempts, now); duration > longest {
-			longest = duration
-		}
-	}
-	return longest, nil
-}
-
-type RateLimitError struct {
-	RetryAfter time.Duration
-}
-
-func (err RateLimitError) Error() string { return "authentication rate limited" }
+type RateLimitError = ratelimit.Error
 
 func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
-}
-
-func rateLimitDuration(attempts []time.Time, now time.Time) time.Duration {
-	rules := []struct {
-		threshold int
-		window    time.Duration
-	}{{5, 15 * time.Minute}, {10, time.Hour}, {20, 24 * time.Hour}}
-	var longest time.Duration
-	for _, rule := range rules {
-		var recent []time.Time
-		cutoff := now.Add(-rule.window)
-		for _, attempt := range attempts {
-			if !attempt.Before(cutoff) {
-				recent = append(recent, attempt)
-			}
-		}
-		if len(recent) < rule.threshold {
-			continue
-		}
-		boundary := recent[rule.threshold-1]
-		retryAfter := boundary.Add(rule.window).Sub(now)
-		if retryAfter > longest {
-			longest = retryAfter
-		}
-	}
-	return longest
 }
