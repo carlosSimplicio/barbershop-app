@@ -98,6 +98,28 @@
 - Reset de senha invalida credenciais previamente emitidas.
 - Desativar um usuário revoga seus refresh tokens, incrementa sua versão de credencial e faz o backend rejeitar imediatamente access tokens ainda não expirados.
 
+### Contrato de sessão
+
+- A API expõe `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
+- Access JWTs usam Ed25519/EdDSA, incluem `kid` no header e são validados por um keyring de chaves públicas. A chave privada ativa e as chaves públicas anteriores são configuração exclusiva do backend.
+- As claims são limitadas a usuário, estabelecimento, papel, expiração e versão da credencial. Em cada requisição autenticada, o backend também consulta o usuário atual e compara estado, tenant, papel e versão para permitir revogação imediata.
+- A configuração inicial do Argon2id usa `m=19456 KiB`, `t=2`, `p=1`, salt aleatório de 16 bytes e saída de 32 bytes em formato PHC. Os limites configuráveis não podem ficar abaixo desse perfil.
+- Os cookies são host-only e `SameSite=Strict`: `__Secure-barbershop_access` usa `Path=/api/v1`, `__Secure-barbershop_refresh` usa `Path=/api/v1/auth` e ambos são `HttpOnly`; `__Secure-barbershop_csrf` usa `Path=/` e pode ser lido pelo frontend somente para envio no header `X-CSRF-Token`. Todos usam `Secure`, inclusive no desenvolvimento local.
+- Mutações validam uma allowlist exata de `Origin`. Refresh, logout e troca de senha também exigem igualdade entre cookie e header CSRF e assinatura válida do token.
+- O rate limiting de login usa chaves HMAC separadas para IP e e-mail normalizado, sem persistir esses valores na tabela de tentativas. Depois de 5 falhas em 15 minutos, 10 em 1 hora ou 20 em 24 horas, novas tentativas recebem `429` e `Retry-After` pela maior janela ativa.
+- Várias sessões por usuário são permitidas, sem prazo absoluto. Cada refresh estende a inatividade por 7 dias, consome definitivamente o token anterior e revoga a família da sessão se houver reutilização.
+- Um profissional com senha temporária pode consultar e manter sua sessão, trocar a senha ou sair, mas não acessar recursos de domínio. A troca rejeita a mesma senha, revoga todas as sessões, incrementa a versão da credencial e reemite somente a sessão atual.
+
+### Retenção dos dados de autenticação
+
+- Access JWTs e tokens CSRF são stateless e não geram registros persistidos. Cada login cria uma linha em `auth_sessions` e uma em `refresh_tokens`; cada renovação acrescenta outro refresh token à mesma sessão; cada falha de login cria duas linhas em `auth_login_attempts`, uma por dimensão protegida.
+- A implementação atual não executa limpeza de sessões, refresh tokens ou tentativas de login. A query de exclusão de tentativas antigas existe, mas ainda não está ligada a uma rotina operacional. Portanto, essas três tabelas têm crescimento ilimitado até a implementação da retenção e não devem ser consideradas prontas para operação prolongada em produção.
+- Antes da produção, defina e documente a janela durante a qual a reutilização de um refresh token consumido ainda revoga sua família. Depois que o token estiver expirado e ultrapassar essa margem, remover seu hash pode transformar uma reutilização tardia em sessão inválida genérica, mas nunca pode tornar o token utilizável novamente.
+- A retenção deve remover tentativas de login depois da maior janela do rate limiting, atualmente 24 horas, acrescida de margem operacional; remover refresh tokens consumidos ou revogados somente depois de expirados e da margem de detecção; e remover sessões expiradas ou revogadas somente depois de tratar seus tokens relacionados e cumprir a retenção operacional definida.
+- Execute a limpeza em lotes limitados, com índices apropriados para os predicados de expiração e um único executor por vez. A exclusão precisa respeitar as chaves estrangeiras: primeiro refresh tokens elegíveis e depois sessões sem tokens retidos.
+- Limite também a frequência de renovação por sessão. Sem esse controle, um cliente autenticado com defeito ou malicioso pode rotacionar tokens em sequência e acelerar o crescimento mesmo com a limpeza periódica.
+- Monitore quantidade de linhas, tamanho total e idade do registro elegível mais antigo em `auth_sessions`, `refresh_tokens` e `auth_login_attempts`. Confie no autovacuum para tornar espaço apagado reutilizável; não use `VACUUM FULL` como manutenção rotineira.
+
 ### Proprietário e profissional
 
 - Proprietário confirma e-mail e recupera senha por link enviado por e-mail.
@@ -105,7 +127,7 @@
 - Respostas de recuperação não revelam se o e-mail existe; aplique rate limiting.
 - Profissional não possui recuperação autônoma. O proprietário define uma senha temporária e a troca é obrigatória no próximo login.
 - Ao reativar um profissional, o proprietário deve definir uma nova senha temporária; nunca restaure a validade da senha ou das sessões anteriores.
-- Até a troca, o profissional só pode definir uma nova senha ou encerrar a sessão.
+- Até a troca, o profissional só pode consultar ou manter a sessão, definir uma nova senha ou encerrar a sessão; recursos de domínio permanecem bloqueados.
 - A senha temporária nunca é recuperável ou armazenada em texto puro.
 
 ### E-mail transacional

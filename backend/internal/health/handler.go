@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"barbershop-app/backend/internal/platform/httpserver"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -26,16 +27,10 @@ func (h *Handler) GetHealth(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, api.ErrorResponse{
 			Code:      "service_unavailable",
 			Message:   "Serviço temporariamente indisponível.",
-			RequestId: RequestID(c),
+			RequestId: httpserver.RequestID(c),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, api.HealthResponse{Status: api.Ok})
-}
-
-func RequestID(c *gin.Context) string {
-	value, _ := c.Get("request_id")
-	requestID, _ := value.(string)
-	return requestID
 }

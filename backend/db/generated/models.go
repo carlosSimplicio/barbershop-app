@@ -3,3 +3,60 @@
 //   sqlc v1.31.1
 
 package db
+
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type AuthLoginAttempt struct {
+	ID          int64              `json:"id"`
+	Dimension   string             `json:"dimension"`
+	KeyHash     []byte             `json:"key_hash"`
+	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
+}
+
+type AuthSession struct {
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	IdleExpiresAt pgtype.Timestamptz `json:"idle_expires_at"`
+	RevokedAt     pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Establishment struct {
+	ID        pgtype.UUID        `json:"id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type RefreshToken struct {
+	ID           pgtype.UUID        `json:"id"`
+	SessionID    pgtype.UUID        `json:"session_id"`
+	TokenHash    []byte             `json:"token_hash"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	ConsumedAt   pgtype.Timestamptz `json:"consumed_at"`
+	RevokedAt    pgtype.Timestamptz `json:"revoked_at"`
+	ReplacedByID pgtype.UUID        `json:"replaced_by_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type User struct {
+	ID                     pgtype.UUID        `json:"id"`
+	EstablishmentID        pgtype.UUID        `json:"establishment_id"`
+	Email                  string             `json:"email"`
+	NormalizedEmail        string             `json:"normalized_email"`
+	Role                   string             `json:"role"`
+	Active                 bool               `json:"active"`
+	EmailConfirmedAt       pgtype.Timestamptz `json:"email_confirmed_at"`
+	CredentialVersion      int64              `json:"credential_version"`
+	PasswordChangeRequired bool               `json:"password_change_required"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserCredential struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	PasswordHash string             `json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}

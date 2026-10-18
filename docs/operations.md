@@ -18,12 +18,14 @@
 ### Ambiente local da fundação
 
 - Copie `.env.example` para `.env` e execute `make dev` para subir o ambiente de desenvolvimento.
-- A aplicação é publicada pelo Caddy em `http://localhost:8088`; a interface do Mailpit fica restrita a `http://127.0.0.1:8025`.
+- A aplicação é publicada pelo Caddy em `https://localhost:8443`; `http://localhost:8088` apenas redireciona para HTTPS. A interface do Mailpit fica restrita a `http://127.0.0.1:8025`.
 - Quando houver migrations de domínio, execute `make migrate-up` para aplicá-las com a imagem isolada do Goose após o PostgreSQL ficar saudável.
-- `compose.yaml` representa a topologia de produção; `compose.dev.yaml` acrescenta somente o Mailpit e sua interface local.
+- `compose.yaml` representa a topologia de produção; `compose.dev.yaml` acrescenta o Mailpit, sua interface local e fixa o endereço HTTPS de desenvolvimento do Caddy.
 - PostgreSQL e SMTP ficam na rede interna de dados. Backend e frontend ficam atrás da rede interna de proxy. Somente o Caddy participa também da rede de borda e publica as portas da aplicação.
 - No PostgreSQL 18, monte o volume persistente em `/var/lib/postgresql`; o layout interno versionado é responsabilidade da imagem oficial.
 - Use `make compose-config` para validar a composição, `make test` para os testes unitários e `make check` para geração, formato, análise estática e tipos.
+- Antes do primeiro `make dev`, use `make auth-keys` e copie as cinco variáveis produzidas para o `.env`. A saída contém segredos locais e não deve ser versionada nem reutilizada em produção.
+- Para confiar no certificado local, copie `/data/caddy/pki/authorities/local/root.crt` do container Caddy para um arquivo temporário e instale-o manualmente no repositório de autoridades do sistema ou navegador. Nunca versione essa CA. Reinicie o navegador depois da instalação.
 
 ## Caddy e HTTPS
 
@@ -31,6 +33,7 @@
 - Encaminhe `/api/v1` ao backend e as demais rotas ao frontend.
 - Use HTTPS automático para o domínio único do MVP e persista `/data` do Caddy.
 - Preserve cabeçalhos de host, protocolo e cliente necessários, mas confie neles somente quando vierem do proxy controlado.
+- A rede `proxy` usa subnet interna fixa e reserva `172.30.0.4` para o Caddy. O backend confia em `X-Forwarded-*` somente quando a conexão direta vem de `172.30.0.4/32`; frontend e outros containers não são proxies confiáveis.
 - Uma futura adoção de wildcard/subdomínios exige DNS-01 e é uma mudança separada de infraestrutura.
 
 ## Configuração e segredos
@@ -41,6 +44,7 @@
 - Cada aplicação valida configuração obrigatória na inicialização e falha claramente se estiver ausente ou inválida.
 - Segredos nunca usam `NEXT_PUBLIC_*`.
 - Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
+- Configure `JWT_ACTIVE_KEY_ID`, `JWT_PRIVATE_KEY_BASE64`, `JWT_PUBLIC_KEYS_JSON`, `CSRF_SIGNING_KEY_BASE64`, `RATE_LIMIT_HMAC_KEY_BASE64`, `TRUSTED_ORIGINS` e `TRUSTED_PROXY_CIDRS`. A chave JWT privada é um seed Ed25519 em base64 sem padding; o keyring público é um objeto JSON de `kid` para chave pública.
 - Ao adicionar configuração obrigatória, atualize `.env.example` e a documentação operacional.
 
 ## CI/CD e releases
@@ -71,6 +75,14 @@
 - Preserve o volume em deploys e manutenções.
 - A ausência de backup também se aplica ao volume de logos no escopo inicial.
 - Antes de alteração destrutiva, destaque a ausência de backup e prefira alternativa reversível.
+
+### Manutenção dos dados de autenticação
+
+- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `refresh_tokens` ou `auth_login_attempts`; enquanto isso, as três tabelas crescem sem limite. Implemente e valide essa manutenção antes de operar autenticação continuamente em produção.
+- Execute a manutenção ao menos diariamente como comando idempotente e observável, invocado pelo ambiente da VPS sem criar um novo serviço permanente. Proteja execuções concorrentes e processe exclusões em lotes para limitar bloqueios, WAL e picos de I/O.
+- Antes de habilitar exclusões, registre apenas contagens agregadas dos candidatos, valide as janelas definidas na arquitetura e confirme a ordem exigida pelas chaves estrangeiras. Nunca registre hashes, tokens, IPs, e-mails ou identificadores individuais.
+- Acompanhe por tabela a contagem aproximada, o tamanho total e a idade do registro elegível mais antigo. Emita alerta operacional quando a rotina falhar ou quando a idade ultrapassar a janela esperada; não dependa apenas do tamanho atual do volume.
+- Deixe o autovacuum recuperar o espaço para reutilização normal. `VACUUM FULL` exige bloqueio e reescrita da tabela e só pode ser uma intervenção excepcional planejada.
 
 ## Logs e desempenho
 

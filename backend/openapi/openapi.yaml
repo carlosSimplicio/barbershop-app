@@ -6,6 +6,104 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /auth/login:
+    post:
+      operationId: postAuthLogin
+      summary: Autentica proprietário ou profissional
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Sessão criada
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPrincipal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /auth/refresh:
+    post:
+      operationId: postAuthRefresh
+      summary: Renova e rotaciona a sessão atual
+      tags: [authentication]
+      responses:
+        "204":
+          description: Sessão renovada
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /auth/logout:
+    post:
+      operationId: postAuthLogout
+      summary: Encerra a sessão atual
+      tags: [authentication]
+      responses:
+        "204":
+          description: Sessão encerrada ou já ausente
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      summary: Consulta o usuário da sessão atual
+      tags: [authentication]
+      responses:
+        "200":
+          description: Identidade autenticada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPrincipal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /auth/password/change:
+    post:
+      operationId: postAuthPasswordChange
+      summary: Substitui a senha temporária obrigatória
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Senha alterada e sessão reemitida
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /health:
     get:
       operationId: getHealth
@@ -22,6 +120,48 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
 components:
   schemas:
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 32
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [new_password]
+      properties:
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 32
+    UserRole:
+      type: string
+      enum: [owner, professional]
+    AuthPrincipal:
+      type: object
+      required: [user_id, establishment_id, email, role, password_change_required]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        establishment_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/UserRole"
+        password_change_required:
+          type: boolean
     HealthResponse:
       type: object
       required: [status]
@@ -54,6 +194,35 @@ components:
           items:
             $ref: "#/components/schemas/FieldError"
   responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Credenciais ou sessão inválidas
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Operação não permitida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: Limite temporário de tentativas excedido
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     ServiceUnavailable:
       description: Servico temporariamente indisponivel
       content:

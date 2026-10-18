@@ -5,6 +5,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthResponseStatus.
@@ -20,6 +21,38 @@ func (e HealthResponseStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Defines values for UserRole.
+const (
+	Owner        UserRole = "owner"
+	Professional UserRole = "professional"
+)
+
+// Valid indicates whether the value is a known member of the UserRole enum.
+func (e UserRole) Valid() bool {
+	switch e {
+	case Owner:
+		return true
+	case Professional:
+		return true
+	default:
+		return false
+	}
+}
+
+// AuthPrincipal defines model for AuthPrincipal.
+type AuthPrincipal struct {
+	Email                  openapi_types.Email `json:"email"`
+	EstablishmentId        openapi_types.UUID  `json:"establishment_id"`
+	PasswordChangeRequired bool                `json:"password_change_required"`
+	Role                   UserRole            `json:"role"`
+	UserId                 openapi_types.UUID  `json:"user_id"`
+}
+
+// ChangePasswordRequest defines model for ChangePasswordRequest.
+type ChangePasswordRequest struct {
+	NewPassword string `json:"new_password"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
@@ -45,11 +78,53 @@ type HealthResponse struct {
 // HealthResponseStatus defines model for HealthResponse.Status.
 type HealthResponseStatus string
 
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Email    openapi_types.Email `json:"email"`
+	Password string              `json:"password"`
+}
+
+// UserRole defines model for UserRole.
+type UserRole string
+
+// BadRequest defines model for BadRequest.
+type BadRequest = ErrorResponse
+
+// Forbidden defines model for Forbidden.
+type Forbidden = ErrorResponse
+
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorResponse
 
+// TooManyRequests defines model for TooManyRequests.
+type TooManyRequests = ErrorResponse
+
+// Unauthorized defines model for Unauthorized.
+type Unauthorized = ErrorResponse
+
+// PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
+type PostAuthLoginJSONRequestBody = LoginRequest
+
+// PostAuthPasswordChangeJSONRequestBody defines body for PostAuthPasswordChange for application/json ContentType.
+type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// PostAuthLogin Autentica proprietário ou profissional
+	// (POST /auth/login)
+	PostAuthLogin(c *gin.Context)
+	// PostAuthLogout Encerra a sessão atual
+	// (POST /auth/logout)
+	PostAuthLogout(c *gin.Context)
+	// GetAuthMe Consulta o usuário da sessão atual
+	// (GET /auth/me)
+	GetAuthMe(c *gin.Context)
+	// PostAuthPasswordChange Substitui a senha temporária obrigatória
+	// (POST /auth/password/change)
+	PostAuthPasswordChange(c *gin.Context)
+	// PostAuthRefresh Renova e rotaciona a sessão atual
+	// (POST /auth/refresh)
+	PostAuthRefresh(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -63,6 +138,71 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// PostAuthLogin operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthLogin(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthLogin(c)
+}
+
+// PostAuthLogout operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthLogout(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthLogout(c)
+}
+
+// GetAuthMe operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthMe(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAuthMe(c)
+}
+
+// PostAuthPasswordChange operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthPasswordChange(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthPasswordChange(c)
+}
+
+// PostAuthRefresh operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRefresh(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthRefresh(c)
+}
 
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
@@ -104,5 +244,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
+	router.POST(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
+	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
+	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
+	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

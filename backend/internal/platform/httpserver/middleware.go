@@ -42,7 +42,7 @@ func AccessLog(logger *slog.Logger) gin.HandlerFunc {
 			"route", route,
 			"status", c.Writer.Status(),
 			"duration_ms", time.Since(startedAt).Milliseconds(),
-			"request_id", requestID(c),
+			"request_id", RequestID(c),
 		)
 	}
 }
@@ -51,11 +51,11 @@ func Recovery(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				logger.Error("http_panic", "request_id", requestID(c))
+				logger.Error("http_panic", "request_id", RequestID(c))
 				c.AbortWithStatusJSON(http.StatusInternalServerError, api.ErrorResponse{
 					Code:      "internal_error",
 					Message:   "Não foi possível concluir a solicitação.",
-					RequestId: requestID(c),
+					RequestId: RequestID(c),
 				})
 			}
 		}()
@@ -63,7 +63,7 @@ func Recovery(logger *slog.Logger) gin.HandlerFunc {
 	}
 }
 
-func requestID(c *gin.Context) string {
+func RequestID(c *gin.Context) string {
 	value, _ := c.Get("request_id")
 	requestID, _ := value.(string)
 	return requestID
