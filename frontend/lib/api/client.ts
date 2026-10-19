@@ -26,7 +26,7 @@ export async function apiFetch<T>(
     },
   });
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 205) {
     return { state: "empty" };
   }
 
@@ -38,5 +38,10 @@ export async function apiFetch<T>(
     return { state: "error", error };
   }
 
-  return { state: "success", data: (await response.json()) as T };
+  const body = await response.text();
+  if (body === "") {
+    return { state: "empty" };
+  }
+
+  return { state: "success", data: JSON.parse(body) as T };
 }
