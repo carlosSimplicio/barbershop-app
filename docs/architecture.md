@@ -37,6 +37,15 @@
 - Compartilhe apenas abstrações de domínio estáveis ou necessidades transversais reais; evite utilitários genéricos.
 - Não adote CQRS formal, command/query bus, mediator ou event bus sem necessidade concreta.
 
+### Estratégia de testes
+
+- Mantenha testes unitários rápidos para regras de negócio, validações e recusas que possam ser verificadas sem infraestrutura real.
+- Cubra os fluxos entregues do backend também com testes de integração black-box na fronteira HTTP, atravessando roteamento Gin, middleware, serviços, código `sqlc`, transações e constraints do PostgreSQL.
+- Execute a integração em PostgreSQL descartável provisionado por Testcontainers, usando a mesma versão fixada para o projeto e aplicando as migrations Goose reais. Cada teste deve começar com dados isolados e determinísticos.
+- Use `httptest` com TLS para preservar o comportamento dos cookies `Secure`. Substitua somente dependências externas ao backend, como o transporte de e-mail, por fakes locais controlados; não substitua banco, stores ou casos de uso nos testes de integração.
+- Mantenha a suíte de integração sob a build tag `integration`. Testes unitários não exigem Docker; a suíte de integração e o gate de pull request exigem Docker disponível.
+- Não adote testes E2E nem integração de frontend sem nova decisão. Evite duplicar nos testes de integração todas as combinações já protegidas unitariamente; priorize jornadas reais, contratos entre camadas, persistência, autorização e invariantes transacionais.
+
 ## Banco de dados
 
 - Escreva SQL nos arquivos de entrada do `sqlc` e regenere o código Go após alterações.

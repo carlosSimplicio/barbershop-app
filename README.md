@@ -129,15 +129,17 @@ atualiza o servidor Go, as consultas sqlc e os tipos TypeScript. Os diretórios
 ## Verificações
 
 ```sh
-make test           # testes unitários de backend e frontend
+make test           # testes unitários e integração do backend, mais testes do frontend
+make test-unit      # testes unitários de backend e frontend, sem Docker
+make test-integration # fluxos do backend contra PostgreSQL descartável; requer Docker
 make check          # geração, formato, vet, lint, tipos e testes
 make build          # builds locais de produção
 make compose-config # valida a composição de desenvolvimento
 ```
 
-O gate de pull request executa somente os testes unitários, conforme o escopo
-atual. As verificações completas rodam na branch principal e podem ser
-executadas localmente antes de uma release.
+O gate de pull request executa os testes unitários e a integração do backend.
+As verificações completas rodam na branch principal e podem ser executadas
+localmente antes de uma release.
 
 ## Estrutura
 

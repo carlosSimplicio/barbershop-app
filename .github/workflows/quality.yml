@@ -26,7 +26,7 @@ jobs:
         working-directory: frontend
       - run: make generate-check
       - run: test -z "$(cd backend && gofmt -l $(find . -name '*.go' -not -path './openapi/generated/*' -not -path './db/generated/*'))"
-      - run: go vet ./... && go test ./...
+      - run: go vet -tags=integration ./... && go test ./... && go test -tags=integration ./integration
         working-directory: backend
       - run: npm run format:check && npm run lint && npm run typecheck && npm test && npm run build
         working-directory: frontend

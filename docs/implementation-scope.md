@@ -135,7 +135,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 1. Confirmar a regra nos documentos e atualizar o OpenAPI.
 2. Criar migration e SQL necessários.
-3. Implementar regra de domínio e testes unitários.
+3. Implementar regra de domínio e testes unitários; adicionar integração quando o fluxo cruzar HTTP, persistência ou PostgreSQL.
 4. Implementar persistência e handler Gin.
 5. Regenerar backend e tipos TypeScript.
 6. Implementar interface e estados do frontend.
@@ -501,7 +501,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Criar GitHub Actions para geração de código e detecção de artefatos desatualizados.
 - [ ] Executar testes, lint, formato, tipos e builds aplicáveis antes de release.
-- [x] Manter somente testes unitários como gate obrigatório de pull request no escopo atual.
+- [x] Executar testes unitários e testes de integração do backend como gate obrigatório de pull request.
 - [ ] Disparar produção apenas por GitHub Release estável com tag SemVer `vMAJOR.MINOR.PATCH`.
 - [ ] Não implantar drafts ou pre-releases.
 - [ ] Fazer deploy por SSH com usuário dedicado e segredos do GitHub Actions.
@@ -518,14 +518,16 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar testes unitários de backend com o pacote `testing`.
 - [x] Criar testes unitários de frontend com Vitest.
 - [x] Orientar testes unitários a comportamentos observáveis e regras de negócio, evitando detalhes internos e casos sem risco ou requisito identificável.
+- [x] Criar infraestrutura de integração do backend com Testcontainers, PostgreSQL real, migrations Goose e servidor HTTP TLS descartável.
+- [x] Cobrir por integração os fluxos entregues de health check, cadastro e confirmação do proprietário, autenticação, sessão, consulta do estabelecimento e troca obrigatória de senha do profissional.
 - [ ] Cobrir prioritariamente isolamento de tenant, autorização, autenticação e política de assinatura.
 - [ ] Cobrir disponibilidade, concorrência lógica, snapshots e transições de agendamento.
 - [ ] Cobrir receitas, despesas, comissões, arredondamento, anulação e indicadores.
 - [ ] Cobrir validação de dados, estados vazios e comportamento dos componentes críticos.
 - [ ] Adicionar teste unitário de regressão para toda correção de bug tecnicamente testável.
-- [x] Executar `gofmt`, testes e `go vet ./...` no backend.
+- [x] Executar `gofmt`, testes unitários e de integração e `go vet -tags=integration ./...` no backend.
 - [x] Executar testes, ESLint, Prettier, checagem de tipos e build no frontend.
-- [x] Não adicionar integração, testcontainers ou E2E sem nova decisão.
+- [x] Manter a integração restrita ao backend e não adicionar E2E nem integração de frontend sem nova decisão.
 
 ## 27. Fora do MVP
 
@@ -548,7 +550,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [ ] Todos os escopos do MVP acima estão implementados ou explicitamente reclassificados por decisão documentada.
 - [ ] OpenAPI, código gerado, migrations, backend e frontend estão sincronizados.
-- [ ] Testes unitários e verificações completas passam a partir de um checkout limpo.
+- [ ] Testes unitários, testes de integração do backend e verificações completas passam a partir de um checkout limpo.
 - [ ] O projeto sobe integralmente com Docker Compose e dados persistem após recriação dos containers.
 - [ ] O fluxo público funciona em dispositivo móvel e o painel funciona em desktop e tela responsiva.
 - [ ] Isolamento de tenant, papéis e expiração de assinatura foram revisados de ponta a ponta.

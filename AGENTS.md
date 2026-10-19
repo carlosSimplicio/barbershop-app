@@ -49,11 +49,13 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 
 ## Testes e verificação
 
-- O escopo atual inclui apenas testes unitários: pacote `testing` no Go e Vitest no frontend.
-- Não introduza testes de integração, testcontainers ou E2E sem uma nova decisão.
+- O escopo inclui testes unitários com o pacote `testing` no Go e Vitest no frontend, além de testes de integração do backend com Testcontainers e PostgreSQL real.
+- Mantenha os testes de integração do backend sob a build tag `integration`; eles devem aplicar as migrations reais em banco descartável e exercitar os fluxos HTTP entregues por handlers, middleware, serviços e persistência reais. Substitua apenas integrações externas, como transporte de e-mail, por fakes controlados.
+- Não introduza testes E2E ou de integração do frontend sem uma nova decisão.
 - Escreva testes unitários orientados a comportamentos observáveis e regras de negócio. Priorize fluxos, recusas e invariantes relevantes; evite testar detalhes internos, casos sem risco ou requisito identificável e comportamento de bibliotecas.
-- Toda correção de bug deve incluir teste unitário de regressão quando tecnicamente aplicável.
-- Antes de concluir mudanças no backend, execute os testes unitários, `gofmt` e `go vet ./...`.
+- Use testes de integração para proteger contratos entre HTTP, autenticação, transações, SQL e PostgreSQL; mantenha regras puras e casos combinatórios nos testes unitários.
+- Toda correção de bug deve incluir teste de regressão no nível mais baixo que reproduza o defeito com fidelidade.
+- Antes de concluir mudanças no backend, execute testes unitários e de integração, `gofmt` e `go vet -tags=integration ./...`.
 - Antes de concluir mudanças no frontend, execute testes unitários, ESLint, Prettier e checagem de tipos.
 - Verifique builds de produção quando a mudança puder afetar compilação ou empacotamento.
 - Se uma verificação relevante não puder ser executada ou já estiver falhando, informe claramente na entrega.
@@ -72,4 +74,4 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 
 - Não imponha Conventional Commits.
 - Mantenha commits focados e não inclua alterações não relacionadas.
-- O gate obrigatório de pull requests são os testes unitários aplicáveis. As verificações completas continuam obrigatórias antes de uma release.
+- O gate obrigatório de pull requests inclui os testes unitários aplicáveis e os testes de integração do backend. As verificações completas continuam obrigatórias antes de uma release.

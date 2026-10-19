@@ -1,4 +1,4 @@
-.PHONY: setup auth-keys generate generate-check migrate-up dev test check build compose-config
+.PHONY: setup auth-keys generate generate-check migrate-up dev test test-unit test-integration check build compose-config
 
 setup:
 	cd frontend && npm ci
@@ -22,13 +22,21 @@ dev:
 	docker compose -f compose.yaml -f compose.dev.yaml up --build
 
 test:
+	$(MAKE) test-unit
+	$(MAKE) test-integration
+
+test-unit:
 	cd backend && go test ./...
 	cd frontend && npm test
 
+test-integration:
+	cd backend && go test -tags=integration ./integration
+
 check: generate-check
 	test -z "$$(cd backend && gofmt -l $$(find . -name '*.go' -not -path './openapi/generated/*' -not -path './db/generated/*'))"
-	cd backend && go vet ./...
+	cd backend && go vet -tags=integration ./...
 	cd backend && go test ./...
+	cd backend && go test -tags=integration ./integration
 	cd frontend && npm run format:check
 	cd frontend && npm run lint
 	cd frontend && npm run typecheck

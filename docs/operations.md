@@ -23,7 +23,8 @@
 - `compose.yaml` representa a topologia de produção; `compose.dev.yaml` acrescenta o Mailpit, sua interface local e fixa o endereço HTTPS de desenvolvimento do Caddy.
 - PostgreSQL e SMTP ficam na rede interna de dados. No override local, o Mailpit também participa de uma bridge exclusiva de desenvolvimento para publicar somente sua UI em `127.0.0.1`; a porta SMTP não é publicada. Backend e frontend ficam atrás da rede interna de proxy. Somente o Caddy participa também da rede de borda e publica as portas da aplicação.
 - No PostgreSQL 18, monte o volume persistente em `/var/lib/postgresql`; o layout interno versionado é responsabilidade da imagem oficial.
-- Use `make compose-config` para validar a composição, `make test` para os testes unitários e `make check` para geração, formato, análise estática e tipos.
+- Use `make compose-config` para validar a composição, `make test-unit` para os testes sem infraestrutura, `make test-integration` para os fluxos do backend contra PostgreSQL descartável e `make test` para ambas as suítes. `make check` também executa geração, formato, análise estática, tipos e todos os testes.
+- Os testes de integração exigem Docker acessível ao processo de teste. Testcontainers cria e remove um PostgreSQL `18.6-alpine3.24`, e Goose aplica todas as migrations antes da execução; eles não reutilizam nem alteram o banco de desenvolvimento.
 - Antes do primeiro `make dev`, use `make auth-keys` e copie as cinco variáveis produzidas para o `.env`. A saída contém segredos locais e não deve ser versionada nem reutilizada em produção.
 - Para confiar no certificado local, copie `/data/caddy/pki/authorities/local/root.crt` do container Caddy para um arquivo temporário e instale-o manualmente no repositório de autoridades do sistema ou navegador. Nunca versione essa CA. Reinicie o navegador depois da instalação.
 
@@ -114,19 +115,20 @@
 
 ## Testes e qualidade
 
-- O escopo atual contém somente testes unitários: `testing` no backend e Vitest no frontend.
-- Não adicione integração, banco efêmero, testcontainers ou E2E sem decisão nova.
-- Regras devem ser testáveis sem rede, HTTP ou banco reais.
+- O backend combina testes unitários com `testing` e testes de integração sob a build tag `integration`; o frontend usa testes unitários com Vitest.
+- Regras devem continuar testáveis sem rede, HTTP ou banco reais. A integração complementa essa cobertura nos contratos entre roteamento, middleware, serviços, persistência, migrations e PostgreSQL.
+- A suíte de integração usa Testcontainers e exige Docker. Ela sobe um banco descartável por execução, aplica as migrations reais e usa servidor HTTP TLS local; falha se essa infraestrutura não puder ser provisionada.
+- Não adicione E2E nem integração de frontend sem decisão nova.
 - Testes unitários verificam comportamentos observáveis e regras de negócio, cobrindo fluxos, recusas e invariantes relevantes. Evite acoplá-los a detalhes internos, casos sem risco ou requisito identificável e comportamento de bibliotecas.
-- Priorize agenda e conflitos, estados, autorização e isolamento, faturamento e comissão.
-- Correções incluem teste de regressão quando aplicável.
-- Backend: `gofmt`, testes unitários e `go vet ./...`.
+- Testes de integração verificam as jornadas reais entregues e priorizam autenticação, autorização, isolamento de tenant, transações e constraints; amplie-os quando novos fluxos persistidos forem implementados.
+- Correções incluem teste de regressão no nível mais baixo capaz de reproduzir o defeito com fidelidade.
+- Backend: `gofmt`, testes unitários, testes de integração e `go vet -tags=integration ./...`.
 - Frontend: testes unitários, ESLint, Prettier e checagem de tipos.
 - Verifique builds quando a mudança afetar compilação ou empacotamento.
 
 ## Git e pull requests
 
 - Não há formato obrigatório ou Conventional Commits.
-- O único gate obrigatório de pull request são os testes unitários aplicáveis.
+- O gate obrigatório de pull request executa os testes unitários aplicáveis e os testes de integração do backend.
 - Lint, formato, tipos, geração e builds continuam parte da validação e do pipeline de release.
 - Commits devem ser focados e não misturar alterações não relacionadas.
