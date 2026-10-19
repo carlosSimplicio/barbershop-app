@@ -23,12 +23,48 @@ type RegistrationRegistrar interface {
 	Register(context.Context, RegistrationInput) (RegistrationResult, error)
 }
 
-type Handler struct {
-	registrations RegistrationRegistrar
+type EmailConfirmationRequestRequester interface {
+	Request(context.Context, EmailConfirmationRequestInput) (EmailConfirmationRequestResult, error)
 }
 
-func NewHandler(registrations RegistrationRegistrar) *Handler {
-	return &Handler{registrations: registrations}
+type Handler struct {
+	registrations        RegistrationRegistrar
+	confirmationRequests EmailConfirmationRequestRequester
+}
+
+func NewHandler(registrations RegistrationRegistrar, confirmationRequests EmailConfirmationRequestRequester) *Handler {
+	return &Handler{registrations: registrations, confirmationRequests: confirmationRequests}
+}
+
+func (handler *Handler) PostAuthEmailConfirmation(c *gin.Context) {
+	var request api.EmailConfirmationRequest
+	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeOnboardingError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	result, err := handler.confirmationRequests.Request(c.Request.Context(), EmailConfirmationRequestInput{
+		Email: string(request.Email), IP: c.ClientIP(),
+	})
+	if err != nil {
+		var rateLimitError ratelimit.Error
+		switch {
+		case errors.Is(err, auth.ErrInvalidEmail):
+			writeOnboardingFieldError(c, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
+		case errors.As(err, &rateLimitError):
+			writeRateLimitError(c, "email_confirmation_rate_limited", rateLimitError)
+		default:
+			slog.Error("email_confirmation_request_failed", "request_id", httpserver.RequestID(c))
+			writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		}
+		return
+	}
+	if result.DeliveryFailed {
+		slog.Warn("email_confirmation_delivery_failed", "request_id", httpserver.RequestID(c))
+	}
+	c.Status(http.StatusAccepted)
+	c.Writer.WriteHeaderNow()
 }
 
 func (handler *Handler) PostAuthRegister(c *gin.Context) {
@@ -36,7 +72,7 @@ func (handler *Handler) PostAuthRegister(c *gin.Context) {
 	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 8192))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		writeRegistrationError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		writeOnboardingError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
 
@@ -59,39 +95,43 @@ func (handler *Handler) writeRegistrationFailure(c *gin.Context, err error) {
 	var rateLimitError ratelimit.Error
 	switch {
 	case errors.Is(err, ErrInvalidName):
-		writeRegistrationFieldError(c, http.StatusBadRequest, "establishment_name", "invalid_name", "Informe um nome com até 120 caracteres.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "establishment_name", "invalid_name", "Informe um nome com até 120 caracteres.")
 	case errors.Is(err, ErrInvalidSlug):
-		writeRegistrationFieldError(c, http.StatusBadRequest, "slug", "invalid_slug", "Informe um identificador válido com 3 a 63 caracteres.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "slug", "invalid_slug", "Informe um identificador válido com 3 a 63 caracteres.")
 	case errors.Is(err, ErrReservedSlug):
-		writeRegistrationFieldError(c, http.StatusBadRequest, "slug", "reserved_slug", "Escolha outro identificador.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "slug", "reserved_slug", "Escolha outro identificador.")
 	case errors.Is(err, ErrInvalidTimeZone):
-		writeRegistrationFieldError(c, http.StatusBadRequest, "time_zone", "invalid_time_zone", "Informe um fuso horário válido.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "time_zone", "invalid_time_zone", "Informe um fuso horário válido.")
 	case errors.Is(err, auth.ErrInvalidEmail):
-		writeRegistrationFieldError(c, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
 	case errors.Is(err, security.ErrInvalidPassword):
-		writeRegistrationFieldError(c, http.StatusBadRequest, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
 	case errors.Is(err, ErrEmailUnavailable):
-		writeRegistrationFieldError(c, http.StatusConflict, "email", "email_unavailable", "Este e-mail já está cadastrado.")
+		writeOnboardingFieldError(c, http.StatusConflict, "email", "email_unavailable", "Este e-mail já está cadastrado.")
 	case errors.Is(err, ErrSlugUnavailable):
-		writeRegistrationFieldError(c, http.StatusConflict, "slug", "slug_unavailable", "Este identificador não está disponível.")
+		writeOnboardingFieldError(c, http.StatusConflict, "slug", "slug_unavailable", "Este identificador não está disponível.")
 	case errors.As(err, &rateLimitError):
-		retryAfter := int(math.Ceil(rateLimitError.RetryAfter.Seconds()))
-		if retryAfter < 1 {
-			retryAfter = 1
-		}
-		c.Header("Retry-After", strconv.Itoa(retryAfter))
-		writeRegistrationError(c, http.StatusTooManyRequests, "registration_rate_limited", "Muitas tentativas. Tente novamente mais tarde.")
+		writeRateLimitError(c, "registration_rate_limited", rateLimitError)
 	default:
 		slog.Error("registration_failed", "request_id", httpserver.RequestID(c))
-		writeRegistrationError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 	}
 }
 
-func writeRegistrationError(c *gin.Context, status int, code, message string) {
+func writeRateLimitError(c *gin.Context, code string, rateLimitError ratelimit.Error) {
+	retryAfter := int(math.Ceil(rateLimitError.RetryAfter.Seconds()))
+	if retryAfter < 1 {
+		retryAfter = 1
+	}
+	c.Header("Retry-After", strconv.Itoa(retryAfter))
+	writeOnboardingError(c, http.StatusTooManyRequests, code, "Muitas tentativas. Tente novamente mais tarde.")
+}
+
+func writeOnboardingError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(c)})
 }
 
-func writeRegistrationFieldError(c *gin.Context, status int, field, code, message string) {
+func writeOnboardingFieldError(c *gin.Context, status int, field, code, message string) {
 	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
 	topLevelCode := "validation_failed"
 	if status == http.StatusConflict {

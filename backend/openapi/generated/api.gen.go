@@ -55,6 +55,11 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+// EmailConfirmationRequest defines model for EmailConfirmationRequest.
+type EmailConfirmationRequest struct {
+	Email openapi_types.Email `json:"email"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Code      string        `json:"code"`
@@ -117,6 +122,9 @@ type TooManyRequests = ErrorResponse
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorResponse
 
+// PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
+type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
+
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody = LoginRequest
 
@@ -128,6 +136,9 @@ type PostAuthRegisterJSONRequestBody = RegisterRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
+	// (POST /auth/email-confirmation)
+	PostAuthEmailConfirmation(c *gin.Context)
 	// PostAuthLogin Autentica proprietário ou profissional
 	// (POST /auth/login)
 	PostAuthLogin(c *gin.Context)
@@ -159,6 +170,19 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// PostAuthEmailConfirmation operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthEmailConfirmation(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthEmailConfirmation(c)
+}
 
 // PostAuthLogin operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthLogin(c *gin.Context) {
@@ -279,6 +303,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.POST(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
+	router.POST(options.BaseURL+"/auth/email-confirmation", wrapper.PostAuthEmailConfirmation)
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)

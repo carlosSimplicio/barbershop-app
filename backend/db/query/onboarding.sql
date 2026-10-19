@@ -30,7 +30,18 @@ WHERE user_id = $1
 SELECT id
 FROM users
 WHERE id = $1
+  AND role = 'owner'
+  AND active = true
+  AND email_confirmed_at IS NULL
 FOR UPDATE;
+
+-- name: FindUnconfirmedOwnerByNormalizedEmail :one
+SELECT id, email
+FROM users
+WHERE normalized_email = $1
+  AND role = 'owner'
+  AND active = true
+  AND email_confirmed_at IS NULL;
 
 -- name: CreateEmailConfirmation :one
 INSERT INTO email_confirmations (user_id, token_hash, expires_at, created_at)

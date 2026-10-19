@@ -69,7 +69,7 @@ func TestConfirmationMailerDoesNotLeakRecipientOrTokenOnFailure(t *testing.T) {
 }
 
 func TestConfirmationServiceReplacesStoredTokenBeforeSending(t *testing.T) {
-	store := &confirmationStoreStub{}
+	store := &confirmationStoreStub{replaced: true}
 	sender := &senderStub{}
 	service := NewConfirmationService(store, NewConfirmationMailer(sender, "https://localhost:8443"))
 
@@ -84,13 +84,27 @@ func TestConfirmationServiceReplacesStoredTokenBeforeSending(t *testing.T) {
 	}
 }
 
-type confirmationStoreStub struct {
-	userID string
+func TestConfirmationServiceDoesNotSendWhenOwnerBecameIneligible(t *testing.T) {
+	store := &confirmationStoreStub{replaced: false}
+	sender := &senderStub{}
+	service := NewConfirmationService(store, NewConfirmationMailer(sender, "https://localhost:8443"))
+
+	if err := service.Request(context.Background(), "user-1", "owner@example.com"); err != nil {
+		t.Fatalf("Request: %v", err)
+	}
+	if sender.message.To != "" {
+		t.Fatalf("message was sent to ineligible owner: %#v", sender.message)
+	}
 }
 
-func (stub *confirmationStoreStub) ReplaceEmailConfirmation(_ context.Context, userID string) (EmailConfirmation, error) {
+type confirmationStoreStub struct {
+	userID   string
+	replaced bool
+}
+
+func (stub *confirmationStoreStub) ReplaceEmailConfirmation(_ context.Context, userID string) (EmailConfirmation, bool, error) {
 	stub.userID = userID
-	return EmailConfirmation{Token: "stored-token"}, nil
+	return EmailConfirmation{Token: "stored-token"}, stub.replaced, nil
 }
 
 type senderStub struct {

@@ -41,7 +41,7 @@ type ConfirmationMailer struct {
 }
 
 type ConfirmationStore interface {
-	ReplaceEmailConfirmation(context.Context, string) (EmailConfirmation, error)
+	ReplaceEmailConfirmation(context.Context, string) (EmailConfirmation, bool, error)
 }
 
 type ConfirmationService struct {
@@ -54,9 +54,12 @@ func NewConfirmationService(store ConfirmationStore, confirmationMailer *Confirm
 }
 
 func (service *ConfirmationService) Request(ctx context.Context, userID, recipient string) error {
-	confirmation, err := service.store.ReplaceEmailConfirmation(ctx, userID)
+	confirmation, replaced, err := service.store.ReplaceEmailConfirmation(ctx, userID)
 	if err != nil {
 		return err
+	}
+	if !replaced {
+		return nil
 	}
 	return service.mailer.Send(ctx, recipient, confirmation.Token)
 }

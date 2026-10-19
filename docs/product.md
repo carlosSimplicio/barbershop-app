@@ -20,6 +20,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - O cadastro pode ser concluído sem plano ou assinatura ativa, permitindo o início de um período de avaliação.
 - O cadastro inicial recebe nome do estabelecimento, slug, fuso IANA, e-mail e senha. Ele cria atomicamente estabelecimento, proprietário, credencial e solicitação de confirmação, mas não inicia o trial.
 - E-mail já cadastrado e slug indisponível são apresentados como conflitos específicos dos respectivos campos. Uma indisponibilidade no envio da confirmação depois da persistência não desfaz o cadastro.
+- O proprietário pode solicitar uma nova confirmação informando o e-mail. A resposta não revela se a conta existe, já foi confirmada ou recebeu um novo token; quando aplicável, o token anterior é invalidado antes do novo envio.
 
 ## Planos, assinatura e trial
 

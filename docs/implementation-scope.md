@@ -226,7 +226,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
-- [ ] Estender a limitação progressiva à confirmação e recuperação quando esses fluxos forem implementados.
+- [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
+- [ ] Estender a limitação progressiva à recuperação quando esse fluxo for implementado.
 - [ ] Não implementar MFA, troca periódica ou consulta de senha comprometida no MVP.
 
 ## 6. Autorização e multi-tenancy

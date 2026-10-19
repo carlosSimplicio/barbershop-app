@@ -220,6 +220,27 @@ func (q *Queries) CreateRegistrationOwner(ctx context.Context, arg CreateRegistr
 	return id, err
 }
 
+const findUnconfirmedOwnerByNormalizedEmail = `-- name: FindUnconfirmedOwnerByNormalizedEmail :one
+SELECT id, email
+FROM users
+WHERE normalized_email = $1
+  AND role = 'owner'
+  AND active = true
+  AND email_confirmed_at IS NULL
+`
+
+type FindUnconfirmedOwnerByNormalizedEmailRow struct {
+	ID    pgtype.UUID `json:"id"`
+	Email string      `json:"email"`
+}
+
+func (q *Queries) FindUnconfirmedOwnerByNormalizedEmail(ctx context.Context, normalizedEmail string) (FindUnconfirmedOwnerByNormalizedEmailRow, error) {
+	row := q.db.QueryRow(ctx, findUnconfirmedOwnerByNormalizedEmail, normalizedEmail)
+	var i FindUnconfirmedOwnerByNormalizedEmailRow
+	err := row.Scan(&i.ID, &i.Email)
+	return i, err
+}
+
 const getEmailConfirmationForUpdate = `-- name: GetEmailConfirmationForUpdate :one
 SELECT ec.id, ec.user_id, ec.token_hash, ec.expires_at, ec.consumed_at, ec.invalidated_at, ec.created_at, u.establishment_id, u.email, u.role, u.active, u.email_confirmed_at, u.credential_version
 FROM email_confirmations AS ec
@@ -317,6 +338,9 @@ const lockUserForEmailConfirmation = `-- name: LockUserForEmailConfirmation :one
 SELECT id
 FROM users
 WHERE id = $1
+  AND role = 'owner'
+  AND active = true
+  AND email_confirmed_at IS NULL
 FOR UPDATE
 `
 

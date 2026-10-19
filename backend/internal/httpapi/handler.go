@@ -30,6 +30,10 @@ func (handler *Handler) PostAuthRegister(c *gin.Context) {
 	handler.onboarding.PostAuthRegister(c)
 }
 
+func (handler *Handler) PostAuthEmailConfirmation(c *gin.Context) {
+	handler.onboarding.PostAuthEmailConfirmation(c)
+}
+
 func (handler *Handler) PostAuthRefresh(c *gin.Context) {
 	handler.authentication.PostAuthRefresh(c)
 }

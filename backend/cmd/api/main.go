@@ -88,10 +88,12 @@ func run() error {
 		}
 	}
 	confirmationMailer := onboarding.NewConfirmationMailer(emailSender, configuration.PublicAppURL)
+	confirmationService := onboarding.NewConfirmationService(onboardingStore, confirmationMailer)
+	confirmationRequests := onboarding.NewEmailConfirmationRequestService(onboardingStore, confirmationService, rateLimitStore, rateKeys)
 	registrations := onboarding.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys)
 	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
-	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login, sessions), onboarding.NewHandler(registrations))
+	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login, sessions), onboarding.NewHandler(registrations, confirmationRequests))
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())
 	serverErrors := make(chan error, 1)

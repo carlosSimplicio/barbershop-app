@@ -30,6 +30,28 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /auth/email-confirmation:
+    post:
+      operationId: postAuthEmailConfirmation
+      summary: Solicita confirmação do e-mail do proprietário
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailConfirmationRequest"
+      responses:
+        "202":
+          description: Solicitação recebida sem revelar o estado da conta
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/login:
     post:
       operationId: postAuthLogin
@@ -144,6 +166,15 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
 components:
   schemas:
+    EmailConfirmationRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
     RegisterRequest:
       type: object
       additionalProperties: false
