@@ -49,7 +49,21 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetEmailConfirmationForUpdate :one
-SELECT ec.*, u.establishment_id, u.email, u.role, u.active, u.email_confirmed_at, u.credential_version
+SELECT
+    ec.id,
+    ec.user_id,
+    ec.token_hash,
+    ec.expires_at,
+    ec.consumed_at,
+    ec.invalidated_at,
+    ec.created_at,
+    u.establishment_id,
+    u.email,
+    u.role,
+    u.active,
+    u.email_confirmed_at,
+    u.credential_version,
+    u.password_change_required
 FROM email_confirmations AS ec
 JOIN users AS u ON u.id = ec.user_id
 WHERE ec.token_hash = $1

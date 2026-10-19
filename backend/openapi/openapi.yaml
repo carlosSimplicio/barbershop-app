@@ -52,6 +52,34 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /auth/email-confirmation/verify:
+    post:
+      operationId: postAuthEmailConfirmationVerify
+      summary: Confirma o e-mail e inicia a sessão do proprietário
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailConfirmationVerifyRequest"
+      responses:
+        "200":
+          description: E-mail confirmado, trial iniciado e sessão criada
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPrincipal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/login:
     post:
       operationId: postAuthLogin
@@ -175,6 +203,15 @@ components:
           type: string
           format: email
           maxLength: 254
+    EmailConfirmationVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 128
     RegisterRequest:
       type: object
       additionalProperties: false

@@ -21,6 +21,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - O cadastro inicial recebe nome do estabelecimento, slug, fuso IANA, e-mail e senha. Ele cria atomicamente estabelecimento, proprietário, credencial e solicitação de confirmação, mas não inicia o trial.
 - E-mail já cadastrado e slug indisponível são apresentados como conflitos específicos dos respectivos campos. Uma indisponibilidade no envio da confirmação depois da persistência não desfaz o cadastro.
 - O proprietário pode solicitar uma nova confirmação informando o e-mail. A resposta não revela se a conta existe, já foi confirmada ou recebeu um novo token; quando aplicável, o token anterior é invalidado antes do novo envio.
+- A confirmação recebe o token somente no corpo, recusa de forma indistinguível tokens inexistentes, expirados, substituídos ou usados e, quando válida, confirma a conta e autentica automaticamente o proprietário.
 
 ## Planos, assinatura e trial
 
@@ -30,6 +31,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - O trial dura 14 dias e oferece acesso completo às funcionalidades disponíveis.
 - O trial começa quando o proprietário confirma o e-mail e ativa a conta; o tempo entre cadastro e confirmação não consome o período.
 - Cada proprietário e estabelecimento tem direito a um único trial. Cancelar, expirar, renovar ou recriar a assinatura não reinicia o benefício.
+- A confirmação válida cria o trial no intervalo exato de 14 períodos de 24 horas a partir do instante da confirmação; a confirmação, o consumo do token, o trial e a sessão são persistidos atomicamente.
 - O MVP oferece um único plano pago com todas as funcionalidades atuais.
 - O plano inicial custa R$ 20,00 por mês.
 - O catálogo inicial é criado por seed versionado; não existe perfil ou painel de administrador da plataforma no MVP.

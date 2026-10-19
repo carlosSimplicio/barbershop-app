@@ -242,7 +242,21 @@ func (q *Queries) FindUnconfirmedOwnerByNormalizedEmail(ctx context.Context, nor
 }
 
 const getEmailConfirmationForUpdate = `-- name: GetEmailConfirmationForUpdate :one
-SELECT ec.id, ec.user_id, ec.token_hash, ec.expires_at, ec.consumed_at, ec.invalidated_at, ec.created_at, u.establishment_id, u.email, u.role, u.active, u.email_confirmed_at, u.credential_version
+SELECT
+    ec.id,
+    ec.user_id,
+    ec.token_hash,
+    ec.expires_at,
+    ec.consumed_at,
+    ec.invalidated_at,
+    ec.created_at,
+    u.establishment_id,
+    u.email,
+    u.role,
+    u.active,
+    u.email_confirmed_at,
+    u.credential_version,
+    u.password_change_required
 FROM email_confirmations AS ec
 JOIN users AS u ON u.id = ec.user_id
 WHERE ec.token_hash = $1
@@ -250,19 +264,20 @@ FOR UPDATE OF ec, u
 `
 
 type GetEmailConfirmationForUpdateRow struct {
-	ID                pgtype.UUID        `json:"id"`
-	UserID            pgtype.UUID        `json:"user_id"`
-	TokenHash         []byte             `json:"token_hash"`
-	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
-	ConsumedAt        pgtype.Timestamptz `json:"consumed_at"`
-	InvalidatedAt     pgtype.Timestamptz `json:"invalidated_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	EstablishmentID   pgtype.UUID        `json:"establishment_id"`
-	Email             string             `json:"email"`
-	Role              string             `json:"role"`
-	Active            bool               `json:"active"`
-	EmailConfirmedAt  pgtype.Timestamptz `json:"email_confirmed_at"`
-	CredentialVersion int64              `json:"credential_version"`
+	ID                     pgtype.UUID        `json:"id"`
+	UserID                 pgtype.UUID        `json:"user_id"`
+	TokenHash              []byte             `json:"token_hash"`
+	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
+	ConsumedAt             pgtype.Timestamptz `json:"consumed_at"`
+	InvalidatedAt          pgtype.Timestamptz `json:"invalidated_at"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	EstablishmentID        pgtype.UUID        `json:"establishment_id"`
+	Email                  string             `json:"email"`
+	Role                   string             `json:"role"`
+	Active                 bool               `json:"active"`
+	EmailConfirmedAt       pgtype.Timestamptz `json:"email_confirmed_at"`
+	CredentialVersion      int64              `json:"credential_version"`
+	PasswordChangeRequired bool               `json:"password_change_required"`
 }
 
 func (q *Queries) GetEmailConfirmationForUpdate(ctx context.Context, tokenHash []byte) (GetEmailConfirmationForUpdateRow, error) {
@@ -282,6 +297,7 @@ func (q *Queries) GetEmailConfirmationForUpdate(ctx context.Context, tokenHash [
 		&i.Active,
 		&i.EmailConfirmedAt,
 		&i.CredentialVersion,
+		&i.PasswordChangeRequired,
 	)
 	return i, err
 }

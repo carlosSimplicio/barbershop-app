@@ -20,7 +20,7 @@ import (
 
 func TestRegistrationHandlerReturnsAcceptedWithoutSensitiveResponse(t *testing.T) {
 	registrar := &registrationRegistrarStub{}
-	recorder := performRegistrationRequest(t, NewHandler(registrar, nil), validRegistrationJSON())
+	recorder := performRegistrationRequest(t, NewHandler(registrar, nil, nil), validRegistrationJSON())
 
 	if recorder.Code != http.StatusAccepted || recorder.Body.Len() != 0 {
 		t.Fatalf("status = %d, body = %q", recorder.Code, recorder.Body.String())
@@ -48,7 +48,7 @@ func TestRegistrationHandlerMapsValidationAndConflictErrorsToFields(t *testing.T
 	}
 	for _, test := range tests {
 		t.Run(test.code, func(t *testing.T) {
-			recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{err: test.err}, nil), validRegistrationJSON())
+			recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{err: test.err}, nil, nil), validRegistrationJSON())
 			if recorder.Code != test.status || !strings.Contains(recorder.Body.String(), `"field":"`+test.field+`"`) || !strings.Contains(recorder.Body.String(), `"code":"`+test.code+`"`) {
 				t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 			}
@@ -57,7 +57,7 @@ func TestRegistrationHandlerMapsValidationAndConflictErrorsToFields(t *testing.T
 }
 
 func TestRegistrationHandlerReturnsRetryAfterWhenRateLimited(t *testing.T) {
-	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{err: ratelimit.Error{RetryAfter: 90 * time.Second}}, nil), validRegistrationJSON())
+	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{err: ratelimit.Error{RetryAfter: 90 * time.Second}}, nil, nil), validRegistrationJSON())
 	if recorder.Code != http.StatusTooManyRequests || recorder.Header().Get("Retry-After") != "90" {
 		t.Fatalf("status = %d, retry-after = %q, body = %s", recorder.Code, recorder.Header().Get("Retry-After"), recorder.Body.String())
 	}
@@ -69,7 +69,7 @@ func TestRegistrationHandlerLogsOnlyOperationalEventWhenDeliveryFails(t *testing
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
 
-	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{result: RegistrationResult{DeliveryFailed: true}}, nil), validRegistrationJSON())
+	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{result: RegistrationResult{DeliveryFailed: true}}, nil, nil), validRegistrationJSON())
 	if recorder.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
@@ -91,7 +91,7 @@ func TestRegistrationHandlerDoesNotExposeSensitiveInternalError(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	sensitiveError := errors.New("owner@example.com token-secret senha-segura")
 
-	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{err: sensitiveError}, nil), validRegistrationJSON())
+	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{err: sensitiveError}, nil, nil), validRegistrationJSON())
 	if recorder.Code != http.StatusInternalServerError || !strings.Contains(recorder.Body.String(), `"code":"internal_error"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
@@ -106,7 +106,7 @@ func TestRegistrationHandlerDoesNotExposeSensitiveInternalError(t *testing.T) {
 
 func TestRegistrationHandlerRejectsUnknownFields(t *testing.T) {
 	body := strings.TrimSuffix(validRegistrationJSON(), "}") + `,"admin":true}`
-	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{}, nil), body)
+	recorder := performRegistrationRequest(t, NewHandler(&registrationRegistrarStub{}, nil, nil), body)
 	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), `"code":"invalid_request"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}

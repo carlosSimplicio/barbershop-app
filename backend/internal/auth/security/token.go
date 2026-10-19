@@ -23,6 +23,11 @@ func HashOpaqueToken(token string) []byte {
 	return hash[:]
 }
 
+func ValidateOpaqueToken(token string) bool {
+	decoded, err := base64.RawURLEncoding.DecodeString(token)
+	return err == nil && len(decoded) == 32
+}
+
 type HMACSigner struct {
 	key []byte
 }

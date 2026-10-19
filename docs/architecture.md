@@ -101,7 +101,7 @@
 
 ### Contrato de sessão
 
-- A API expõe `POST /auth/register`, `POST /auth/email-confirmation`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
+- A API expõe `POST /auth/register`, `POST /auth/email-confirmation`, `POST /auth/email-confirmation/verify`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
 - `POST /auth/register` é público, mas mantém a allowlist estrita de `Origin`. Ele valida no backend nome, slug, fuso IANA, e-mail e senha; cria estabelecimento, usuário `owner`, credencial e primeira confirmação em uma única transação; e não cria trial.
 - O cadastro responde `202 Accepted` depois do commit. O envio da confirmação ocorre diretamente pelo serviço interno após a transação; falha de transporte é registrada apenas como evento operacional, sem e-mail, token ou link, e não transforma o cadastro persistido em erro HTTP.
 - Conflitos de e-mail global e slug único retornam `409` com erro associado ao campo correspondente. A limitação progressiva do cadastro usa escopo próprio e chaves HMAC separadas para IP e e-mail normalizado, sem persistir esses identificadores em claro.
@@ -110,6 +110,7 @@
 - Quando há owner ativo ainda não confirmado, a substituição bloqueia e revalida sua elegibilidade, invalida tokens ativos e persiste um novo token de 24 horas antes do envio. Mudança concorrente de elegibilidade encerra a solicitação sem novo token. Falha de transporte após a persistência não altera o `202` e gera somente evento operacional sem e-mail ou token.
 - O rate limiting da solicitação de confirmação usa escopo próprio, IP e e-mail normalizado e é registrado antes de consultar a conta, preservando o mesmo tratamento de abuso independentemente de sua existência.
 - A proteção anti-enumeração atual uniformiza status e corpo, mas não garante tempo constante: o SMTP síncrono pode tornar uma solicitação elegível mais lenta. Esse risco é aceito nesta etapa; não há outbox nem sessão restrita antes da confirmação, e eventual endurecimento de latência exige uma decisão arquitetural posterior.
+- `POST /auth/email-confirmation/verify` é público, exige `Origin` confiável e recebe o token somente no corpo. A transação bloqueia token e owner, valida expiração e estado na aplicação, confirma o e-mail, consome o token, cria o único trial exato de 14 dias e persiste sessão e refresh token. Replay, token substituído, expirado ou inexistente produzem o mesmo erro; access JWT e CSRF são preparados antes do commit, de modo que uma falha de emissão reverta a transação, e então são enviados nos cookies seguros existentes.
 - Access JWTs usam Ed25519/EdDSA, incluem `kid` no header e são validados por um keyring de chaves públicas. A chave privada ativa e as chaves públicas anteriores são configuração exclusiva do backend.
 - As claims são limitadas a usuário, estabelecimento, papel, expiração e versão da credencial. Em cada requisição autenticada, o backend também consulta o usuário atual e compara estado, tenant, papel e versão para permitir revogação imediata.
 - A configuração inicial do Argon2id usa `m=19456 KiB`, `t=2`, `p=1`, salt aleatório de 16 bytes e saída de 32 bytes em formato PHC. Os limites configuráveis não podem ficar abaixo desse perfil.

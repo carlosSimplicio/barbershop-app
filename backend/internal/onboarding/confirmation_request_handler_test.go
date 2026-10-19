@@ -19,7 +19,7 @@ import (
 
 func TestEmailConfirmationRequestHandlerReturnsAcceptedWithoutAccountState(t *testing.T) {
 	requester := &emailConfirmationRequesterStub{}
-	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester), `{"email":"Owner@Example.COM"}`)
+	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester, nil), `{"email":"Owner@Example.COM"}`)
 
 	if recorder.Code != http.StatusAccepted || recorder.Body.Len() != 0 {
 		t.Fatalf("status = %d, body = %q", recorder.Code, recorder.Body.String())
@@ -30,7 +30,7 @@ func TestEmailConfirmationRequestHandlerReturnsAcceptedWithoutAccountState(t *te
 }
 
 func TestEmailConfirmationRequestHandlerRejectsInvalidEmail(t *testing.T) {
-	recorder := performEmailConfirmationRequest(t, NewHandler(nil, &emailConfirmationRequesterStub{err: auth.ErrInvalidEmail}), `{"email":"owner@example.com"}`)
+	recorder := performEmailConfirmationRequest(t, NewHandler(nil, &emailConfirmationRequesterStub{err: auth.ErrInvalidEmail}, nil), `{"email":"owner@example.com"}`)
 	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), `"field":"email"`) || !strings.Contains(recorder.Body.String(), `"code":"invalid_email"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
@@ -38,7 +38,7 @@ func TestEmailConfirmationRequestHandlerRejectsInvalidEmail(t *testing.T) {
 
 func TestEmailConfirmationRequestHandlerReturnsRetryAfter(t *testing.T) {
 	requester := &emailConfirmationRequesterStub{err: ratelimit.Error{RetryAfter: 90 * time.Second}}
-	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester), `{"email":"owner@example.com"}`)
+	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester, nil), `{"email":"owner@example.com"}`)
 	if recorder.Code != http.StatusTooManyRequests || recorder.Header().Get("Retry-After") != "90" {
 		t.Fatalf("status = %d, retry-after = %q, body = %s", recorder.Code, recorder.Header().Get("Retry-After"), recorder.Body.String())
 	}
@@ -51,7 +51,7 @@ func TestEmailConfirmationRequestHandlerLogsDeliveryFailureWithoutSensitiveData(
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	requester := &emailConfirmationRequesterStub{result: EmailConfirmationRequestResult{DeliveryFailed: true}}
 
-	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester), `{"email":"owner@example.com"}`)
+	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester, nil), `{"email":"owner@example.com"}`)
 	if recorder.Code != http.StatusAccepted || !strings.Contains(logs.String(), "email_confirmation_delivery_failed") || !strings.Contains(logs.String(), "request-123") {
 		t.Fatalf("status = %d, log = %q", recorder.Code, logs.String())
 	}
@@ -67,7 +67,7 @@ func TestEmailConfirmationRequestHandlerDoesNotExposeSensitiveInternalError(t *t
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	requester := &emailConfirmationRequesterStub{err: errors.New("owner@example.com token-secret")}
 
-	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester), `{"email":"owner@example.com"}`)
+	recorder := performEmailConfirmationRequest(t, NewHandler(nil, requester, nil), `{"email":"owner@example.com"}`)
 	if recorder.Code != http.StatusInternalServerError || !strings.Contains(recorder.Body.String(), `"code":"internal_error"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
@@ -79,7 +79,7 @@ func TestEmailConfirmationRequestHandlerDoesNotExposeSensitiveInternalError(t *t
 }
 
 func TestEmailConfirmationRequestHandlerRejectsUnknownFields(t *testing.T) {
-	recorder := performEmailConfirmationRequest(t, NewHandler(nil, &emailConfirmationRequesterStub{}), `{"email":"owner@example.com","token":"secret"}`)
+	recorder := performEmailConfirmationRequest(t, NewHandler(nil, &emailConfirmationRequesterStub{}, nil), `{"email":"owner@example.com","token":"secret"}`)
 	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), `"code":"invalid_request"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}

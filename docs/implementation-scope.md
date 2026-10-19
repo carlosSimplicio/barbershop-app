@@ -210,8 +210,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
-- [ ] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
-- [ ] Iniciar o trial somente depois da confirmação do e-mail.
+- [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
+- [x] Iniciar o trial somente depois da confirmação do e-mail.
 - [x] Implementar login de proprietário e profissional com resposta genérica para credenciais inválidas.
 - [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
@@ -423,8 +423,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 20. Trial, planos e assinatura
 
-- [ ] Iniciar um único trial de 14 dias após confirmação do e-mail, com acesso completo.
-- [ ] Persistir uso do trial independentemente da assinatura atual para impedir reutilização.
+- [x] Iniciar um único trial de 14 dias após confirmação do e-mail, com acesso completo.
+- [x] Persistir uso do trial independentemente da assinatura atual para impedir reutilização.
 - [ ] Modelar catálogo com planos, opções de preço e período, sem assumir plano único no schema ou domínio.
 - [ ] Preservar versão, preço e termos contratados no histórico da assinatura.
 - [ ] Preparar adicionais como itens independentes com preço e direitos próprios, sem implementar adicional real no MVP.

@@ -27,13 +27,42 @@ type EmailConfirmationRequestRequester interface {
 	Request(context.Context, EmailConfirmationRequestInput) (EmailConfirmationRequestResult, error)
 }
 
+type EmailConfirmationVerifier interface {
+	Verify(context.Context, string) (auth.LoginResult, error)
+}
+
 type Handler struct {
 	registrations        RegistrationRegistrar
 	confirmationRequests EmailConfirmationRequestRequester
+	confirmationVerifier EmailConfirmationVerifier
 }
 
-func NewHandler(registrations RegistrationRegistrar, confirmationRequests EmailConfirmationRequestRequester) *Handler {
-	return &Handler{registrations: registrations, confirmationRequests: confirmationRequests}
+func NewHandler(registrations RegistrationRegistrar, confirmationRequests EmailConfirmationRequestRequester, confirmationVerifier EmailConfirmationVerifier) *Handler {
+	return &Handler{registrations: registrations, confirmationRequests: confirmationRequests, confirmationVerifier: confirmationVerifier}
+}
+
+func (handler *Handler) PostAuthEmailConfirmationVerify(c *gin.Context) {
+	var request api.EmailConfirmationVerifyRequest
+	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeOnboardingError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	result, err := handler.confirmationVerifier.Verify(c.Request.Context(), request.Token)
+	if err != nil {
+		if errors.Is(err, ErrInvalidEmailConfirmation) {
+			writeOnboardingError(c, http.StatusBadRequest, "invalid_email_confirmation", "O link de confirmação é inválido ou expirou.")
+			return
+		}
+		slog.Error("email_confirmation_verification_failed", "request_id", httpserver.RequestID(c))
+		writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a confirmação.")
+		return
+	}
+	if err := auth.WriteSessionResponse(c, result); err != nil {
+		slog.Error("email_confirmation_principal_invalid", "request_id", httpserver.RequestID(c))
+		writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a confirmação.")
+	}
 }
 
 func (handler *Handler) PostAuthEmailConfirmation(c *gin.Context) {

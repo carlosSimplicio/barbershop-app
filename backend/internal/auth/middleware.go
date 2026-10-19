@@ -15,12 +15,13 @@ import (
 const principalContextKey = "auth_principal"
 
 var publicPaths = map[string]struct{}{
-	"/api/v1/health":                  {},
-	"/api/v1/auth/register":           {},
-	"/api/v1/auth/email-confirmation": {},
-	"/api/v1/auth/login":              {},
-	"/api/v1/auth/refresh":            {},
-	"/api/v1/auth/logout":             {},
+	"/api/v1/health":                         {},
+	"/api/v1/auth/register":                  {},
+	"/api/v1/auth/email-confirmation":        {},
+	"/api/v1/auth/email-confirmation/verify": {},
+	"/api/v1/auth/login":                     {},
+	"/api/v1/auth/refresh":                   {},
+	"/api/v1/auth/logout":                    {},
 }
 
 type AccessTokenVerifier interface {

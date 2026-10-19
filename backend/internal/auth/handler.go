@@ -8,21 +8,12 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"time"
 
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/platform/httpserver"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	openapiTypes "github.com/oapi-codegen/runtime/types"
-)
-
-const (
-	accessCookieName  = "__Secure-barbershop_access"
-	refreshCookieName = "__Secure-barbershop_refresh"
-	csrfCookieName    = "__Secure-barbershop_csrf"
 )
 
 type Handler struct {
@@ -73,14 +64,10 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 		return
 	}
 
-	response, err := principalResponse(result.Principal)
-	if err != nil {
+	if err := WriteSessionResponse(c, result); err != nil {
 		slog.Error("authentication_principal_invalid", "request_id", httpserver.RequestID(c))
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
-		return
 	}
-	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
-	c.JSON(http.StatusOK, response)
 }
 
 func (handler *Handler) PostAuthRefresh(c *gin.Context) {
@@ -159,34 +146,6 @@ func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
 	}
 	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
 	c.Status(http.StatusNoContent)
-}
-
-func setSessionCookies(c *gin.Context, accessToken, refreshToken, csrfToken string) {
-	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Value: accessToken, Path: "/api/v1", MaxAge: 15 * 60, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: refreshCookieName, Value: refreshToken, Path: "/api/v1/auth", MaxAge: 7 * 24 * 60 * 60, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Value: csrfToken, Path: "/", MaxAge: 7 * 24 * 60 * 60, Secure: true, SameSite: http.SameSiteStrictMode})
-}
-
-func clearSessionCookies(c *gin.Context) {
-	expires := time.Unix(1, 0).UTC()
-	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Path: "/api/v1", MaxAge: -1, Expires: expires, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: refreshCookieName, Path: "/api/v1/auth", MaxAge: -1, Expires: expires, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Path: "/", MaxAge: -1, Expires: expires, Secure: true, SameSite: http.SameSiteStrictMode})
-}
-
-func principalResponse(principal Principal) (api.AuthPrincipal, error) {
-	userID, err := uuid.Parse(principal.UserID)
-	if err != nil {
-		return api.AuthPrincipal{}, err
-	}
-	establishmentID, err := uuid.Parse(principal.EstablishmentID)
-	if err != nil {
-		return api.AuthPrincipal{}, err
-	}
-	return api.AuthPrincipal{
-		UserId: userID, EstablishmentId: establishmentID, Email: openapiTypes.Email(principal.Email),
-		Role: api.UserRole(principal.Role), PasswordChangeRequired: principal.PasswordChangeRequired,
-	}, nil
 }
 
 func writeError(c *gin.Context, status int, code, message string) {

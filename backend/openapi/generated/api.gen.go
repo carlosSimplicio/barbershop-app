@@ -60,6 +60,11 @@ type EmailConfirmationRequest struct {
 	Email openapi_types.Email `json:"email"`
 }
 
+// EmailConfirmationVerifyRequest defines model for EmailConfirmationVerifyRequest.
+type EmailConfirmationVerifyRequest struct {
+	Token string `json:"token"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Code      string        `json:"code"`
@@ -125,6 +130,9 @@ type Unauthorized = ErrorResponse
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
 type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
 
+// PostAuthEmailConfirmationVerifyJSONRequestBody defines body for PostAuthEmailConfirmationVerify for application/json ContentType.
+type PostAuthEmailConfirmationVerifyJSONRequestBody = EmailConfirmationVerifyRequest
+
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody = LoginRequest
 
@@ -139,6 +147,9 @@ type ServerInterface interface {
 	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
 	// (POST /auth/email-confirmation)
 	PostAuthEmailConfirmation(c *gin.Context)
+	// PostAuthEmailConfirmationVerify Confirma o e-mail e inicia a sessão do proprietário
+	// (POST /auth/email-confirmation/verify)
+	PostAuthEmailConfirmationVerify(c *gin.Context)
 	// PostAuthLogin Autentica proprietário ou profissional
 	// (POST /auth/login)
 	PostAuthLogin(c *gin.Context)
@@ -182,6 +193,19 @@ func (siw *ServerInterfaceWrapper) PostAuthEmailConfirmation(c *gin.Context) {
 	}
 
 	siw.Handler.PostAuthEmailConfirmation(c)
+}
+
+// PostAuthEmailConfirmationVerify operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthEmailConfirmationVerify(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthEmailConfirmationVerify(c)
 }
 
 // PostAuthLogin operation middleware
@@ -304,6 +328,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.POST(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 	router.POST(options.BaseURL+"/auth/email-confirmation", wrapper.PostAuthEmailConfirmation)
+	router.POST(options.BaseURL+"/auth/email-confirmation/verify", wrapper.PostAuthEmailConfirmationVerify)
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
