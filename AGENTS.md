@@ -25,6 +25,7 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 - O backend Go é a autoridade para regras de negócio, autorização, validação e persistência. O frontend nunca substitui validações do backend.
 - Não presuma regras de agenda, disponibilidade, autorização ou cálculos financeiros que não estejam documentadas. Confirme decisões que mudem comportamento de negócio.
 - Trate nome, telefone, e-mail, tokens e dados financeiros como sensíveis. Não os exponha em logs, URLs, mensagens de erro ou fixtures públicas.
+- Links transacionais podem transportar um token somente no fragmento da URL, que não é enviado ao servidor. A interface deve removê-lo do endereço antes de enviar o token no corpo da requisição e nunca encaminhá-lo em path, query, `Referer` ou logs.
 - Preserve histórico de agendamentos e financeiro. Prefira desativação e registros imutáveis a exclusões que destruam referências históricas.
 - Use inglês para código, schema, endpoints e identificadores técnicos. Use português brasileiro nos textos apresentados ao usuário.
 - Siga os padrões existentes antes de introduzir novas dependências ou abstrações. Mantenha a solução simples e justifique qualquer divergência.

@@ -52,10 +52,7 @@ func (service *EmailConfirmationRequestService) Request(ctx context.Context, inp
 	now := service.now().UTC()
 	normalizedEmail := auth.NormalizeEmail(input.Email)
 	identifiers := map[string]string{"ip": input.IP, "email": normalizedEmail}
-	if err := service.rateLimiter.Check(ctx, "email-confirmation", identifiers, now); err != nil {
-		return EmailConfirmationRequestResult{}, err
-	}
-	if err := service.rateLimiter.Record(ctx, "email-confirmation", identifiers, now); err != nil {
+	if _, err := service.rateLimiter.Reserve(ctx, "email-confirmation", identifiers, now); err != nil {
 		return EmailConfirmationRequestResult{}, err
 	}
 	account, found, err := service.accounts.FindUnconfirmedOwnerByNormalizedEmail(ctx, normalizedEmail)

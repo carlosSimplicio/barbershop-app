@@ -74,8 +74,8 @@ func TestRegistrationRejectsInvalidFieldsBeforePersistence(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			store := newRegistrationStoreStub()
 			_, err := newTestRegistrationService(store, &registrationMailerStub{}).Register(context.Background(), test.input)
-			if !errors.Is(err, test.want) || store.created {
-				t.Fatalf("error = %v, created = %t", err, store.created)
+			if !errors.Is(err, test.want) || store.created || store.releasedAttempts != 1 {
+				t.Fatalf("error = %v, created = %t, released attempts = %d", err, store.created, store.releasedAttempts)
 			}
 		})
 	}
@@ -136,6 +136,7 @@ type registrationStoreStub struct {
 	createdBeforeSend bool
 	recordedScope     string
 	recordedKeys      map[string][]byte
+	releasedAttempts  int
 }
 
 func newRegistrationStoreStub() *registrationStoreStub {
@@ -149,13 +150,19 @@ func (stub *registrationStoreStub) CreateRegistration(_ context.Context, registr
 	return stub.createErr
 }
 
-func (stub *registrationStoreStub) ListRateLimitEvents(_ context.Context, _ string, dimension string, _ []byte, _ time.Time) ([]time.Time, error) {
-	return stub.events[dimension], nil
-}
-
-func (stub *registrationStoreStub) RecordRateLimitEvents(_ context.Context, scope string, keys map[string][]byte, _ time.Time) error {
+func (stub *registrationStoreStub) ReserveRateLimitEvents(_ context.Context, scope string, keys map[string][]byte, at time.Time) ([]int64, time.Duration, error) {
 	stub.recordedScope = scope
 	stub.recordedKeys = keys
+	for dimension := range keys {
+		if len(stub.events[dimension]) >= 5 {
+			return nil, stub.events[dimension][4].Add(15 * time.Minute).Sub(at), nil
+		}
+	}
+	return []int64{1, 2}, 0, nil
+}
+
+func (stub *registrationStoreStub) ReleaseRateLimitEvents(context.Context, []int64) error {
+	stub.releasedAttempts++
 	return nil
 }
 

@@ -147,12 +147,15 @@ func newConfirmationRateStoreStub() *confirmationRateStoreStub {
 	return &confirmationRateStoreStub{events: make(map[string][]time.Time)}
 }
 
-func (stub *confirmationRateStoreStub) ListRateLimitEvents(_ context.Context, _ string, dimension string, _ []byte, _ time.Time) ([]time.Time, error) {
-	return stub.events[dimension], nil
-}
-
-func (stub *confirmationRateStoreStub) RecordRateLimitEvents(_ context.Context, scope string, keys map[string][]byte, _ time.Time) error {
+func (stub *confirmationRateStoreStub) ReserveRateLimitEvents(_ context.Context, scope string, keys map[string][]byte, at time.Time) ([]int64, time.Duration, error) {
 	stub.recordedScope = scope
 	stub.recordedKeys = keys
-	return nil
+	for dimension := range keys {
+		if len(stub.events[dimension]) >= 5 {
+			return nil, stub.events[dimension][4].Add(15 * time.Minute).Sub(at), nil
+		}
+	}
+	return []int64{1, 2}, 0, nil
 }
+
+func (*confirmationRateStoreStub) ReleaseRateLimitEvents(context.Context, []int64) error { return nil }

@@ -217,7 +217,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
 - [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
-- [ ] Implementar limpeza diária, idempotente e em lotes dos dados de autenticação expirados, com índices adequados, proteção contra execução concorrente e métricas agregadas.
+- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
@@ -250,8 +250,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Tornar nome e logo obrigatórios; descrição, endereço, telefone de contato e redes sociais são opcionais.
 - [x] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
 - [x] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
-- [ ] Manter slug imutável e URL canônica `/{establishment_slug}` no MVP.
-- [ ] Usar `America/Sao_Paulo` como fuso padrão e aceitar somente identificadores IANA válidos.
+- [x] Manter o slug imutável nos endpoints atualmente entregues.
+- [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
+- [x] Validar e persistir somente identificadores IANA informados ao backend.
+- [ ] Na futura interface, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação antes do cadastro.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
 - [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
 - [ ] Interpretar valores ausentes dessas configurações como ausência de limite.
@@ -444,19 +446,26 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 21. E-mail transacional
 
 - [x] Criar interface pequena de envio desacoplada do provedor.
-- [ ] Versionar templates em `pt-BR` para confirmação e recuperação de senha.
+- [x] Versionar o template de confirmação de e-mail em `pt-BR`.
+- [ ] Versionar o template de recuperação de senha em `pt-BR` quando esse fluxo for implementado.
 - [x] Integrar Mailpit por SMTP somente no ambiente local.
-- [ ] Não registrar endereço completo, token, link ou credencial em falhas.
+- [x] Não registrar endereço completo, token, link ou credencial nas falhas dos fluxos de onboarding entregues.
+- [ ] Preservar a mesma garantia nos fluxos futuros de e-mail transacional.
 - [x] Falhar com segurança em produção quando o envio obrigatório não possuir provedor real configurado.
 - [ ] Escolher e integrar um provedor real antes da disponibilização de produção que dependa de confirmação e recuperação.
 
 ## 22. Segurança e privacidade
 
-- [ ] Tratar nome, telefone, e-mail, tokens e valores financeiros como dados sensíveis.
-- [ ] Não expor dados sensíveis em logs, URLs, mensagens de erro ou fixtures públicas.
-- [ ] Usar respostas genéricas em autenticação, recuperação e consulta pública para reduzir enumeração.
-- [ ] Aplicar rate limiting aos fluxos públicos e de autenticação suscetíveis a abuso.
-- [ ] Validar ownership, tenant e papel em cada recurso acessado.
+- [x] Tratar nome do estabelecimento, e-mail, tokens e credenciais como sensíveis nos fluxos de onboarding entregues.
+- [ ] Estender o tratamento de dados sensíveis aos futuros fluxos de clientes e financeiro.
+- [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; o token transacional usa somente o fragmento controlado até a interface removê-lo.
+- [ ] Preservar a mesma garantia nos demais fluxos futuros.
+- [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
+- [ ] Aplicar respostas resistentes a enumeração na recuperação e consulta pública futuras.
+- [x] Aplicar rate limiting ao login, cadastro e solicitação de confirmação por IP e e-mail normalizado.
+- [ ] Aplicar rate limiting à recuperação e aos futuros fluxos públicos suscetíveis a abuso.
+- [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
+- [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.
 - [ ] Revisar cookies, CORS, CSRF, headers de segurança e confiança em proxy antes da produção.

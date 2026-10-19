@@ -91,34 +91,32 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 	now := service.now().UTC()
 	normalizedEmail := NormalizeEmail(input.Email)
 	identifiers := map[string]string{"ip": input.IP, "email": normalizedEmail}
-	if err := service.rateLimiter.Check(ctx, "login", identifiers, now); err != nil {
+	reservation, err := service.rateLimiter.Reserve(ctx, "login", identifiers, now)
+	if err != nil {
 		return LoginResult{}, err
 	}
 
 	user, err := service.store.FindUserByNormalizedEmail(ctx, normalizedEmail)
 	if errors.Is(err, ErrUserNotFound) {
 		_, _ = service.passwords.Verify(input.Password, service.dummyPasswordHash)
-		if recordErr := service.rateLimiter.Record(ctx, "login", identifiers, now); recordErr != nil {
-			return LoginResult{}, recordErr
-		}
 		return LoginResult{}, ErrInvalidCredentials
 	}
 	if err != nil {
-		return LoginResult{}, err
+		return LoginResult{}, service.releaseRateLimitReservation(ctx, reservation, err)
 	}
 
 	passwordMatches, err := service.passwords.Verify(input.Password, user.PasswordHash)
 	if err != nil {
-		return LoginResult{}, err
+		return LoginResult{}, service.releaseRateLimitReservation(ctx, reservation, err)
 	}
 	if !passwordMatches || !user.Active {
-		if err := service.rateLimiter.Record(ctx, "login", identifiers, now); err != nil {
-			return LoginResult{}, err
-		}
 		return LoginResult{}, ErrInvalidCredentials
 	}
 	if user.Role == "owner" && !user.EmailConfirmed {
-		return LoginResult{}, ErrEmailConfirmationRequired
+		return LoginResult{}, service.releaseRateLimitReservation(ctx, reservation, ErrEmailConfirmationRequired)
+	}
+	if err := service.releaseRateLimitReservation(ctx, reservation, nil); err != nil {
+		return LoginResult{}, err
 	}
 
 	refreshToken, err := security.NewOpaqueToken()
@@ -146,6 +144,15 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 		},
 		AccessToken: accessToken, RefreshToken: refreshToken, CSRFToken: csrfToken,
 	}, nil
+}
+
+func (service *LoginService) releaseRateLimitReservation(ctx context.Context, reservation *ratelimit.Reservation, cause error) error {
+	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := service.rateLimiter.Release(releaseCtx, reservation); err != nil {
+		return errors.Join(cause, err)
+	}
+	return cause
 }
 
 type RateLimitError = ratelimit.Error

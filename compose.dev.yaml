@@ -19,6 +19,7 @@ services:
       - mailpit_data:/data
     networks:
       - data
+      - mailpit_ui
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 10s
@@ -32,3 +33,6 @@ services:
 
 volumes:
   mailpit_data:
+
+networks:
+  mailpit_ui:

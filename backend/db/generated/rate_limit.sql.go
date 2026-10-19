@@ -21,6 +21,16 @@ func (q *Queries) DeleteRateLimitEventsBefore(ctx context.Context, attemptedAt p
 	return err
 }
 
+const deleteRateLimitEventsByIDs = `-- name: DeleteRateLimitEventsByIDs :exec
+DELETE FROM auth_login_attempts
+WHERE id = ANY($1::bigint[])
+`
+
+func (q *Queries) DeleteRateLimitEventsByIDs(ctx context.Context, dollar_1 []int64) error {
+	_, err := q.db.Exec(ctx, deleteRateLimitEventsByIDs, dollar_1)
+	return err
+}
+
 const listRateLimitEventsSince = `-- name: ListRateLimitEventsSince :many
 SELECT attempted_at
 FROM auth_login_attempts
@@ -63,10 +73,11 @@ func (q *Queries) ListRateLimitEventsSince(ctx context.Context, arg ListRateLimi
 	return items, nil
 }
 
-const recordRateLimitEvent = `-- name: RecordRateLimitEvent :exec
+const recordRateLimitEvent = `-- name: RecordRateLimitEvent :one
 
 INSERT INTO auth_login_attempts (scope, dimension, key_hash, attempted_at)
 VALUES ($1, $2, $3, $4)
+RETURNING id
 `
 
 type RecordRateLimitEventParams struct {
@@ -77,12 +88,14 @@ type RecordRateLimitEventParams struct {
 }
 
 // The table name is retained for migration compatibility; its scoped events are shared by protected flows.
-func (q *Queries) RecordRateLimitEvent(ctx context.Context, arg RecordRateLimitEventParams) error {
-	_, err := q.db.Exec(ctx, recordRateLimitEvent,
+func (q *Queries) RecordRateLimitEvent(ctx context.Context, arg RecordRateLimitEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, recordRateLimitEvent,
 		arg.Scope,
 		arg.Dimension,
 		arg.KeyHash,
 		arg.AttemptedAt,
 	)
-	return err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

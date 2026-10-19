@@ -16,7 +16,7 @@ type loginStoreStub struct {
 	user               User
 	findErr            error
 	attempts           map[string][]time.Time
-	recordedFailures   int
+	releasedAttempts   int
 	createdSession     bool
 	createdUserID      string
 	createdRefreshHash []byte
@@ -26,13 +26,29 @@ func (stub *loginStoreStub) FindUserByNormalizedEmail(context.Context, string) (
 	return stub.user, stub.findErr
 }
 
-func (stub *loginStoreStub) ListRateLimitEvents(_ context.Context, _ string, dimension string, _ []byte, _ time.Time) ([]time.Time, error) {
-	return stub.attempts[dimension], nil
+func (stub *loginStoreStub) ReserveRateLimitEvents(_ context.Context, _ string, _ map[string][]byte, at time.Time) ([]int64, time.Duration, error) {
+	var longest time.Duration
+	for _, attempts := range stub.attempts {
+		if duration := loginRetryAfter(attempts, at); duration > longest {
+			longest = duration
+		}
+	}
+	if longest > 0 {
+		return nil, longest, nil
+	}
+	return []int64{1, 2}, 0, nil
 }
 
-func (stub *loginStoreStub) RecordRateLimitEvents(context.Context, string, map[string][]byte, time.Time) error {
-	stub.recordedFailures++
+func (stub *loginStoreStub) ReleaseRateLimitEvents(context.Context, []int64) error {
+	stub.releasedAttempts++
 	return nil
+}
+
+func loginRetryAfter(events []time.Time, now time.Time) time.Duration {
+	if len(events) < 5 {
+		return 0
+	}
+	return events[4].Add(15 * time.Minute).Sub(now)
 }
 
 func (stub *loginStoreStub) CreateSession(_ context.Context, userID string, refreshHash []byte, _ time.Time) error {
@@ -82,6 +98,9 @@ func TestLoginCreatesSessionForConfirmedActiveUser(t *testing.T) {
 	if result.Principal.Email != "user@example.com" {
 		t.Fatalf("principal email = %q", result.Principal.Email)
 	}
+	if store.releasedAttempts != 1 {
+		t.Fatalf("released attempts = %d, want 1", store.releasedAttempts)
+	}
 }
 
 func TestLoginUsesGenericFailureForUnknownInvalidOrInactiveUser(t *testing.T) {
@@ -100,7 +119,7 @@ func TestLoginUsesGenericFailureForUnknownInvalidOrInactiveUser(t *testing.T) {
 			if !errors.Is(err, ErrInvalidCredentials) {
 				t.Fatalf("error = %v, want ErrInvalidCredentials", err)
 			}
-			if test.store.recordedFailures != 1 || test.store.createdSession {
+			if test.store.releasedAttempts != 0 || test.store.createdSession {
 				t.Fatalf("unexpected store effects: %#v", test.store)
 			}
 		})
@@ -113,7 +132,7 @@ func TestLoginReturnsConfirmationStateOnlyAfterCorrectPassword(t *testing.T) {
 	if !errors.Is(err, ErrEmailConfirmationRequired) {
 		t.Fatalf("error = %v, want ErrEmailConfirmationRequired", err)
 	}
-	if store.createdSession || store.recordedFailures != 0 {
+	if store.createdSession || store.releasedAttempts != 1 {
 		t.Fatalf("unexpected store effects: %#v", store)
 	}
 }
@@ -132,7 +151,7 @@ func TestLoginAppliesProgressiveRateLimitBeforeCheckingCredentials(t *testing.T)
 	if rateError.RetryAfter != 10*time.Minute {
 		t.Fatalf("RetryAfter = %s, want 10m", rateError.RetryAfter)
 	}
-	if store.createdSession || store.recordedFailures != 0 {
+	if store.createdSession || store.releasedAttempts != 0 {
 		t.Fatal("rate-limited login reached credential processing")
 	}
 }

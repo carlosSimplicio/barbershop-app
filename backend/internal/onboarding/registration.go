@@ -73,14 +73,14 @@ func (service *RegistrationService) Register(ctx context.Context, input Registra
 	now := service.now().UTC()
 	normalizedEmail := auth.NormalizeEmail(input.Email)
 	identifiers := map[string]string{"ip": input.IP, "email": normalizedEmail}
-	if err := service.rateLimiter.Check(ctx, "register", identifiers, now); err != nil {
+	reservation, err := service.rateLimiter.Reserve(ctx, "register", identifiers, now)
+	if err != nil {
 		return RegistrationResult{}, err
 	}
 	if err := validateRegistration(input); err != nil {
-		return RegistrationResult{}, err
-	}
-	if err := service.rateLimiter.Record(ctx, "register", identifiers, now); err != nil {
-		return RegistrationResult{}, err
+		releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		return RegistrationResult{}, errors.Join(err, service.rateLimiter.Release(releaseCtx, reservation))
 	}
 	passwordHash, err := service.passwords.Hash(input.Password)
 	if err != nil {

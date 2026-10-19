@@ -7,8 +7,8 @@ import (
 )
 
 type Store interface {
-	ListRateLimitEvents(context.Context, string, string, []byte, time.Time) ([]time.Time, error)
-	RecordRateLimitEvents(context.Context, string, map[string][]byte, time.Time) error
+	ReserveRateLimitEvents(context.Context, string, map[string][]byte, time.Time) ([]int64, time.Duration, error)
+	ReleaseRateLimitEvents(context.Context, []int64) error
 }
 
 type KeyGenerator interface {
@@ -30,31 +30,30 @@ func New(store Store, keys KeyGenerator) *Limiter {
 	return &Limiter{store: store, keys: keys}
 }
 
-func (limiter *Limiter) Check(ctx context.Context, scope string, identifiers map[string]string, now time.Time) error {
-	var longest time.Duration
-	for dimension, value := range identifiers {
-		events, err := limiter.store.ListRateLimitEvents(
-			ctx, scope, dimension, limiter.keys.Key(keyDomain(scope, dimension), value), now.Add(-24*time.Hour),
-		)
-		if err != nil {
-			return err
-		}
-		if retryAfter := retryAfter(events, now); retryAfter > longest {
-			longest = retryAfter
-		}
-	}
-	if longest > 0 {
-		return Error{RetryAfter: longest}
-	}
-	return nil
+type Reservation struct {
+	eventIDs []int64
 }
 
-func (limiter *Limiter) Record(ctx context.Context, scope string, identifiers map[string]string, at time.Time) error {
+func (limiter *Limiter) Reserve(ctx context.Context, scope string, identifiers map[string]string, at time.Time) (*Reservation, error) {
 	keys := make(map[string][]byte, len(identifiers))
 	for dimension, value := range identifiers {
 		keys[dimension] = limiter.keys.Key(keyDomain(scope, dimension), value)
 	}
-	return limiter.store.RecordRateLimitEvents(ctx, scope, keys, at)
+	eventIDs, retryAfter, err := limiter.store.ReserveRateLimitEvents(ctx, scope, keys, at)
+	if err != nil {
+		return nil, err
+	}
+	if retryAfter > 0 {
+		return nil, Error{RetryAfter: retryAfter}
+	}
+	return &Reservation{eventIDs: eventIDs}, nil
+}
+
+func (limiter *Limiter) Release(ctx context.Context, reservation *Reservation) error {
+	if reservation == nil || len(reservation.eventIDs) == 0 {
+		return nil
+	}
+	return limiter.store.ReleaseRateLimitEvents(ctx, reservation.eventIDs)
 }
 
 func keyDomain(scope, dimension string) string {
