@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/establishment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o estabelecimento da sessão atual */
+        get: operations["getEstablishment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -195,6 +212,23 @@ export interface components {
             email: string;
             role: components["schemas"]["UserRole"];
             password_change_required: boolean;
+        };
+        /** @enum {string} */
+        TrialStatus: "active" | "expired";
+        EstablishmentTrial: {
+            status: components["schemas"]["TrialStatus"];
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+        };
+        EstablishmentResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            time_zone: string;
+            trial: components["schemas"]["EstablishmentTrial"] | null;
         };
         HealthResponse: {
             /** @enum {string} */
@@ -481,6 +515,29 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getEstablishment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estabelecimento autenticado e situação do trial */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstablishmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getHealth: {

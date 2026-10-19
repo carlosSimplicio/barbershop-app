@@ -75,6 +75,7 @@
 - Prepare o resolvedor para futuramente aceitar `{establishment_slug}.barbershop-app.com`.
 - Não publique caminho e subdomínio simultaneamente como canônicos. Em migração futura, redirecione permanentemente os caminhos antigos.
 - Toda consulta autenticada ou pública inclui explicitamente o estabelecimento resolvido.
+- `GET /establishment` deriva o estabelecimento exclusivamente do `Principal` autenticado e não aceita identificador de tenant como autoridade em path, query ou corpo. A resposta limita-se a identificador, nome, slug, fuso IANA e trial; seus limites são instantes UTC, enquanto o fuso persistido continua sendo a autoridade para regras e apresentação locais.
 
 ## Autenticação
 
@@ -101,7 +102,7 @@
 
 ### Contrato de sessão
 
-- A API expõe `POST /auth/register`, `POST /auth/email-confirmation`, `POST /auth/email-confirmation/verify`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
+- A API expõe `POST /auth/register`, `POST /auth/email-confirmation`, `POST /auth/email-confirmation/verify`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password/change` e `GET /establishment` sob `/api/v1`.
 - `POST /auth/register` é público, mas mantém a allowlist estrita de `Origin`. Ele valida no backend nome, slug, fuso IANA, e-mail e senha; cria estabelecimento, usuário `owner`, credencial e primeira confirmação em uma única transação; e não cria trial.
 - O cadastro responde `202 Accepted` depois do commit. O envio da confirmação ocorre diretamente pelo serviço interno após a transação; falha de transporte é registrada apenas como evento operacional, sem e-mail, token ou link, e não transforma o cadastro persistido em erro HTTP.
 - Conflitos de e-mail global e slug único retornam `409` com erro associado ao campo correspondente. A limitação progressiva do cadastro usa escopo próprio e chaves HMAC separadas para IP e e-mail normalizado, sem persistir esses identificadores em claro.

@@ -15,6 +15,7 @@ import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/config"
+	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/httpapi"
 	"barbershop-app/backend/internal/onboarding"
@@ -94,7 +95,11 @@ func run() error {
 	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	confirmationVerification := onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions)
-	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login, sessions), onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification))
+	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
+	handler := httpapi.NewHandler(
+		health.NewHandler(pool), auth.NewHandler(login, sessions),
+		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification), establishment.NewHandler(establishments),
+	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())
 	serverErrors := make(chan error, 1)

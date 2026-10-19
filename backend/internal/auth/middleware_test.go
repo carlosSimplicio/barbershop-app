@@ -85,6 +85,14 @@ func TestMiddlewareDerivesTenantAndRoleFromCurrentUser(t *testing.T) {
 	}
 }
 
+func TestMiddlewareRejectsEstablishmentRequestWithoutSession(t *testing.T) {
+	middleware := testMiddleware(t, validSessionUser(), security.AccessClaims{})
+	status := runMiddlewareRequest(t, middleware, http.MethodGet, "/api/v1/establishment", nil, nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", status)
+	}
+}
+
 func TestMiddlewareRejectsTenantClaimThatDiffersFromDatabase(t *testing.T) {
 	user := validSessionUser()
 	claims := security.AccessClaims{
@@ -98,7 +106,7 @@ func TestMiddlewareRejectsTenantClaimThatDiffersFromDatabase(t *testing.T) {
 	}
 }
 
-func TestMiddlewareRestrictsTemporaryPasswordFromDomainRoutes(t *testing.T) {
+func TestMiddlewareRestrictsTemporaryPasswordFromEstablishment(t *testing.T) {
 	user := validSessionUser()
 	user.PasswordChangeRequired = true
 	claims := security.AccessClaims{
@@ -106,7 +114,7 @@ func TestMiddlewareRestrictsTemporaryPasswordFromDomainRoutes(t *testing.T) {
 		CredentialVersion: user.CredentialVersion, ExpiresAt: testNow.Add(time.Minute).Unix(),
 	}
 	middleware := testMiddleware(t, user, claims)
-	status := runMiddlewareRequest(t, middleware, http.MethodGet, "/api/v1/services", []*http.Cookie{{Name: accessCookieName, Value: "access"}}, nil)
+	status := runMiddlewareRequest(t, middleware, http.MethodGet, "/api/v1/establishment", []*http.Cookie{{Name: accessCookieName, Value: "access"}}, nil)
 	if status != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403", status)
 	}

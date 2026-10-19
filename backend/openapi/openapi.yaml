@@ -178,6 +178,26 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /establishment:
+    get:
+      operationId: getEstablishment
+      summary: Consulta o estabelecimento da sessão atual
+      tags: [establishment]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Estabelecimento autenticado e situação do trial
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstablishmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -193,6 +213,11 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 components:
+  securitySchemes:
+    accessCookie:
+      type: apiKey
+      in: cookie
+      name: __Secure-barbershop_access
   schemas:
     EmailConfirmationRequest:
       type: object
@@ -279,6 +304,38 @@ components:
           $ref: "#/components/schemas/UserRole"
         password_change_required:
           type: boolean
+    TrialStatus:
+      type: string
+      enum: [active, expired]
+    EstablishmentTrial:
+      type: object
+      required: [status, starts_at, ends_at]
+      properties:
+        status:
+          $ref: "#/components/schemas/TrialStatus"
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+    EstablishmentResponse:
+      type: object
+      required: [id, name, slug, time_zone, trial]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        time_zone:
+          type: string
+        trial:
+          oneOf:
+            - $ref: "#/components/schemas/EstablishmentTrial"
+            - type: "null"
     HealthResponse:
       type: object
       required: [status]

@@ -4,6 +4,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -17,6 +19,24 @@ const (
 func (e HealthResponseStatus) Valid() bool {
 	switch e {
 	case Ok:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrialStatus.
+const (
+	Active  TrialStatus = "active"
+	Expired TrialStatus = "expired"
+)
+
+// Valid indicates whether the value is a known member of the TrialStatus enum.
+func (e TrialStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Expired:
 		return true
 	default:
 		return false
@@ -73,6 +93,22 @@ type ErrorResponse struct {
 	RequestId string        `json:"request_id"`
 }
 
+// EstablishmentResponse defines model for EstablishmentResponse.
+type EstablishmentResponse struct {
+	Id       openapi_types.UUID  `json:"id"`
+	Name     string              `json:"name"`
+	Slug     string              `json:"slug"`
+	TimeZone string              `json:"time_zone"`
+	Trial    *EstablishmentTrial `json:"trial"`
+}
+
+// EstablishmentTrial defines model for EstablishmentTrial.
+type EstablishmentTrial struct {
+	EndsAt   time.Time   `json:"ends_at"`
+	StartsAt time.Time   `json:"starts_at"`
+	Status   TrialStatus `json:"status"`
+}
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	Code    string `json:"code"`
@@ -102,6 +138,9 @@ type RegisterRequest struct {
 	Slug              string              `json:"slug"`
 	TimeZone          string              `json:"time_zone"`
 }
+
+// TrialStatus defines model for TrialStatus.
+type TrialStatus string
 
 // UserRole defines model for UserRole.
 type UserRole string
@@ -168,6 +207,9 @@ type ServerInterface interface {
 	// PostAuthRegister Cadastra proprietário e estabelecimento
 	// (POST /auth/register)
 	PostAuthRegister(c *gin.Context)
+	// GetEstablishment Consulta o estabelecimento da sessão atual
+	// (GET /establishment)
+	GetEstablishment(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -286,6 +328,19 @@ func (siw *ServerInterfaceWrapper) PostAuthRegister(c *gin.Context) {
 	siw.Handler.PostAuthRegister(c)
 }
 
+// GetEstablishment operation middleware
+func (siw *ServerInterfaceWrapper) GetEstablishment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetEstablishment(c)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 
@@ -334,5 +389,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
+	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }
