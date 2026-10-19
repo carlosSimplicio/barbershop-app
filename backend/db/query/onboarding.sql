@@ -1,3 +1,24 @@
+-- name: CreateRegistrationEstablishment :one
+INSERT INTO establishments (name, slug, time_zone, created_at)
+VALUES ($1, $2, $3, $4)
+RETURNING id;
+
+-- name: CreateRegistrationOwner :one
+INSERT INTO users (
+    establishment_id, email, normalized_email, role, active, email_confirmed_at,
+    credential_version, password_change_required, created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, true, NULL, 1, false, $5, $5)
+RETURNING id;
+
+-- name: CreateRegistrationCredential :exec
+INSERT INTO user_credentials (user_id, password_hash, created_at, updated_at)
+VALUES ($1, $2, $3, $3);
+
+-- name: CreateRegistrationEmailConfirmation :exec
+INSERT INTO email_confirmations (user_id, token_hash, expires_at, created_at)
+VALUES ($1, $2, $3, $4);
+
 -- name: InvalidateActiveEmailConfirmations :exec
 UPDATE email_confirmations
 SET invalidated_at = $2

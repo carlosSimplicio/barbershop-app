@@ -84,14 +84,29 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
+	Email             openapi_types.Email `json:"email"`
+	EstablishmentName string              `json:"establishment_name"`
+	Password          string              `json:"password"`
+	Slug              string              `json:"slug"`
+	TimeZone          string              `json:"time_zone"`
+}
+
 // UserRole defines model for UserRole.
 type UserRole string
 
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
 
+// Conflict defines model for Conflict.
+type Conflict = ErrorResponse
+
 // Forbidden defines model for Forbidden.
 type Forbidden = ErrorResponse
+
+// InternalServerError defines model for InternalServerError.
+type InternalServerError = ErrorResponse
 
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorResponse
@@ -107,6 +122,9 @@ type PostAuthLoginJSONRequestBody = LoginRequest
 
 // PostAuthPasswordChangeJSONRequestBody defines body for PostAuthPasswordChange for application/json ContentType.
 type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
+
+// PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
+type PostAuthRegisterJSONRequestBody = RegisterRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -125,6 +143,9 @@ type ServerInterface interface {
 	// PostAuthRefresh Renova e rotaciona a sessão atual
 	// (POST /auth/refresh)
 	PostAuthRefresh(c *gin.Context)
+	// PostAuthRegister Cadastra proprietário e estabelecimento
+	// (POST /auth/register)
+	PostAuthRegister(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -204,6 +225,19 @@ func (siw *ServerInterfaceWrapper) PostAuthRefresh(c *gin.Context) {
 	siw.Handler.PostAuthRefresh(c)
 }
 
+// PostAuthRegister operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRegister(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthRegister(c)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 
@@ -244,6 +278,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)

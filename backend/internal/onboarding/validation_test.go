@@ -1,6 +1,22 @@
 package onboarding
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestValidateEstablishmentNameRequiresAtMost120Characters(t *testing.T) {
+	for _, name := range []string{"", "   ", strings.Repeat("á", 121)} {
+		if err := ValidateEstablishmentName(name); err == nil {
+			t.Errorf("ValidateEstablishmentName(%q) = nil, want error", name)
+		}
+	}
+	for _, name := range []string{"Barbearia Central", strings.Repeat("á", 120)} {
+		if err := ValidateEstablishmentName(name); err != nil {
+			t.Errorf("ValidateEstablishmentName(%q) = %v, want nil", name, err)
+		}
+	}
+}
 
 func TestValidateSlugAcceptsCanonicalPublicSlugs(t *testing.T) {
 	for _, slug := range []string{"barbearia-central", "abc", "salao123"} {

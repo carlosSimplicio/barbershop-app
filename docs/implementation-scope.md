@@ -206,7 +206,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 5. Autenticação
 
-- [ ] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
+- [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
@@ -247,8 +247,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [ ] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
 - [ ] Tornar nome e logo obrigatórios; descrição, endereço, telefone de contato e redes sociais são opcionais.
-- [ ] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
-- [ ] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
+- [x] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
+- [x] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
 - [ ] Manter slug imutável e URL canônica `/{establishment_slug}` no MVP.
 - [ ] Usar `America/Sao_Paulo` como fuso padrão e aceitar somente identificadores IANA válidos.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.

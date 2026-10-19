@@ -7,9 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
-	"net/mail"
 	"strconv"
-	"strings"
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
@@ -44,8 +42,7 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
-	rawEmail := strings.TrimSpace(string(request.Email))
-	if parsed, err := mail.ParseAddress(rawEmail); err != nil || parsed.Address != rawEmail || len(rawEmail) > 254 {
+	if err := ValidateEmail(string(request.Email)); err != nil {
 		writeFieldError(c, "email", "invalid_email", "Informe um e-mail válido.")
 		return
 	}

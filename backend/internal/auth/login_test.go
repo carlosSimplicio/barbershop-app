@@ -147,8 +147,8 @@ func TestRateKeysDoNotExposeRawIdentifiers(t *testing.T) {
 	}
 }
 
-func testLoginService(store LoginStore, passwordMatches bool) *LoginService {
-	service := NewLoginService(store, passwordVerifierStub{match: passwordMatches}, accessIssuerStub{}, signedIssuerStub{}, rateKeyStub{}, "dummy-hash")
+func testLoginService(store *loginStoreStub, passwordMatches bool) *LoginService {
+	service := NewLoginService(store, store, passwordVerifierStub{match: passwordMatches}, accessIssuerStub{}, signedIssuerStub{}, rateKeyStub{}, "dummy-hash")
 	service.now = func() time.Time { return testNow }
 	return service
 }

@@ -101,7 +101,11 @@
 
 ### Contrato de sessão
 
-- A API expõe `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
+- A API expõe `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` e `POST /auth/password/change` sob `/api/v1`.
+- `POST /auth/register` é público, mas mantém a allowlist estrita de `Origin`. Ele valida no backend nome, slug, fuso IANA, e-mail e senha; cria estabelecimento, usuário `owner`, credencial e primeira confirmação em uma única transação; e não cria trial.
+- O cadastro responde `202 Accepted` depois do commit. O envio da confirmação ocorre diretamente pelo serviço interno após a transação; falha de transporte é registrada apenas como evento operacional, sem e-mail, token ou link, e não transforma o cadastro persistido em erro HTTP.
+- Conflitos de e-mail global e slug único retornam `409` com erro associado ao campo correspondente. A limitação progressiva do cadastro usa escopo próprio e chaves HMAC separadas para IP e e-mail normalizado, sem persistir esses identificadores em claro.
+- A consulta e a gravação dos eventos de rate limiting pertencem à infraestrutura compartilhada em `internal/platform/ratelimit`; autenticação e onboarding recebem esse store explicitamente e não reutilizam stores de outro slice.
 - Access JWTs usam Ed25519/EdDSA, incluem `kid` no header e são validados por um keyring de chaves públicas. A chave privada ativa e as chaves públicas anteriores são configuração exclusiva do backend.
 - As claims são limitadas a usuário, estabelecimento, papel, expiração e versão da credencial. Em cada requisição autenticada, o backend também consulta o usuário atual e compara estado, tenant, papel e versão para permitir revogação imediata.
 - A configuração inicial do Argon2id usa `m=19456 KiB`, `t=2`, `p=1`, salt aleatório de 16 bytes e saída de 32 bytes em formato PHC. Os limites configuráveis não podem ficar abaixo desse perfil.
@@ -113,10 +117,10 @@
 
 ### Retenção dos dados de autenticação
 
-- Access JWTs e tokens CSRF são stateless e não geram registros persistidos. Cada login cria uma linha em `auth_sessions` e uma em `refresh_tokens`; cada renovação acrescenta outro refresh token à mesma sessão; cada falha de login cria duas linhas em `auth_login_attempts`, uma por dimensão protegida.
+- Access JWTs e tokens CSRF são stateless e não geram registros persistidos. Cada login cria uma linha em `auth_sessions` e uma em `refresh_tokens`; cada renovação acrescenta outro refresh token à mesma sessão; cada falha de login e cada tentativa válida de cadastro criam eventos separados por dimensão em `auth_login_attempts`, com escopos independentes.
 - A implementação atual não executa limpeza de sessões, refresh tokens ou tentativas de login. A query de exclusão de tentativas antigas existe, mas ainda não está ligada a uma rotina operacional. Portanto, essas três tabelas têm crescimento ilimitado até a implementação da retenção e não devem ser consideradas prontas para operação prolongada em produção.
 - Antes da produção, defina e documente a janela durante a qual a reutilização de um refresh token consumido ainda revoga sua família. Depois que o token estiver expirado e ultrapassar essa margem, remover seu hash pode transformar uma reutilização tardia em sessão inválida genérica, mas nunca pode tornar o token utilizável novamente.
-- A retenção deve remover tentativas de login depois da maior janela do rate limiting, atualmente 24 horas, acrescida de margem operacional; remover refresh tokens consumidos ou revogados somente depois de expirados e da margem de detecção; e remover sessões expiradas ou revogadas somente depois de tratar seus tokens relacionados e cumprir a retenção operacional definida.
+- A retenção deve remover eventos de rate limiting de todos os escopos depois da maior janela aplicável, atualmente 24 horas, acrescida de margem operacional; remover refresh tokens consumidos ou revogados somente depois de expirados e da margem de detecção; e remover sessões expiradas ou revogadas somente depois de tratar seus tokens relacionados e cumprir a retenção operacional definida.
 - Execute a limpeza em lotes limitados, com índices apropriados para os predicados de expiração e um único executor por vez. A exclusão precisa respeitar as chaves estrangeiras: primeiro refresh tokens elegíveis e depois sessões sem tokens retidos.
 - Limite também a frequência de renovação por sessão. Sem esse controle, um cliente autenticado com defeito ou malicioso pode rotacionar tokens em sequência e acelerar o crescimento mesmo com a limpeza periódica.
 - Monitore quantidade de linhas, tamanho total e idade do registro elegível mais antigo em `auth_sessions`, `refresh_tokens` e `auth_login_attempts`. Confie no autovacuum para tornar espaço apagado reutilizável; não use `VACUUM FULL` como manutenção rotineira.

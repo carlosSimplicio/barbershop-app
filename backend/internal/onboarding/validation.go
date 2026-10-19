@@ -3,20 +3,30 @@ package onboarding
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 	_ "time/tzdata"
+	"unicode/utf8"
 )
 
 var (
 	ErrInvalidSlug     = errors.New("invalid establishment slug")
 	ErrReservedSlug    = errors.New("reserved establishment slug")
 	ErrInvalidTimeZone = errors.New("invalid establishment time zone")
+	ErrInvalidName     = errors.New("invalid establishment name")
 
 	validSlug     = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`)
 	reservedSlugs = map[string]struct{}{
 		"admin": {}, "api": {}, "login": {}, "assets": {},
 	}
 )
+
+func ValidateEstablishmentName(name string) error {
+	if !utf8.ValidString(name) || strings.TrimSpace(name) == "" || utf8.RuneCountInString(name) > 120 {
+		return ErrInvalidName
+	}
+	return nil
+}
 
 // ValidateSlug validates the immutable public identifier chosen during onboarding.
 func ValidateSlug(slug string) error {

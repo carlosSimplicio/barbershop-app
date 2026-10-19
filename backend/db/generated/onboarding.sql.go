@@ -127,6 +127,99 @@ func (q *Queries) CreateEstablishmentTrial(ctx context.Context, arg CreateEstabl
 	return i, err
 }
 
+const createRegistrationCredential = `-- name: CreateRegistrationCredential :exec
+INSERT INTO user_credentials (user_id, password_hash, created_at, updated_at)
+VALUES ($1, $2, $3, $3)
+`
+
+type CreateRegistrationCredentialParams struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	PasswordHash string             `json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) CreateRegistrationCredential(ctx context.Context, arg CreateRegistrationCredentialParams) error {
+	_, err := q.db.Exec(ctx, createRegistrationCredential, arg.UserID, arg.PasswordHash, arg.CreatedAt)
+	return err
+}
+
+const createRegistrationEmailConfirmation = `-- name: CreateRegistrationEmailConfirmation :exec
+INSERT INTO email_confirmations (user_id, token_hash, expires_at, created_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateRegistrationEmailConfirmationParams struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	TokenHash []byte             `json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) CreateRegistrationEmailConfirmation(ctx context.Context, arg CreateRegistrationEmailConfirmationParams) error {
+	_, err := q.db.Exec(ctx, createRegistrationEmailConfirmation,
+		arg.UserID,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const createRegistrationEstablishment = `-- name: CreateRegistrationEstablishment :one
+INSERT INTO establishments (name, slug, time_zone, created_at)
+VALUES ($1, $2, $3, $4)
+RETURNING id
+`
+
+type CreateRegistrationEstablishmentParams struct {
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	TimeZone  string             `json:"time_zone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) CreateRegistrationEstablishment(ctx context.Context, arg CreateRegistrationEstablishmentParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createRegistrationEstablishment,
+		arg.Name,
+		arg.Slug,
+		arg.TimeZone,
+		arg.CreatedAt,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createRegistrationOwner = `-- name: CreateRegistrationOwner :one
+INSERT INTO users (
+    establishment_id, email, normalized_email, role, active, email_confirmed_at,
+    credential_version, password_change_required, created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, true, NULL, 1, false, $5, $5)
+RETURNING id
+`
+
+type CreateRegistrationOwnerParams struct {
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	Email           string             `json:"email"`
+	NormalizedEmail string             `json:"normalized_email"`
+	Role            string             `json:"role"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) CreateRegistrationOwner(ctx context.Context, arg CreateRegistrationOwnerParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createRegistrationOwner,
+		arg.EstablishmentID,
+		arg.Email,
+		arg.NormalizedEmail,
+		arg.Role,
+		arg.CreatedAt,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getEmailConfirmationForUpdate = `-- name: GetEmailConfirmationForUpdate :one
 SELECT ec.id, ec.user_id, ec.token_hash, ec.expires_at, ec.consumed_at, ec.invalidated_at, ec.created_at, u.establishment_id, u.email, u.role, u.active, u.email_confirmed_at, u.credential_version
 FROM email_confirmations AS ec

@@ -123,7 +123,7 @@ func requiresCSRF(method, path string) bool {
 }
 
 func requiresAccessToken(method, path string) bool {
-	if path == "/api/v1/health" || path == "/api/v1/auth/login" || path == "/api/v1/auth/refresh" || path == "/api/v1/auth/logout" {
+	if path == "/api/v1/health" || path == "/api/v1/auth/register" || path == "/api/v1/auth/login" || path == "/api/v1/auth/refresh" || path == "/api/v1/auth/logout" {
 		return false
 	}
 	return strings.HasPrefix(path, "/api/v1/")

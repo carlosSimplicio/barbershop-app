@@ -3,6 +3,7 @@ package httpapi
 import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/health"
+	"barbershop-app/backend/internal/onboarding"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,10 +11,11 @@ import (
 type Handler struct {
 	health         *health.Handler
 	authentication *auth.Handler
+	onboarding     *onboarding.Handler
 }
 
-func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler) *Handler {
-	return &Handler{health: healthHandler, authentication: authenticationHandler}
+func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler) *Handler {
+	return &Handler{health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler}
 }
 
 func (handler *Handler) GetHealth(c *gin.Context) {
@@ -22,6 +24,10 @@ func (handler *Handler) GetHealth(c *gin.Context) {
 
 func (handler *Handler) PostAuthLogin(c *gin.Context) {
 	handler.authentication.PostAuthLogin(c)
+}
+
+func (handler *Handler) PostAuthRegister(c *gin.Context) {
+	handler.onboarding.PostAuthRegister(c)
 }
 
 func (handler *Handler) PostAuthRefresh(c *gin.Context) {

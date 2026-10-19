@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
@@ -51,7 +50,6 @@ type LoginResult struct {
 }
 
 type LoginStore interface {
-	ratelimit.Store
 	FindUserByNormalizedEmail(context.Context, string) (User, error)
 	CreateSession(context.Context, string, []byte, time.Time) error
 }
@@ -82,10 +80,10 @@ type LoginService struct {
 	now               func() time.Time
 }
 
-func NewLoginService(store LoginStore, passwords PasswordVerifier, accessTokens AccessTokenIssuer, csrfTokens SignedTokenIssuer, rateKeys RateKeyGenerator, dummyPasswordHash string) *LoginService {
+func NewLoginService(store LoginStore, rateStore ratelimit.Store, passwords PasswordVerifier, accessTokens AccessTokenIssuer, csrfTokens SignedTokenIssuer, rateKeys RateKeyGenerator, dummyPasswordHash string) *LoginService {
 	return &LoginService{
 		store: store, passwords: passwords, accessTokens: accessTokens, csrfTokens: csrfTokens,
-		rateLimiter: ratelimit.New(store, rateKeys), dummyPasswordHash: dummyPasswordHash, now: time.Now,
+		rateLimiter: ratelimit.New(rateStore, rateKeys), dummyPasswordHash: dummyPasswordHash, now: time.Now,
 	}
 }
 
@@ -151,7 +149,3 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 }
 
 type RateLimitError = ratelimit.Error
-
-func NormalizeEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
-}

@@ -84,16 +84,6 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	return i, err
 }
 
-const deleteLoginAttemptsBefore = `-- name: DeleteLoginAttemptsBefore :exec
-DELETE FROM auth_login_attempts
-WHERE attempted_at < $1
-`
-
-func (q *Queries) DeleteLoginAttemptsBefore(ctx context.Context, attemptedAt pgtype.Timestamptz) error {
-	_, err := q.db.Exec(ctx, deleteLoginAttemptsBefore, attemptedAt)
-	return err
-}
-
 const extendAuthSession = `-- name: ExtendAuthSession :exec
 UPDATE auth_sessions
 SET idle_expires_at = $2,
@@ -299,70 +289,6 @@ func (q *Queries) GetRefreshTokenForUpdate(ctx context.Context, tokenHash []byte
 		&i.SessionRevokedAt,
 	)
 	return i, err
-}
-
-const listLoginAttemptsSince = `-- name: ListLoginAttemptsSince :many
-SELECT attempted_at
-FROM auth_login_attempts
-WHERE scope = $1
-  AND dimension = $2
-  AND key_hash = $3
-  AND attempted_at >= $4
-ORDER BY attempted_at DESC
-`
-
-type ListLoginAttemptsSinceParams struct {
-	Scope       string             `json:"scope"`
-	Dimension   string             `json:"dimension"`
-	KeyHash     []byte             `json:"key_hash"`
-	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
-}
-
-func (q *Queries) ListLoginAttemptsSince(ctx context.Context, arg ListLoginAttemptsSinceParams) ([]pgtype.Timestamptz, error) {
-	rows, err := q.db.Query(ctx, listLoginAttemptsSince,
-		arg.Scope,
-		arg.Dimension,
-		arg.KeyHash,
-		arg.AttemptedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []pgtype.Timestamptz{}
-	for rows.Next() {
-		var attempted_at pgtype.Timestamptz
-		if err := rows.Scan(&attempted_at); err != nil {
-			return nil, err
-		}
-		items = append(items, attempted_at)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const recordLoginAttempt = `-- name: RecordLoginAttempt :exec
-INSERT INTO auth_login_attempts (scope, dimension, key_hash, attempted_at)
-VALUES ($1, $2, $3, $4)
-`
-
-type RecordLoginAttemptParams struct {
-	Scope       string             `json:"scope"`
-	Dimension   string             `json:"dimension"`
-	KeyHash     []byte             `json:"key_hash"`
-	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
-}
-
-func (q *Queries) RecordLoginAttempt(ctx context.Context, arg RecordLoginAttemptParams) error {
-	_, err := q.db.Exec(ctx, recordLoginAttempt,
-		arg.Scope,
-		arg.Dimension,
-		arg.KeyHash,
-		arg.AttemptedAt,
-	)
-	return err
 }
 
 const revokeAllUserRefreshTokens = `-- name: RevokeAllUserRefreshTokens :exec

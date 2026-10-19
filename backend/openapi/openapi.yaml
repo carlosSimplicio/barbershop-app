@@ -6,6 +6,30 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /auth/register:
+    post:
+      operationId: postAuthRegister
+      summary: Cadastra proprietário e estabelecimento
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "202":
+          description: Cadastro persistido e confirmação de e-mail solicitada
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/login:
     post:
       operationId: postAuthLogin
@@ -120,6 +144,31 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
 components:
   schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [establishment_name, slug, time_zone, email, password]
+      properties:
+        establishment_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        slug:
+          type: string
+          minLength: 3
+          maxLength: 63
+          pattern: "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$"
+        time_zone:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 32
     LoginRequest:
       type: object
       additionalProperties: false
@@ -208,6 +257,18 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     Forbidden:
       description: Operação não permitida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: E-mail ou slug indisponível
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalServerError:
+      description: Falha interna ao concluir a solicitação
       content:
         application/json:
           schema:

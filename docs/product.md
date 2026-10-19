@@ -18,6 +18,8 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - O proprietário escolhe o slug público durante o cadastro do estabelecimento.
 - O slug não pode ser alterado depois da criação no MVP.
 - O cadastro pode ser concluído sem plano ou assinatura ativa, permitindo o início de um período de avaliação.
+- O cadastro inicial recebe nome do estabelecimento, slug, fuso IANA, e-mail e senha. Ele cria atomicamente estabelecimento, proprietário, credencial e solicitação de confirmação, mas não inicia o trial.
+- E-mail já cadastrado e slug indisponível são apresentados como conflitos específicos dos respectivos campos. Uma indisponibilidade no envio da confirmação depois da persistência não desfaz o cadastro.
 
 ## Planos, assinatura e trial
 
