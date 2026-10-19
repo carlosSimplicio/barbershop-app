@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/url"
 	"os"
 	"strconv"
@@ -30,6 +31,11 @@ type Config struct {
 	RateLimitHMACKey  []byte
 	TrustedOrigins    []string
 	TrustedProxyCIDRs []string
+	EmailProvider     string
+	PublicAppURL      string
+	SMTPHost          string
+	SMTPPort          uint16
+	SMTPFrom          string
 }
 
 func Load() (Config, error) {
@@ -77,8 +83,50 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 	if err := loadAuthenticationConfig(&config, lookup); err != nil {
 		return Config{}, err
 	}
+	if err := loadEmailConfig(&config, lookup); err != nil {
+		return Config{}, err
+	}
 
 	return config, nil
+}
+
+func loadEmailConfig(config *Config, lookup func(string) (string, bool)) error {
+	config.EmailProvider = valueOrDefault(lookup, "EMAIL_PROVIDER", "smtp")
+	config.PublicAppURL = valueOrDefault(lookup, "PUBLIC_APP_URL", "")
+	config.SMTPHost = valueOrDefault(lookup, "SMTP_HOST", "")
+	config.SMTPFrom = valueOrDefault(lookup, "SMTP_FROM", "")
+	if config.EmailProvider != "smtp" && config.EmailProvider != "disabled" {
+		return errors.New("EMAIL_PROVIDER must be smtp or disabled")
+	}
+	if config.Environment == "production" {
+		return errors.New("production transactional email requires a supported real provider")
+	}
+	if config.EmailProvider == "disabled" && config.Environment != "test" {
+		return errors.New("EMAIL_PROVIDER=disabled is allowed only in tests")
+	}
+	if config.EmailProvider == "disabled" {
+		return nil
+	}
+
+	publicURL, err := url.Parse(config.PublicAppURL)
+	if err != nil || publicURL.Scheme != "https" || publicURL.Host == "" || publicURL.Path != "" || publicURL.RawQuery != "" || publicURL.Fragment != "" {
+		return errors.New("PUBLIC_APP_URL must be an HTTPS origin without path")
+	}
+	port, err := uint32Value(lookup, "SMTP_PORT", 0)
+	if err != nil || port == 0 || port > 65535 {
+		return errors.New("SMTP_PORT must be between 1 and 65535")
+	}
+	config.SMTPPort = uint16(port)
+	if config.EmailProvider == "smtp" {
+		if config.SMTPHost == "" || strings.ContainsAny(config.SMTPHost, " /:@") {
+			return errors.New("SMTP_HOST must be a host name without a port")
+		}
+		from, parseErr := mail.ParseAddress(config.SMTPFrom)
+		if parseErr != nil || !strings.Contains(from.Address, "@") || strings.ContainsAny(config.SMTPFrom, "\r\n") {
+			return errors.New("SMTP_FROM must be a valid email address")
+		}
+	}
+	return nil
 }
 
 func loadAuthenticationConfig(config *Config, lookup func(string) (string, bool)) error {

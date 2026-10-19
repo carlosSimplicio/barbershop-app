@@ -129,19 +129,3 @@ WITH updated_user AS (
     WHERE c.user_id = $1
 )
 SELECT credential_version FROM updated_user;
-
--- name: RecordLoginAttempt :exec
-INSERT INTO auth_login_attempts (dimension, key_hash, attempted_at)
-VALUES ($1, $2, $3);
-
--- name: ListLoginAttemptsSince :many
-SELECT attempted_at
-FROM auth_login_attempts
-WHERE dimension = $1
-  AND key_hash = $2
-  AND attempted_at >= $3
-ORDER BY attempted_at DESC;
-
--- name: DeleteLoginAttemptsBefore :exec
-DELETE FROM auth_login_attempts
-WHERE attempted_at < $1;

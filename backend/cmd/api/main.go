@@ -4,19 +4,25 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/config"
+	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/httpapi"
+	"barbershop-app/backend/internal/onboarding"
 	"barbershop-app/backend/internal/platform/database"
 	"barbershop-app/backend/internal/platform/httpserver"
+	"barbershop-app/backend/internal/platform/mailer"
+	"barbershop-app/backend/internal/platform/ratelimit"
 
 	"github.com/gin-gonic/gin"
 )
@@ -73,9 +79,27 @@ func run() error {
 		return err
 	}
 	authStore := auth.NewStore(pool)
-	login := auth.NewLoginService(authStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
+	onboardingStore := onboarding.NewStore(pool)
+	rateLimitStore := ratelimit.NewPostgresStore(pool)
+	var emailSender mailer.Sender = disabledEmailSender{}
+	if configuration.EmailProvider == "smtp" {
+		emailSender, err = mailer.NewSMTPTransport(net.JoinHostPort(configuration.SMTPHost, strconv.Itoa(int(configuration.SMTPPort))), configuration.SMTPFrom)
+		if err != nil {
+			return err
+		}
+	}
+	confirmationMailer := onboarding.NewConfirmationMailer(emailSender, configuration.PublicAppURL)
+	confirmationService := onboarding.NewConfirmationService(onboardingStore, confirmationMailer)
+	confirmationRequests := onboarding.NewEmailConfirmationRequestService(onboardingStore, confirmationService, rateLimitStore, rateKeys)
+	registrations := onboarding.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys)
+	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
-	handler := httpapi.NewHandler(health.NewHandler(pool), auth.NewHandler(login, sessions))
+	confirmationVerification := onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions)
+	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
+	handler := httpapi.NewHandler(
+		health.NewHandler(pool), auth.NewHandler(login, sessions),
+		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification), establishment.NewHandler(establishments),
+	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())
 	serverErrors := make(chan error, 1)
@@ -95,6 +119,12 @@ func run() error {
 	shutdownContext, cancel := context.WithTimeout(context.Background(), configuration.ShutdownTimeout)
 	defer cancel()
 	return server.Shutdown(shutdownContext)
+}
+
+type disabledEmailSender struct{}
+
+func (disabledEmailSender) Send(context.Context, mailer.Message) error {
+	return mailer.ErrDeliveryFailed
 }
 
 func newLogger(configuration config.Config) *slog.Logger {

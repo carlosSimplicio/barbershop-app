@@ -39,14 +39,25 @@ Planeje somente. Não altere implementação, contrato, migrations, documentaç�
 ## Como decompor
 
 - Divida o trabalho em subtarefas pequenas, coesas e avaliáveis separadamente.
+- Dê a cada subtarefa um único resultado principal ou uma única invariante central. O fato de vários componentes serem compartilhados por entregas futuras não justifica agrupá-los na mesma subtarefa.
+- Separe fundações compartilhadas por responsabilidade quando puderem ser implementadas e verificadas de forma independente. Schema e queries, validação de domínio, rate limiting, transporte externo, configuração operacional e serviço transacional normalmente são subtarefas distintas, mesmo quando o primeiro endpoint depende de todas elas.
+- Prefira mais subtarefas delimitadas a uma subtarefa de “fundações” que atravesse vários subsistemas, tipos de risco ou formas de verificação. Mantenha juntas apenas mudanças realmente inseparáveis para produzir um estado válido.
 - Cada subtarefa deve produzir um resultado observável e possuir sua própria forma de verificação.
+- Planeje cada subtarefa para caber em um commit focado e em uma revisão manual independente. Se o revisor precisar compreender várias preocupações não relacionadas para aprová-la, divida novamente.
 - Declare dependências entre subtarefas; não descreva como independente algo que só possa ser avaliado após outra entrega.
 - Prefira uma fatia vertical verificável quando ela puder ser concluída sem criar estados intermediários inconsistentes. Use etapas por camada somente quando a dependência técnica exigir.
 - Quando o escopo envolver múltiplos endpoints, prefira uma subtarefa por endpoint sempre que cada operação puder produzir um resultado observável e ser verificada isoladamente. Dentro dessa subtarefa, agrupe contrato, validação, regra de domínio, persistência, handler e testes aplicáveis, em vez de fragmentar o mesmo endpoint por camada.
-- Separe antes dos endpoints apenas as fundações realmente compartilhadas e mantenha em subtarefa transversal o que só puder ser concluído para o conjunto, como geração final, documentação e revisão. Não force essa organização em trabalhos sem API ou quando endpoints forem inseparáveis por uma única invariante atômica.
+- Separe antes dos endpoints apenas as fundações realmente compartilhadas, decompondo-as também por responsabilidade e resultado verificável. Mantenha em subtarefa transversal somente o que só puder ser concluído para o conjunto, como geração final, documentação e revisão. Não force essa organização em trabalhos sem API ou quando endpoints forem inseparáveis por uma única invariante atômica.
 - Agrupe alterações mecânicas inseparáveis, como atualizar o OpenAPI e regenerar seus artefatos. Nunca proponha editar código gerado diretamente.
 - Inclua documentação e os checkboxes aplicáveis de `docs/implementation-scope.md` na subtarefa que conclui o comportamento correspondente.
 - Não use suposições para completar o plano. Se uma informação não estiver explícita na solicitação, na documentação ou na implementação vigente, pergunte ao usuário antes de prosseguir.
+
+Antes de finalizar o plano, faça um gate de granularidade para cada subtarefa:
+
+1. Confirme que existe um único resultado principal claramente nomeado.
+2. Confirme que ela pode passar por implementação, testes, revisão e commit sem carregar trabalho de outra responsabilidade independente.
+3. Procure enumerações extensas no campo **O que**, muitos diretórios sem uma mesma invariante ou verificações de naturezas diferentes; quando houver, divida a subtarefa e declare as dependências.
+4. Não deixe uma subtarefa grande apenas para reduzir a quantidade total de etapas do plano.
 
 ## Formato da saída
 

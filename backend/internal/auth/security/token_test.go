@@ -19,6 +19,21 @@ func TestOpaqueTokensAreRandomAndHashable(t *testing.T) {
 	}
 }
 
+func TestValidateOpaqueTokenAcceptsOnlyGeneratedTokenShape(t *testing.T) {
+	token, err := NewOpaqueToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ValidateOpaqueToken(token) {
+		t.Fatal("generated token should be valid")
+	}
+	for _, invalid := range []string{"", token + "x", token[:len(token)-1], "not+a/url-safe/token"} {
+		if ValidateOpaqueToken(invalid) {
+			t.Fatalf("token %q should be invalid", invalid)
+		}
+	}
+}
+
 func TestHMACSignerSignsTokensAndKeysWithDomainSeparation(t *testing.T) {
 	key := bytes.Repeat([]byte{7}, 32)
 	signer, err := NewHMACSigner(key)

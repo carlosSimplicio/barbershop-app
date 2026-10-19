@@ -1,4 +1,9 @@
 services:
+  backend:
+    depends_on:
+      mailpit:
+        condition: service_healthy
+
   caddy:
     environment:
       APP_ADDRESS: https://localhost:8443
@@ -14,7 +19,7 @@ services:
       - mailpit_data:/data
     networks:
       - data
-      - edge
+      - mailpit_ui
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 10s
@@ -28,3 +33,6 @@ services:
 
 volumes:
   mailpit_data:
+
+networks:
+  mailpit_ui:

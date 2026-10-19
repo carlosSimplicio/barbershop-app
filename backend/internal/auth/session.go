@@ -55,7 +55,7 @@ func (service *SessionService) Refresh(ctx context.Context, currentToken string)
 	if !userCanAuthenticate(user) {
 		return LoginResult{}, ErrInvalidSession
 	}
-	return service.issueResult(user, newRefreshToken, now)
+	return service.Issue(user, newRefreshToken, now)
 }
 
 func (service *SessionService) Logout(ctx context.Context, refreshToken string) error {
@@ -97,10 +97,11 @@ func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, prin
 	}
 	user.CredentialVersion = credentialVersion
 	user.PasswordChangeRequired = false
-	return service.issueResult(user, refreshToken, now)
+	return service.Issue(user, refreshToken, now)
 }
 
-func (service *SessionService) issueResult(user User, refreshToken string, now time.Time) (LoginResult, error) {
+func (service *SessionService) Issue(user User, refreshToken string, now time.Time) (LoginResult, error) {
+	now = now.UTC()
 	accessToken, err := service.accessTokens.Issue(security.Principal{
 		UserID: user.ID, EstablishmentID: user.EstablishmentID, Role: user.Role, CredentialVersion: user.CredentialVersion,
 	}, now)

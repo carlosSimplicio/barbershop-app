@@ -48,40 +48,6 @@ func (store *Store) FindUserByID(ctx context.Context, userID string) (User, erro
 	return userFromIDRow(row), nil
 }
 
-func (store *Store) ListLoginAttempts(ctx context.Context, dimension string, keyHash []byte, since time.Time) ([]time.Time, error) {
-	rows, err := store.queries.ListLoginAttemptsSince(ctx, db.ListLoginAttemptsSinceParams{
-		Dimension: dimension, KeyHash: keyHash, AttemptedAt: timestamptz(since),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list authentication attempts: %w", err)
-	}
-	attempts := make([]time.Time, 0, len(rows))
-	for _, row := range rows {
-		attempts = append(attempts, row.Time)
-	}
-	return attempts, nil
-}
-
-func (store *Store) RecordLoginFailure(ctx context.Context, ipKey, emailKey []byte, attemptedAt time.Time) error {
-	tx, err := store.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin authentication attempt transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	queries := store.queries.WithTx(tx)
-	for dimension, key := range map[string][]byte{"ip": ipKey, "email": emailKey} {
-		if err := queries.RecordLoginAttempt(ctx, db.RecordLoginAttemptParams{
-			Dimension: dimension, KeyHash: key, AttemptedAt: timestamptz(attemptedAt),
-		}); err != nil {
-			return fmt.Errorf("record authentication attempt: %w", err)
-		}
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit authentication attempt transaction: %w", err)
-	}
-	return nil
-}
-
 func (store *Store) CreateSession(ctx context.Context, userID string, refreshTokenHash []byte, expiresAt time.Time) error {
 	parsedUserID, err := parseUUID(userID)
 	if err != nil {

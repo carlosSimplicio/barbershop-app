@@ -6,6 +6,80 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /auth/register:
+    post:
+      operationId: postAuthRegister
+      summary: Cadastra proprietário e estabelecimento
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "202":
+          description: Cadastro persistido e confirmação de e-mail solicitada
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /auth/email-confirmation:
+    post:
+      operationId: postAuthEmailConfirmation
+      summary: Solicita confirmação do e-mail do proprietário
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailConfirmationRequest"
+      responses:
+        "202":
+          description: Solicitação recebida sem revelar o estado da conta
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /auth/email-confirmation/verify:
+    post:
+      operationId: postAuthEmailConfirmationVerify
+      summary: Confirma o e-mail e inicia a sessão do proprietário
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailConfirmationVerifyRequest"
+      responses:
+        "200":
+          description: E-mail confirmado, trial iniciado e sessão criada
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPrincipal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/login:
     post:
       operationId: postAuthLogin
@@ -104,6 +178,26 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /establishment:
+    get:
+      operationId: getEstablishment
+      summary: Consulta o estabelecimento da sessão atual
+      tags: [establishment]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Estabelecimento autenticado e situação do trial
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstablishmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -119,7 +213,55 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 components:
+  securitySchemes:
+    accessCookie:
+      type: apiKey
+      in: cookie
+      name: __Secure-barbershop_access
   schemas:
+    EmailConfirmationRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    EmailConfirmationVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 128
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [establishment_name, slug, time_zone, email, password]
+      properties:
+        establishment_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        slug:
+          type: string
+          minLength: 3
+          maxLength: 63
+          pattern: "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$"
+        time_zone:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 32
     LoginRequest:
       type: object
       additionalProperties: false
@@ -162,6 +304,38 @@ components:
           $ref: "#/components/schemas/UserRole"
         password_change_required:
           type: boolean
+    TrialStatus:
+      type: string
+      enum: [active, expired]
+    EstablishmentTrial:
+      type: object
+      required: [status, starts_at, ends_at]
+      properties:
+        status:
+          $ref: "#/components/schemas/TrialStatus"
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+    EstablishmentResponse:
+      type: object
+      required: [id, name, slug, time_zone, trial]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        time_zone:
+          type: string
+        trial:
+          oneOf:
+            - $ref: "#/components/schemas/EstablishmentTrial"
+            - type: "null"
     HealthResponse:
       type: object
       required: [status]
@@ -208,6 +382,18 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     Forbidden:
       description: Operação não permitida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: E-mail ou slug indisponível
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalServerError:
+      description: Falha interna ao concluir a solicitação
       content:
         application/json:
           schema:

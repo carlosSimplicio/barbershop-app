@@ -52,6 +52,58 @@ O Caddy é o único ponto público da aplicação. Ele encaminha `/api/v1` para 
 backend e as demais rotas para o Next.js. PostgreSQL, backend, frontend e SMTP
 permanecem nas redes internas do Compose.
 
+## Onboarding local pela API
+
+A interface de onboarding ainda não existe. Para validar o fluxo, mantenha o
+ambiente local ativo, aplique as migrations e use um e-mail fictício exclusivo
+para cada execução. O `.env.example` já aponta `EMAIL_PROVIDER=smtp`,
+`SMTP_HOST=mailpit` e a porta
+`1025` para o Mailpit de desenvolvimento; essa configuração não é aceita como
+provedor real de produção. Todas as mutações precisam da origem HTTPS confiável:
+
+```sh
+curl --fail-with-body --silent --show-error --insecure \
+  -H 'Origin: https://localhost:8443' \
+  -H 'Content-Type: application/json' \
+  --data '{"establishment_name":"Barbearia Exemplo","slug":"barbearia-exemplo-01","time_zone":"America/Sao_Paulo","email":"owner-onboarding@example.test","password":"senha-segura"}' \
+  https://localhost:8443/api/v1/auth/register
+
+curl --fail-with-body --silent --show-error --insecure \
+  -H 'Origin: https://localhost:8443' \
+  -H 'Content-Type: application/json' \
+  --data '{"email":"owner-onboarding@example.test"}' \
+  https://localhost:8443/api/v1/auth/email-confirmation
+```
+
+As duas respostas são `202` sem corpo. Abra <http://127.0.0.1:8025>, use a
+mensagem mais recente e copie somente o valor depois de
+`/confirmar-email#token=`. A segunda solicitação invalida o primeiro token.
+Leia o token sem ecoá-lo, crie um cookie jar temporário e confirme:
+
+```sh
+read -r -s CONFIRMATION_TOKEN
+COOKIE_JAR="$(mktemp)"
+printf '{"token":"%s"}' "$CONFIRMATION_TOKEN" | curl \
+  --fail-with-body --silent --show-error --insecure \
+  -H 'Origin: https://localhost:8443' \
+  -H 'Content-Type: application/json' \
+  --data-binary @- \
+  -c "$COOKIE_JAR" \
+  https://localhost:8443/api/v1/auth/email-confirmation/verify
+
+curl --fail-with-body --silent --show-error --insecure \
+  -b "$COOKIE_JAR" \
+  https://localhost:8443/api/v1/establishment
+
+unset CONFIRMATION_TOKEN
+rm -f "$COOKIE_JAR"
+```
+
+A confirmação responde `200`, autentica o proprietário e inicia o trial. A
+consulta seguinte retorna somente o estabelecimento da sessão, com o fuso
+persistido e limites do trial em UTC. Não grave o token, o link completo ou o
+cookie jar em logs, arquivos versionados ou histórico de comandos.
+
 ## Desenvolvimento sem Compose
 
 Instale as dependências e gere os artefatos:

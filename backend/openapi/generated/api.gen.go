@@ -4,6 +4,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -17,6 +19,24 @@ const (
 func (e HealthResponseStatus) Valid() bool {
 	switch e {
 	case Ok:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrialStatus.
+const (
+	Active  TrialStatus = "active"
+	Expired TrialStatus = "expired"
+)
+
+// Valid indicates whether the value is a known member of the TrialStatus enum.
+func (e TrialStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Expired:
 		return true
 	default:
 		return false
@@ -55,12 +75,38 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+// EmailConfirmationRequest defines model for EmailConfirmationRequest.
+type EmailConfirmationRequest struct {
+	Email openapi_types.Email `json:"email"`
+}
+
+// EmailConfirmationVerifyRequest defines model for EmailConfirmationVerifyRequest.
+type EmailConfirmationVerifyRequest struct {
+	Token string `json:"token"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Code      string        `json:"code"`
 	Fields    *[]FieldError `json:"fields,omitempty"`
 	Message   string        `json:"message"`
 	RequestId string        `json:"request_id"`
+}
+
+// EstablishmentResponse defines model for EstablishmentResponse.
+type EstablishmentResponse struct {
+	Id       openapi_types.UUID  `json:"id"`
+	Name     string              `json:"name"`
+	Slug     string              `json:"slug"`
+	TimeZone string              `json:"time_zone"`
+	Trial    *EstablishmentTrial `json:"trial"`
+}
+
+// EstablishmentTrial defines model for EstablishmentTrial.
+type EstablishmentTrial struct {
+	EndsAt   time.Time   `json:"ends_at"`
+	StartsAt time.Time   `json:"starts_at"`
+	Status   TrialStatus `json:"status"`
 }
 
 // FieldError defines model for FieldError.
@@ -84,14 +130,32 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
+	Email             openapi_types.Email `json:"email"`
+	EstablishmentName string              `json:"establishment_name"`
+	Password          string              `json:"password"`
+	Slug              string              `json:"slug"`
+	TimeZone          string              `json:"time_zone"`
+}
+
+// TrialStatus defines model for TrialStatus.
+type TrialStatus string
+
 // UserRole defines model for UserRole.
 type UserRole string
 
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
 
+// Conflict defines model for Conflict.
+type Conflict = ErrorResponse
+
 // Forbidden defines model for Forbidden.
 type Forbidden = ErrorResponse
+
+// InternalServerError defines model for InternalServerError.
+type InternalServerError = ErrorResponse
 
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorResponse
@@ -102,14 +166,29 @@ type TooManyRequests = ErrorResponse
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorResponse
 
+// PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
+type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
+
+// PostAuthEmailConfirmationVerifyJSONRequestBody defines body for PostAuthEmailConfirmationVerify for application/json ContentType.
+type PostAuthEmailConfirmationVerifyJSONRequestBody = EmailConfirmationVerifyRequest
+
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody = LoginRequest
 
 // PostAuthPasswordChangeJSONRequestBody defines body for PostAuthPasswordChange for application/json ContentType.
 type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
 
+// PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
+type PostAuthRegisterJSONRequestBody = RegisterRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
+	// (POST /auth/email-confirmation)
+	PostAuthEmailConfirmation(c *gin.Context)
+	// PostAuthEmailConfirmationVerify Confirma o e-mail e inicia a sessão do proprietário
+	// (POST /auth/email-confirmation/verify)
+	PostAuthEmailConfirmationVerify(c *gin.Context)
 	// PostAuthLogin Autentica proprietário ou profissional
 	// (POST /auth/login)
 	PostAuthLogin(c *gin.Context)
@@ -125,6 +204,12 @@ type ServerInterface interface {
 	// PostAuthRefresh Renova e rotaciona a sessão atual
 	// (POST /auth/refresh)
 	PostAuthRefresh(c *gin.Context)
+	// PostAuthRegister Cadastra proprietário e estabelecimento
+	// (POST /auth/register)
+	PostAuthRegister(c *gin.Context)
+	// GetEstablishment Consulta o estabelecimento da sessão atual
+	// (GET /establishment)
+	GetEstablishment(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -138,6 +223,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// PostAuthEmailConfirmation operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthEmailConfirmation(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthEmailConfirmation(c)
+}
+
+// PostAuthEmailConfirmationVerify operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthEmailConfirmationVerify(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthEmailConfirmationVerify(c)
+}
 
 // PostAuthLogin operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthLogin(c *gin.Context) {
@@ -204,6 +315,32 @@ func (siw *ServerInterfaceWrapper) PostAuthRefresh(c *gin.Context) {
 	siw.Handler.PostAuthRefresh(c)
 }
 
+// PostAuthRegister operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRegister(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthRegister(c)
+}
+
+// GetEstablishment operation middleware
+func (siw *ServerInterfaceWrapper) GetEstablishment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetEstablishment(c)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 
@@ -244,10 +381,14 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
+	router.POST(options.BaseURL+"/auth/email-confirmation", wrapper.PostAuthEmailConfirmation)
+	router.POST(options.BaseURL+"/auth/email-confirmation/verify", wrapper.PostAuthEmailConfirmationVerify)
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
+	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

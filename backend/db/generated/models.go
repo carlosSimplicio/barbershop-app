@@ -13,6 +13,7 @@ type AuthLoginAttempt struct {
 	Dimension   string             `json:"dimension"`
 	KeyHash     []byte             `json:"key_hash"`
 	AttemptedAt pgtype.Timestamptz `json:"attempted_at"`
+	Scope       string             `json:"scope"`
 }
 
 type AuthSession struct {
@@ -24,9 +25,31 @@ type AuthSession struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EmailConfirmation struct {
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	TokenHash     []byte             `json:"token_hash"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	ConsumedAt    pgtype.Timestamptz `json:"consumed_at"`
+	InvalidatedAt pgtype.Timestamptz `json:"invalidated_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type Establishment struct {
 	ID        pgtype.UUID        `json:"id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	TimeZone  string             `json:"time_zone"`
+}
+
+type EstablishmentTrial struct {
+	ID              pgtype.UUID        `json:"id"`
+	OwnerUserID     pgtype.UUID        `json:"owner_user_id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	StartsAt        pgtype.Timestamptz `json:"starts_at"`
+	EndsAt          pgtype.Timestamptz `json:"ends_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type RefreshToken struct {

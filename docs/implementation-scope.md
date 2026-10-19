@@ -206,18 +206,18 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 5. Autenticação
 
-- [ ] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
+- [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
-- [ ] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
-- [ ] Iniciar o trial somente depois da confirmação do e-mail.
+- [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
+- [x] Iniciar o trial somente depois da confirmação do e-mail.
 - [x] Implementar login de proprietário e profissional com resposta genérica para credenciais inválidas.
 - [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
 - [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
-- [ ] Implementar limpeza diária, idempotente e em lotes dos dados de autenticação expirados, com índices adequados, proteção contra execução concorrente e métricas agregadas.
+- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
@@ -226,7 +226,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
-- [ ] Estender a limitação progressiva à confirmação e recuperação quando esses fluxos forem implementados.
+- [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
+- [ ] Estender a limitação progressiva à recuperação quando esse fluxo for implementado.
 - [ ] Não implementar MFA, troca periódica ou consulta de senha comprometida no MVP.
 
 ## 6. Autorização e multi-tenancy
@@ -247,10 +248,12 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [ ] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
 - [ ] Tornar nome e logo obrigatórios; descrição, endereço, telefone de contato e redes sociais são opcionais.
-- [ ] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
-- [ ] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
-- [ ] Manter slug imutável e URL canônica `/{establishment_slug}` no MVP.
-- [ ] Usar `America/Sao_Paulo` como fuso padrão e aceitar somente identificadores IANA válidos.
+- [x] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
+- [x] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
+- [x] Manter o slug imutável nos endpoints atualmente entregues.
+- [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
+- [x] Validar e persistir somente identificadores IANA informados ao backend.
+- [ ] Na futura interface, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação antes do cadastro.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
 - [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
 - [ ] Interpretar valores ausentes dessas configurações como ausência de limite.
@@ -422,8 +425,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 20. Trial, planos e assinatura
 
-- [ ] Iniciar um único trial de 14 dias após confirmação do e-mail, com acesso completo.
-- [ ] Persistir uso do trial independentemente da assinatura atual para impedir reutilização.
+- [x] Iniciar um único trial de 14 dias após confirmação do e-mail, com acesso completo.
+- [x] Persistir uso do trial independentemente da assinatura atual para impedir reutilização.
 - [ ] Modelar catálogo com planos, opções de preço e período, sem assumir plano único no schema ou domínio.
 - [ ] Preservar versão, preço e termos contratados no histórico da assinatura.
 - [ ] Preparar adicionais como itens independentes com preço e direitos próprios, sem implementar adicional real no MVP.
@@ -442,20 +445,27 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 21. E-mail transacional
 
-- [ ] Criar interface pequena de envio desacoplada do provedor.
-- [ ] Versionar templates em `pt-BR` para confirmação e recuperação de senha.
-- [ ] Integrar Mailpit por SMTP somente no ambiente local.
-- [ ] Não registrar endereço completo, token, link ou credencial em falhas.
-- [ ] Falhar com segurança em produção quando o envio obrigatório não possuir provedor real configurado.
+- [x] Criar interface pequena de envio desacoplada do provedor.
+- [x] Versionar o template de confirmação de e-mail em `pt-BR`.
+- [ ] Versionar o template de recuperação de senha em `pt-BR` quando esse fluxo for implementado.
+- [x] Integrar Mailpit por SMTP somente no ambiente local.
+- [x] Não registrar endereço completo, token, link ou credencial nas falhas dos fluxos de onboarding entregues.
+- [ ] Preservar a mesma garantia nos fluxos futuros de e-mail transacional.
+- [x] Falhar com segurança em produção quando o envio obrigatório não possuir provedor real configurado.
 - [ ] Escolher e integrar um provedor real antes da disponibilização de produção que dependa de confirmação e recuperação.
 
 ## 22. Segurança e privacidade
 
-- [ ] Tratar nome, telefone, e-mail, tokens e valores financeiros como dados sensíveis.
-- [ ] Não expor dados sensíveis em logs, URLs, mensagens de erro ou fixtures públicas.
-- [ ] Usar respostas genéricas em autenticação, recuperação e consulta pública para reduzir enumeração.
-- [ ] Aplicar rate limiting aos fluxos públicos e de autenticação suscetíveis a abuso.
-- [ ] Validar ownership, tenant e papel em cada recurso acessado.
+- [x] Tratar nome do estabelecimento, e-mail, tokens e credenciais como sensíveis nos fluxos de onboarding entregues.
+- [ ] Estender o tratamento de dados sensíveis aos futuros fluxos de clientes e financeiro.
+- [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; o token transacional usa somente o fragmento controlado até a interface removê-lo.
+- [ ] Preservar a mesma garantia nos demais fluxos futuros.
+- [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
+- [ ] Aplicar respostas resistentes a enumeração na recuperação e consulta pública futuras.
+- [x] Aplicar rate limiting ao login, cadastro e solicitação de confirmação por IP e e-mail normalizado.
+- [ ] Aplicar rate limiting à recuperação e aos futuros fluxos públicos suscetíveis a abuso.
+- [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
+- [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.
 - [ ] Revisar cookies, CORS, CSRF, headers de segurança e confiança em proxy antes da produção.
