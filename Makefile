@@ -1,4 +1,4 @@
-.PHONY: setup auth-keys generate generate-check migrate-up dev test test-unit test-integration check build compose-config
+.PHONY: setup auth-keys generate generate-check migrate-up dev dev-down test test-unit test-integration check build compose-config
 
 setup:
 	cd frontend && npm ci
@@ -20,6 +20,9 @@ migrate-up:
 
 dev:
 	docker compose -f compose.yaml -f compose.dev.yaml up --build
+
+dev-down:
+	docker compose -f compose.yaml -f compose.dev.yaml down --remove-orphans
 
 test:
 	$(MAKE) test-unit

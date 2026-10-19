@@ -17,7 +17,7 @@
 
 ### Ambiente local da fundação
 
-- Copie `.env.example` para `.env` e execute `make dev` para subir o ambiente de desenvolvimento.
+- Copie `.env.example` para `.env` e execute `make dev` para subir o ambiente de desenvolvimento. Use `make dev-down` para remover seus containers e redes, incluindo serviços órfãos, sem apagar os volumes persistentes.
 - A aplicação é publicada pelo Caddy em `https://localhost:8443`; `http://localhost:8088` apenas redireciona para HTTPS. A interface do Mailpit fica restrita a `http://127.0.0.1:8025`.
 - Quando houver migrations de domínio, execute `make migrate-up` para aplicá-las com a imagem isolada do Goose após o PostgreSQL ficar saudável.
 - `compose.yaml` representa a topologia de produção; `compose.dev.yaml` acrescenta o Mailpit, sua interface local e fixa o endereço HTTPS de desenvolvimento do Caddy.
