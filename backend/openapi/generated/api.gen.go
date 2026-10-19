@@ -4,9 +4,12 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -145,6 +148,9 @@ type TrialStatus string
 // UserRole defines model for UserRole.
 type UserRole string
 
+// OptionalRefreshCookie defines model for OptionalRefreshCookie.
+type OptionalRefreshCookie = string
+
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
 
@@ -165,6 +171,11 @@ type TooManyRequests = ErrorResponse
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorResponse
+
+// PostAuthLogoutParams defines parameters for PostAuthLogout.
+type PostAuthLogoutParams struct {
+	UnderscoreUnderscoreSecureBarbershopRefresh *OptionalRefreshCookie `form:"__Secure-barbershop_refresh,omitempty" json:"__Secure-barbershop_refresh,omitempty"`
+}
 
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
 type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
@@ -194,7 +205,7 @@ type ServerInterface interface {
 	PostAuthLogin(c *gin.Context)
 	// PostAuthLogout Encerra a sessão atual
 	// (POST /auth/logout)
-	PostAuthLogout(c *gin.Context)
+	PostAuthLogout(c *gin.Context, params PostAuthLogoutParams)
 	// GetAuthMe Consulta o usuário da sessão atual
 	// (GET /auth/me)
 	GetAuthMe(c *gin.Context)
@@ -266,6 +277,27 @@ func (siw *ServerInterfaceWrapper) PostAuthLogin(c *gin.Context) {
 // PostAuthLogout operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthLogout(c *gin.Context) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostAuthLogoutParams
+
+	{
+		var cookie string
+
+		if cookie, err = c.Cookie("__Secure-barbershop_refresh"); err == nil {
+			var value OptionalRefreshCookie
+			err = runtime.BindStyledParameterWithOptions("simple", "__Secure-barbershop_refresh", cookie, &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationCookie, Explode: true, Required: false, Type: "string", Format: ""})
+			if err != nil {
+				siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter __Secure-barbershop_refresh: %w", err), http.StatusBadRequest)
+				return
+			}
+			params.UnderscoreUnderscoreSecureBarbershopRefresh = &value
+
+		}
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -273,7 +305,7 @@ func (siw *ServerInterfaceWrapper) PostAuthLogout(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.PostAuthLogout(c)
+	siw.Handler.PostAuthLogout(c, params)
 }
 
 // GetAuthMe operation middleware

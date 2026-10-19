@@ -312,7 +312,9 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        OptionalRefreshCookie: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -427,6 +429,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     postAuthRefresh: {
@@ -448,6 +451,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     postAuthLogout: {
@@ -455,7 +459,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                "__Secure-barbershop_refresh"?: components["parameters"]["OptionalRefreshCookie"];
+            };
         };
         requestBody?: never;
         responses: {
@@ -468,6 +474,7 @@ export interface operations {
                 content?: never;
             };
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAuthMe: {
@@ -489,6 +496,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     postAuthPasswordChange: {
@@ -515,6 +523,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getEstablishment: {

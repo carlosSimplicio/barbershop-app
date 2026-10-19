@@ -110,11 +110,17 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/refresh:
     post:
       operationId: postAuthRefresh
       summary: Renova e rotaciona a sessão atual
       tags: [authentication]
+      security:
+        - refreshCookie: []
+          csrfCookie: []
+          csrfHeader: []
       responses:
         "204":
           description: Sessão renovada
@@ -126,11 +132,18 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/logout:
     post:
       operationId: postAuthLogout
       summary: Encerra a sessão atual
       tags: [authentication]
+      security:
+        - csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/OptionalRefreshCookie"
       responses:
         "204":
           description: Sessão encerrada ou já ausente
@@ -140,11 +153,15 @@ paths:
                 type: string
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/me:
     get:
       operationId: getAuthMe
       summary: Consulta o usuário da sessão atual
       tags: [authentication]
+      security:
+        - accessCookie: []
       responses:
         "200":
           description: Identidade autenticada
@@ -154,11 +171,17 @@ paths:
                 $ref: "#/components/schemas/AuthPrincipal"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/password/change:
     post:
       operationId: postAuthPasswordChange
       summary: Substitui a senha temporária obrigatória
       tags: [authentication]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
       requestBody:
         required: true
         content:
@@ -178,6 +201,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /establishment:
     get:
       operationId: getEstablishment
@@ -218,6 +243,25 @@ components:
       type: apiKey
       in: cookie
       name: __Secure-barbershop_access
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: __Secure-barbershop_refresh
+    csrfCookie:
+      type: apiKey
+      in: cookie
+      name: __Secure-barbershop_csrf
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+  parameters:
+    OptionalRefreshCookie:
+      name: __Secure-barbershop_refresh
+      in: cookie
+      required: false
+      schema:
+        type: string
   schemas:
     EmailConfirmationRequest:
       type: object
