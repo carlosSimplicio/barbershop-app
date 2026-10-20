@@ -199,7 +199,10 @@
 - Use ESLint e Prettier e forneça scripts `lint`, `format`, `format:check`, `typecheck`, `test` e `build`.
 - Crie componentes e estilos próprios com CSS ou SCSS.
 - Não use Tailwind CSS, shadcn/ui ou kits equivalentes.
-- Reutilize componentes, variáveis e estilos existentes antes de criar novos padrões.
+- Trate `frontend/prototypes/design-system.html` como a fonte de verdade da identidade visual e dos padrões de interface do projeto. Todo fluxo e componente do frontend deve usar os tokens, componentes, variantes e estados documentados nele.
+- Reutilize componentes, variáveis e estilos existentes antes de criar novos padrões. Não crie variações locais ou componentes isolados que dupliquem uma solução já coberta pelo design system.
+- Quando o produto realmente precisar de um componente, variante ou estado ainda inexistente, adicione-o ao design system no mesmo trabalho que o introduzir no frontend. A documentação deve incluir os temas claro e escuro, estados interativos, comportamento responsivo e requisitos de acessibilidade aplicáveis.
+- Alterações visuais em componentes existentes devem atualizar simultaneamente o design system e todos os usos afetados, sem divergência conhecida entre documentação e implementação.
 
 ### Renderização e API
 

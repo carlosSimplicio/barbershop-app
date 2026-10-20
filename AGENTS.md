@@ -28,6 +28,7 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 - Links transacionais podem transportar um token somente no fragmento da URL, que não é enviado ao servidor. A interface deve removê-lo do endereço antes de enviar o token no corpo da requisição e nunca encaminhá-lo em path, query, `Referer` ou logs.
 - Preserve histórico de agendamentos e financeiro. Prefira desativação e registros imutáveis a exclusões que destruam referências históricas.
 - Use inglês para código, schema, endpoints e identificadores técnicos. Use português brasileiro nos textos apresentados ao usuário.
+- Todo o frontend e qualquer componente visual devem seguir o design system vigente em `frontend/prototypes/design-system.html`. Quando uma necessidade real exigir um novo componente, variante ou estado visual, documente-o e incorpore-o ao design system no mesmo trabalho que o introduzir no produto.
 - Siga os padrões existentes antes de introduzir novas dependências ou abstrações. Mantenha a solução simples e justifique qualquer divergência.
 
 ## Estrutura e stack

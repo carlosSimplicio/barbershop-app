@@ -198,6 +198,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Usar apenas estado, efeitos e Context nativos do React; Context não funciona como cache genérico de API.
 - [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
 - [ ] Criar fundações visuais: cores, tipografia, espaçamento, formulários, botões, tabelas, modais, feedback e estados vazios.
+- [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
 - [ ] Manter página pública e agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
