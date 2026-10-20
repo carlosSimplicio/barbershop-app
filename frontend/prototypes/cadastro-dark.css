@@ -1,0 +1,169 @@
+:root {
+  --ink: #e9f5fb;
+  --muted: #91aebe;
+  --paper: #07141d;
+  --cream: #102633;
+  --sky-blue: #65c6ee;
+  --sky-blue-deep: #8ed8f4;
+  --blue-mist: #17384b;
+  --line: #294b5d;
+  --white: #f6fbfe;
+  --danger: #ff817c;
+  --focus: #75cff4;
+  color-scheme: dark;
+}
+
+body {
+  background: #061019;
+}
+
+.brand-panel {
+  background:
+    radial-gradient(
+      circle at 105% 90%,
+      rgb(46 153 198 / 22%),
+      transparent 35rem
+    ),
+    linear-gradient(150deg, #102c3b 0%, #0a1d29 55%, #07151f 100%);
+}
+
+.brand-panel::before {
+  background: rgb(64 173 218 / 13%);
+  box-shadow: 0 0 8rem rgb(76 190 235 / 12%);
+}
+
+.brand-panel::after,
+.decorative-orbit {
+  border-color: rgb(120 205 239 / 16%);
+}
+
+.brand-mark {
+  border-color: rgb(150 218 245 / 20%);
+  background: rgb(114 198 233 / 12%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 8%),
+    0 0.55rem 1.5rem rgb(0 0 0 / 20%);
+  color: #a5e1f7;
+}
+
+.brand-copy p {
+  color: #a2bbc8;
+}
+
+.benefit-list li {
+  color: #98b3c1;
+}
+
+.benefit-list strong {
+  color: #edf8fc;
+}
+
+.benefit-icon {
+  border-color: rgb(139 211 240 / 17%);
+  background: rgb(106 195 232 / 10%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
+  color: #8fd8f4;
+}
+
+.brand-footer {
+  color: #7695a5;
+}
+
+.form-panel {
+  background:
+    radial-gradient(circle at 90% 8%, rgb(52 150 192 / 18%), transparent 25rem),
+    radial-gradient(
+      circle at 15% 90%,
+      rgb(39 108 143 / 10%),
+      transparent 23rem
+    ),
+    linear-gradient(145deg, #081822 0%, #050e16 100%);
+}
+
+.form-wrap {
+  border-color: rgb(135 205 235 / 15%);
+  background: rgb(13 32 44 / 82%);
+  box-shadow:
+    0 1.8rem 5rem rgb(0 0 0 / 34%),
+    inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+
+.step-badge {
+  border: 1px solid rgb(114 200 235 / 13%);
+  background: #17384a;
+}
+
+input,
+select {
+  border-color: var(--line);
+  background: rgb(6 20 29 / 74%);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 22%);
+}
+
+input::placeholder {
+  color: #6e8b9b;
+}
+
+input:hover,
+select:hover {
+  border-color: #3c6d84;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--sky-blue);
+  background: #0a202c;
+  box-shadow: 0 0 0 4px rgb(101 198 238 / 12%);
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: var(--danger);
+  background: #271719;
+  box-shadow: 0 0 0 3px rgb(255 129 124 / 9%);
+}
+
+input[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 4px rgb(255 129 124 / 14%);
+}
+
+.password-toggle:hover {
+  background: #163243;
+}
+
+.password-toggle[aria-pressed="true"] {
+  background: #1a4358;
+}
+
+.primary-button {
+  background: #65c6ee;
+  box-shadow: 0 0.8rem 1.8rem rgb(42 157 204 / 20%);
+  color: #071722;
+}
+
+.primary-button:hover {
+  background: #8ed8f4;
+  box-shadow: 0 0.9rem 2rem rgb(55 174 222 / 24%);
+}
+
+.confirmation-note {
+  background: #122e3e;
+  color: #94b3c3;
+}
+
+.prototype-toast {
+  border-color: #2a5063;
+  background: #102b3a;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 36%);
+}
+
+.prototype-toast span {
+  color: #071722;
+}
+
+@media (max-width: 720px) {
+  .mobile-brand .brand-mark {
+    color: #071722;
+  }
+}

@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Protótipo visual da tela de cadastro do proprietário."
+    />
+    <title>Crie seu espaço — Barbershop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="cadastro.css" />
+    <script>
+      if (new URLSearchParams(window.location.search).get("theme") === "dark") {
+        const darkStyles = document.createElement("link");
+        darkStyles.rel = "stylesheet";
+        darkStyles.href = "cadastro-dark.css";
+        document.head.append(darkStyles);
+      }
+    </script>
+  </head>
+  <body>
+    <main class="registration-shell">
+      <section class="brand-panel" aria-labelledby="brand-title">
+        <a class="brand" href="#" aria-label="Barbershop — página inicial">
+          <span class="brand-mark" aria-hidden="true">B</span>
+          <span>Barbershop</span>
+        </a>
+
+        <div class="brand-copy">
+          <span class="eyebrow">Seu negócio, do seu jeito</span>
+          <h1 id="brand-title">Mais tempo para cuidar de quem chega.</h1>
+          <p>
+            Organize agenda, equipe e financeiro em um só lugar — com uma
+            experiência simples para você e seus clientes.
+          </p>
+        </div>
+
+        <ul class="benefit-list" aria-label="Benefícios da plataforma">
+          <li>
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M7 3v3m10-3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+                />
+              </svg>
+            </span>
+            <span
+              ><strong>Agenda organizada</strong> sem planilhas ou mensagens
+              perdidas.</span
+            >
+          </li>
+          <li>
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 19V9m6 10V5m6 14v-7m4 7H2" />
+              </svg>
+            </span>
+            <span
+              ><strong>Visão clara do negócio</strong> para decidir com
+              tranquilidade.</span
+            >
+          </li>
+          <li>
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4l3 2" />
+              </svg>
+            </span>
+            <span
+              ><strong>14 dias para experimentar</strong> a partir da
+              confirmação do e-mail.</span
+            >
+          </li>
+        </ul>
+
+        <p class="brand-footer">
+          Feito para barbearias, salões e estúdios de beleza.
+        </p>
+        <span class="decorative-orbit orbit-one" aria-hidden="true"></span>
+        <span class="decorative-orbit orbit-two" aria-hidden="true"></span>
+      </section>
+
+      <section class="form-panel" aria-labelledby="form-title">
+        <div class="mobile-brand">
+          <span class="brand-mark" aria-hidden="true">B</span>
+          <span>Barbershop</span>
+        </div>
+
+        <div class="form-wrap">
+          <div class="form-heading">
+            <div>
+              <span class="step-label">Comece por aqui</span>
+              <h2 id="form-title">Crie seu espaço</h2>
+              <p>Leva menos de dois minutos. Sem cartão.</p>
+            </div>
+            <span class="step-badge" aria-label="Etapa 1 de 1">01</span>
+          </div>
+
+          <form id="registration-form" novalidate>
+            <div class="field-group">
+              <label for="establishment-name">Nome do estabelecimento</label>
+              <input
+                id="establishment-name"
+                name="establishment_name"
+                type="text"
+                maxlength="120"
+                placeholder="Ex.: Estúdio Aurora"
+                autocomplete="organization"
+                aria-describedby="establishment-name-error"
+                required
+              />
+              <p
+                class="field-error"
+                id="establishment-name-error"
+                aria-live="polite"
+                aria-hidden="true"
+              ></p>
+            </div>
+
+            <div class="field-group">
+              <label for="slug">Endereço da sua página</label>
+              <div class="slug-input">
+                <span aria-hidden="true">/</span>
+                <input
+                  id="slug"
+                  name="slug"
+                  type="text"
+                  minlength="3"
+                  maxlength="63"
+                  pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])"
+                  placeholder="estudio-aurora"
+                  autocomplete="off"
+                  aria-describedby="slug-hint slug-error"
+                  required
+                />
+              </div>
+              <p class="field-hint" id="slug-hint">
+                Seus clientes encontrarão você por este endereço. Ele não poderá
+                ser alterado.
+              </p>
+              <p
+                class="field-error"
+                id="slug-error"
+                aria-live="polite"
+                aria-hidden="true"
+              ></p>
+            </div>
+
+            <div class="field-row">
+              <div class="field-group">
+                <label for="email">Seu e-mail</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  maxlength="254"
+                  placeholder="voce@exemplo.com"
+                  autocomplete="email"
+                  aria-describedby="email-error"
+                  required
+                />
+                <p
+                  class="field-error"
+                  id="email-error"
+                  aria-live="polite"
+                  aria-hidden="true"
+                ></p>
+              </div>
+
+              <div class="field-group">
+                <label for="time-zone">Fuso horário</label>
+                <div class="select-wrap">
+                  <select
+                    id="time-zone"
+                    name="time_zone"
+                    aria-describedby="time-zone-error"
+                    required
+                  >
+                    <option value="America/Sao_Paulo">São Paulo (GMT−3)</option>
+                    <option value="America/Manaus">Manaus (GMT−4)</option>
+                    <option value="America/Rio_Branco">
+                      Rio Branco (GMT−5)
+                    </option>
+                    <option value="America/Noronha">
+                      Fernando de Noronha (GMT−2)
+                    </option>
+                  </select>
+                </div>
+                <p
+                  class="field-error"
+                  id="time-zone-error"
+                  aria-live="polite"
+                  aria-hidden="true"
+                ></p>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="password">Crie uma senha</label>
+              <div class="password-input">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  minlength="8"
+                  maxlength="32"
+                  placeholder="De 8 a 32 caracteres"
+                  autocomplete="new-password"
+                  aria-describedby="password-hint password-error"
+                  required
+                />
+                <button
+                  class="password-toggle"
+                  type="button"
+                  aria-label="Mostrar senha"
+                  aria-pressed="false"
+                >
+                  <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z"
+                    />
+                    <circle cx="12" cy="12" r="2.5" />
+                  </svg>
+                  <svg
+                    class="eye-closed"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z"
+                    />
+                    <circle cx="12" cy="12" r="2.5" />
+                    <path d="M4 4 20 20" />
+                  </svg>
+                </button>
+              </div>
+              <p class="field-hint" id="password-hint">
+                Use de 8 a 32 caracteres, sem espaços.
+              </p>
+              <p
+                class="field-error"
+                id="password-error"
+                aria-live="polite"
+                aria-hidden="true"
+              ></p>
+            </div>
+
+            <button class="primary-button" type="submit">
+              Criar meu espaço
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 5 7 7-7 7" />
+              </svg>
+            </button>
+
+            <p class="confirmation-note">
+              <span aria-hidden="true">✦</span>
+              Enviaremos um link para confirmar seu e-mail. Seu período de teste
+              começa somente depois da confirmação.
+            </p>
+          </form>
+
+          <p class="sign-in-link">Já tem uma conta? <a href="#">Entrar</a></p>
+        </div>
+      </section>
+    </main>
+
+    <div class="prototype-toast" role="status" aria-live="polite" hidden>
+      <span aria-hidden="true">✓</span>
+      Protótipo: cadastro pronto para envio.
+    </div>
+
+    <script>
+      const form = document.querySelector("#registration-form");
+      const nameInput = document.querySelector("#establishment-name");
+      const slugInput = document.querySelector("#slug");
+      const emailInput = document.querySelector("#email");
+      const timeZoneInput = document.querySelector("#time-zone");
+      const passwordInput = document.querySelector("#password");
+      const passwordToggle = document.querySelector(".password-toggle");
+      const toast = document.querySelector(".prototype-toast");
+      let slugWasEdited = false;
+
+      const fields = [
+        {
+          input: nameInput,
+          error: document.querySelector("#establishment-name-error"),
+          validate: (value) =>
+            value.trim() ? "" : "Informe o nome do estabelecimento.",
+        },
+        {
+          input: slugInput,
+          error: document.querySelector("#slug-error"),
+          validate: (value) => {
+            if (!value) return "Escolha o endereço da sua página.";
+            if (value.length < 3) return "Use pelo menos 3 caracteres.";
+            if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(value)) {
+              return "Use letras minúsculas, números e hífens.";
+            }
+            if (["admin", "api", "login", "assets"].includes(value)) {
+              return "Este endereço está reservado. Escolha outro.";
+            }
+            return "";
+          },
+        },
+        {
+          input: emailInput,
+          error: document.querySelector("#email-error"),
+          validate: (value) => {
+            if (!value.trim()) return "Informe seu e-mail.";
+            return emailInput.validity.typeMismatch
+              ? "Digite um e-mail válido."
+              : "";
+          },
+        },
+        {
+          input: timeZoneInput,
+          error: document.querySelector("#time-zone-error"),
+          validate: (value) => (value ? "" : "Selecione seu fuso horário."),
+        },
+        {
+          input: passwordInput,
+          error: document.querySelector("#password-error"),
+          validate: (value) => {
+            if (!value) return "Crie uma senha.";
+            if (value.length < 8) return "Use pelo menos 8 caracteres.";
+            if (/\s/.test(value)) return "A senha não pode conter espaços.";
+            return "";
+          },
+        },
+      ];
+
+      const validateField = (field) => {
+        const message = field.validate(field.input.value);
+        field.input.setAttribute("aria-invalid", String(Boolean(message)));
+        field.error.textContent = message;
+        field.error.classList.toggle("is-visible", Boolean(message));
+        field.error.setAttribute("aria-hidden", String(!message));
+        return !message;
+      };
+
+      fields.forEach((field) => {
+        field.input.addEventListener("blur", () => validateField(field));
+        field.input.addEventListener("input", () => {
+          if (field.input.getAttribute("aria-invalid") === "true") {
+            validateField(field);
+          }
+        });
+      });
+
+      const toSlug = (value) =>
+        value
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 63);
+
+      slugInput.addEventListener("input", () => {
+        slugWasEdited = slugInput.value.length > 0;
+        slugInput.value = toSlug(slugInput.value);
+        if (slugInput.getAttribute("aria-invalid") === "true") {
+          validateField(fields[1]);
+        }
+      });
+
+      nameInput.addEventListener("input", () => {
+        if (!slugWasEdited) {
+          slugInput.value = toSlug(nameInput.value);
+          if (slugInput.getAttribute("aria-invalid") === "true") {
+            validateField(fields[1]);
+          }
+        }
+      });
+
+      passwordToggle.addEventListener("click", () => {
+        const shouldShow = passwordInput.type === "password";
+        passwordInput.type = shouldShow ? "text" : "password";
+        passwordToggle.setAttribute("aria-pressed", String(shouldShow));
+        passwordToggle.setAttribute(
+          "aria-label",
+          shouldShow ? "Ocultar senha" : "Mostrar senha",
+        );
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const results = fields.map(validateField);
+        const firstInvalidField = fields[results.indexOf(false)];
+        if (firstInvalidField) {
+          firstInvalidField.input.focus();
+          return;
+        }
+        toast.hidden = false;
+        window.setTimeout(() => {
+          toast.hidden = true;
+        }, 3500);
+      });
+    </script>
+  </body>
+</html>
