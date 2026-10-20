@@ -200,6 +200,7 @@
 - Crie componentes e estilos próprios com CSS ou SCSS.
 - Não use Tailwind CSS, shadcn/ui ou kits equivalentes.
 - Trate os tokens em `frontend/styles/tokens.css` e os componentes em `frontend/components/ui` como fontes de verdade da identidade visual e dos padrões de interface. A referência React em `frontend/app/design-system` deve usar esses componentes reais, documentar seus estados e permanecer disponível somente em desenvolvimento; em produção, essa rota responde como não encontrada.
+- Mantenha cada componente de `frontend/components/ui` em uma pasta própria, com implementação TypeScript React, teste e CSS Module co-localizados. Exponha a API pública pelo barrel do diretório e use a prop `ref` nativa do React 19, sem `forwardRef`.
 - Sirva a tipografia Montserrat a partir de `frontend/public/fonts/montserrat`, junto de sua licença OFL, sem depender de download de fonte durante build ou execução.
 - Reutilize componentes, variáveis e estilos existentes antes de criar novos padrões. Não crie variações locais ou componentes isolados que dupliquem uma solução já coberta pelo design system.
 - Quando o produto realmente precisar de um componente, variante ou estado ainda inexistente, adicione-o ao design system no mesmo trabalho que o introduzir no frontend. A documentação deve incluir os temas claro e escuro, estados interativos, comportamento responsivo e requisitos de acessibilidade aplicáveis.

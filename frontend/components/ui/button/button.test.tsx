@@ -3,9 +3,8 @@ import { createRef } from "react";
 import { expect, test, vi } from "vitest";
 
 import { Button } from "./button";
-import { IconButton } from "./icon-button";
 
-test("permite configurar conteúdo, ação e atributos nativos do botão", () => {
+test("permite configurar conteúdo, ação, atributos nativos e ref", () => {
   const handleClick = vi.fn();
   const ref = createRef<HTMLButtonElement>();
 
@@ -24,7 +23,7 @@ test("permite configurar conteúdo, ação e atributos nativos do botão", () =>
   expect(ref.current).toBe(button);
 });
 
-test("não executa a ação de um botão desabilitado", () => {
+test("não executa a ação quando está desabilitado", () => {
   const handleClick = vi.fn();
 
   render(
@@ -36,26 +35,4 @@ test("não executa a ação de um botão desabilitado", () => {
   fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
   expect(handleClick).not.toHaveBeenCalled();
-});
-
-test("expõe nome acessível, estado pressionado e ação do botão de ícone", () => {
-  const handleClick = vi.fn();
-
-  render(
-    <IconButton
-      aria-label="Mostrar senha"
-      data-context="senha"
-      onClick={handleClick}
-      pressed
-    >
-      <span aria-hidden="true">ícone</span>
-    </IconButton>,
-  );
-
-  const button = screen.getByRole("button", { name: "Mostrar senha" });
-  fireEvent.click(button);
-
-  expect(handleClick).toHaveBeenCalledOnce();
-  expect(button).toHaveAttribute("aria-pressed", "true");
-  expect(button).toHaveAttribute("data-context", "senha");
 });

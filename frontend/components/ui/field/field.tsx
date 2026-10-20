@@ -1,9 +1,9 @@
 import { useId } from "react";
-import type { AriaAttributes, HTMLAttributes, ReactNode } from "react";
+import type { AriaAttributes, ComponentPropsWithRef, ReactNode } from "react";
 
 import styles from "./field.module.css";
 
-export type FieldProps = HTMLAttributes<HTMLDivElement> & {
+export type FieldProps = ComponentPropsWithRef<"div"> & {
   children: ReactNode;
   error?: ReactNode;
   errorId?: string;
