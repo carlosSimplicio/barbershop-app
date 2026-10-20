@@ -14,7 +14,7 @@
 }
 
 .control::placeholder {
-  color: color-mix(in srgb, var(--color-muted) 72%, transparent);
+  color: var(--color-muted);
 }
 
 .control:hover:not(:disabled) {
@@ -137,7 +137,7 @@
 }
 
 .affixedControl::placeholder {
-  color: color-mix(in srgb, var(--color-muted) 72%, transparent);
+  color: var(--color-muted);
 }
 
 .affixedControl:disabled {

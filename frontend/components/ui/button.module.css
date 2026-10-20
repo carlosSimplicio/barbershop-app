@@ -1,5 +1,6 @@
 .button {
   display: inline-flex;
+  min-width: var(--control-touch-target);
   min-height: var(--control-height);
   align-items: center;
   justify-content: center;

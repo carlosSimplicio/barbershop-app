@@ -197,7 +197,13 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Cancelar requisições obsoletas e impedir que respostas antigas substituam estado recente.
 - [x] Usar apenas estado, efeitos e Context nativos do React; Context não funciona como cache genérico de API.
 - [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
-- [ ] Criar fundações visuais: cores, tipografia, espaçamento, formulários, botões, tabelas, modais, feedback e estados vazios.
+- [x] Centralizar cores, tipografia, espaçamento, raios, sombras e temas claro e escuro em tokens visuais compartilhados.
+- [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado.
+- [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis.
+- [ ] Criar padrões compartilhados para tabelas.
+- [ ] Criar padrões compartilhados para modais.
+- [ ] Criar padrões compartilhados de feedback.
+- [ ] Criar padrões compartilhados para estados vazios.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
