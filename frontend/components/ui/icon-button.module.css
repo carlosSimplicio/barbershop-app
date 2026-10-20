@@ -1,0 +1,42 @@
+.iconButton {
+  display: inline-grid;
+  width: var(--control-touch-target);
+  height: var(--control-touch-target);
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0.9rem;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--color-surface-soft);
+  color: var(--color-primary-hover);
+}
+
+.iconButton[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-primary-hover);
+}
+
+.iconButton:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.iconButton svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
