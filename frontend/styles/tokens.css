@@ -1,0 +1,90 @@
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/montserrat/montserrat-latin-variable.woff2") format("woff2");
+}
+
+:root,
+[data-theme="light"] {
+  --color-primary: #2677a4;
+  --color-primary-hover: #236b95;
+  --color-accent: #d7eef9;
+  --color-ink: #17384d;
+  --color-muted: #557184;
+  --color-canvas: #eff8fe;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f8fcff;
+  --color-line: #cbdfea;
+  --color-danger: #a43a34;
+  --color-success: #267a56;
+  --color-warning: #946414;
+  --color-focus: #2b78c5;
+  --color-on-primary: #ffffff;
+  --shadow-card: 0 1.2rem 3rem rgb(48 112 148 / 10%);
+  --shadow-control: inset 0 1px 2px rgb(23 56 77 / 4%);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --color-primary: #65c6ee;
+  --color-primary-hover: #8ed8f4;
+  --color-accent: #17384b;
+  --color-ink: #e9f5fb;
+  --color-muted: #91aebe;
+  --color-canvas: #061019;
+  --color-surface: #0d202c;
+  --color-surface-soft: #091923;
+  --color-line: #294b5d;
+  --color-danger: #ff817c;
+  --color-success: #65d6a3;
+  --color-warning: #f4c66b;
+  --color-focus: #75cff4;
+  --color-on-primary: #071722;
+  --shadow-card: 0 1.5rem 4rem rgb(0 0 0 / 24%);
+  --shadow-control: inset 0 1px 2px rgb(0 0 0 / 16%);
+  color-scheme: dark;
+}
+
+:root {
+  --font-family-sans:
+    "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 2rem;
+  --radius-pill: 999px;
+
+  --control-height: 3rem;
+  --control-touch-target: 2.75rem;
+  --focus-width: 3px;
+  --focus-offset: 3px;
+
+  --transition-fast: 160ms ease;
+  --transition-medium: 180ms ease;
+}
+
+[data-theme] {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}

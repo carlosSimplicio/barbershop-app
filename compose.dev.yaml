@@ -1,8 +1,23 @@
 services:
   backend:
+    environment:
+      APP_ENV: development
     depends_on:
       mailpit:
         condition: service_healthy
+
+  frontend:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend/app:/app/app
+      - ./frontend/components:/app/components
+      - ./frontend/lib:/app/lib
+      - ./frontend/public:/app/public
+      - ./frontend/styles:/app/styles
+      - ./frontend/types:/app/types
 
   caddy:
     environment:

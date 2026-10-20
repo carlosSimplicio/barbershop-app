@@ -4,6 +4,15 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+FROM dependencies AS development
+ENV NODE_ENV=development \
+    NEXT_TELEMETRY_DISABLED=1
+COPY --chown=node:node . .
+RUN chown node:node /app
+USER node
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
 FROM node:24.21.0-alpine3.23 AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
