@@ -4,6 +4,7 @@ export {
 } from "./affixed-input/affixed-input";
 export { Button, type ButtonProps } from "./button/button";
 export { Field, type FieldProps } from "./field/field";
+export { Feedback, type FeedbackProps } from "./feedback/feedback";
 export { IconButton, type IconButtonProps } from "./icon-button/icon-button";
 export { Input, type InputProps } from "./input/input";
 export {

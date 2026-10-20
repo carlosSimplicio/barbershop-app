@@ -202,7 +202,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis.
 - [ ] Criar padrões compartilhados para tabelas.
 - [ ] Criar padrões compartilhados para modais.
-- [ ] Criar padrões compartilhados de feedback.
+- [x] Criar padrões compartilhados de feedback.
 - [ ] Criar padrões compartilhados para estados vazios.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.

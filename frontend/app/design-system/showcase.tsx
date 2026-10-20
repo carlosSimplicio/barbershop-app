@@ -6,6 +6,7 @@ import {
   AffixedInput,
   Button,
   Field,
+  Feedback,
   IconButton,
   PasswordField,
   SelectField,
@@ -218,6 +219,23 @@ export function DesignSystemShowcase() {
             <SelectField disabled label="Seleção desabilitada">
               <option>Não editável</option>
             </SelectField>
+          </div>
+        </Showcase>
+        <Showcase title="Feedback assíncrono">
+          <div className={styles.feedbackGrid}>
+            <Feedback title="Cadastro recebido" variant="success">
+              Enviamos as instruções de confirmação para o seu e-mail.
+            </Feedback>
+            <Feedback title="Atenção necessária" variant="warning">
+              Sua sessão está perto de expirar.
+            </Feedback>
+            <Feedback
+              action={<Button>Tentar novamente</Button>}
+              title="Não foi possível concluir"
+              variant="error"
+            >
+              Confira sua conexão e repita a solicitação.
+            </Feedback>
           </div>
         </Showcase>
       </section>
