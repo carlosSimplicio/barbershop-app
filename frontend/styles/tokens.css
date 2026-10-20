@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/montserrat/montserrat-latin-variable.woff2") format("woff2");
+}
+
 :root,
 [data-theme="light"] {
   --color-primary: #2f86b8;
@@ -41,8 +49,7 @@
 
 :root {
   --font-family-sans:
-    var(--font-montserrat), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+    "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
