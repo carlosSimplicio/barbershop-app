@@ -62,6 +62,15 @@ Criar os primeiros componentes reutilizáveis do frontend com APIs configurávei
 - **Verificação:** executar `npm test`, `npm run lint`, `npm run format:check`, `npm run typecheck` e `npm run build`; revisar o diff final, acessibilidade, responsividade e ausência de estilos duplicados.
 - **Dependências:** subtarefas 1–5.
 
+### 7. Isolar cada componente e adotar refs nativas do React 19
+
+- **O que:** mover cada componente para uma pasta própria contendo implementação `.tsx`, teste `.test.tsx` e CSS Module; substituir `forwardRef` pela prop `ref` nativa do React 19, preservando a API pública pelo barrel `frontend/components/ui/index.ts`.
+- **Motivação:** tornar componentes mais fáceis de localizar, alterar e substituir, alinhando a implementação ao modelo atual de refs do React.
+- **Onde:** `frontend/components/ui`, catálogo React e `docs/architecture.md`.
+- **Base documental:** convenções de frontend de `docs/architecture.md` e decisão explícita desta continuação do plano.
+- **Verificação:** testes isolados por componente comprovam comportamento e encaminhamento de refs; executar `npm test`, `npm run lint`, `npm run format:check`, `npm run typecheck` e `npm run build`; confirmar ausência de `forwardRef` no design system.
+- **Dependências:** subtarefas 1–6.
+
 ## Premissas
 
 - Nenhuma página funcional, chamada de API ou regra de negócio será implementada nesta entrega.
