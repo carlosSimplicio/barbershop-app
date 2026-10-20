@@ -1,5 +1,9 @@
 export { AffixedInput, type AffixedInputProps } from "./affixed-input";
 export { Button, type ButtonProps } from "./button";
+export { Field, type FieldProps } from "./field";
 export { IconButton, type IconButtonProps } from "./icon-button";
 export { Input, type InputProps } from "./input";
+export { PasswordField, type PasswordFieldProps } from "./password-field";
 export { Select, type SelectProps } from "./select";
+export { SelectField, type SelectFieldProps } from "./select-field";
+export { TextField, type TextFieldProps } from "./text-field";
