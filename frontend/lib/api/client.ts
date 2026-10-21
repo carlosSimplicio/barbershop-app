@@ -2,7 +2,7 @@ import { recoverRead } from "./session";
 import { sendRequest, type ApiResult } from "./transport";
 
 export type { ApiError, ApiResult } from "./transport";
-export { configureApiSessionRecovery } from "./session";
+export { configureApiSessionRecovery, runSessionAction } from "./session";
 
 export type ApiFetchOptions = RequestInit & {
   authenticated?: boolean;

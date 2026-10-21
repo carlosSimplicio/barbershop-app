@@ -1,9 +1,17 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-import { apiFetch, configureApiSessionRecovery } from "./client";
+import {
+  apiFetch,
+  configureApiSessionRecovery,
+  runSessionAction,
+} from "./client";
 
-afterEach(() => {
+afterEach(async () => {
   configureApiSessionRecovery(null);
+  await runSessionAction(
+    async () => ({ state: "empty", status: 204 }),
+    "authenticated",
+  );
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -213,6 +221,172 @@ test("chamada pública e refresh explícito não entram na recuperação automá
   });
 
   expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+test("aguarda o refresh antes de uma mudança explícita de sessão", async () => {
+  let finishRefresh: ((response: Response) => void) | undefined;
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    )
+    .mockResolvedValueOnce(jsonResponse({ user_id: "before" }));
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+  const read = apiFetch("/api/v1/auth/me", { authenticated: true });
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+  const action = vi.fn(async () => ({ state: "empty" as const, status: 204 }));
+  const change = runSessionAction(action, "authenticated");
+  expect(action).not.toHaveBeenCalled();
+  finishRefresh?.(new Response(null, { status: 204 }));
+  await Promise.all([read, change]);
+
+  expect(action).toHaveBeenCalledOnce();
+});
+
+test("nova sessão reabilita recuperação após refresh inválido", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(jsonResponse({ user_id: "new" }));
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+
+  await apiFetch("/api/v1/auth/me", { authenticated: true });
+  await runSessionAction(
+    async () => ({ state: "empty", status: 204 }),
+    "authenticated",
+  );
+  await expect(
+    apiFetch("/api/v1/auth/me", { authenticated: true }),
+  ).resolves.toMatchObject({ state: "success", status: 200 });
+  expect(fetchMock).toHaveBeenCalledTimes(5);
+});
+
+test("leitura antiga não é repetida sob conta autenticada depois", async () => {
+  let finishOldRead: ((response: Response) => void) | undefined;
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishOldRead = resolve;
+        }),
+    )
+    .mockResolvedValueOnce(jsonResponse({ tenant: "new-account" }));
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+
+  const oldRead = apiFetch("/api/v1/establishment", { authenticated: true });
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+  await runSessionAction(
+    async () => ({ state: "empty", status: 204 }),
+    "authenticated",
+  );
+  finishOldRead?.(errorResponse(401));
+
+  await expect(oldRead).resolves.toMatchObject({ state: "error", status: 401 });
+  expect(fetchMock).toHaveBeenCalledOnce();
+});
+
+test("descarta retry que termina depois de uma troca explícita de conta", async () => {
+  let finishRetry: ((response: Response) => void) | undefined;
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishRetry = resolve;
+        }),
+    );
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+  const oldRead = apiFetch("/api/v1/establishment", { authenticated: true });
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+
+  await runSessionAction(
+    async () => ({ state: "empty", status: 204 }),
+    "authenticated",
+  );
+  finishRetry?.(jsonResponse({ tenant: "new-account" }));
+
+  await expect(oldRead).resolves.toMatchObject({ state: "error", status: 401 });
+});
+
+test("ação explícita usa o mesmo Web Lock da renovação automática", async () => {
+  const requestLock = installWebLock();
+  const action = vi.fn(async () => ({ state: "empty" as const, status: 204 }));
+
+  await runSessionAction(action, "authenticated");
+
+  expect(requestLock).toHaveBeenCalledWith(
+    "barbershop-auth-refresh",
+    { mode: "exclusive" },
+    expect.any(Function),
+  );
+  expect(action).toHaveBeenCalledOnce();
+});
+
+test("não inicia refresh automático durante uma mudança explícita de sessão", async () => {
+  let finishAction: (() => void) | undefined;
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(errorResponse(401));
+  const change = runSessionAction(
+    () =>
+      new Promise<{ state: "empty"; status: 204 }>((resolve) => {
+        finishAction = () => resolve({ state: "empty", status: 204 });
+      }),
+    "authenticated",
+  );
+  await vi.waitFor(() => expect(finishAction).toBeDefined());
+
+  await expect(
+    apiFetch("/api/v1/auth/me", { authenticated: true }),
+  ).resolves.toMatchObject({ state: "error", status: 401 });
+  expect(fetchMock).toHaveBeenCalledOnce();
+  finishAction?.();
+  await change;
+});
+
+test("desmontar o Provider durante refresh não inicia uma segunda rotação", async () => {
+  let finishRefresh: ((response: Response) => void) | undefined;
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    )
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(jsonResponse({ user_id: "current" }))
+    .mockResolvedValueOnce(jsonResponse({ user_id: "current" }));
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+  const first = apiFetch("/api/v1/auth/me", { authenticated: true });
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+  configureApiSessionRecovery(null);
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+  const second = apiFetch("/api/v1/auth/me", { authenticated: true });
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+  finishRefresh?.(new Response(null, { status: 204 }));
+
+  await expect(Promise.all([first, second])).resolves.toEqual([
+    expect.objectContaining({ state: "success" }),
+    expect.objectContaining({ state: "success" }),
+  ]);
+  expect(
+    fetchMock.mock.calls.filter(([path]) => path === "/api/v1/auth/refresh"),
+  ).toHaveLength(1);
 });
 
 function errorResponse(status: number) {
