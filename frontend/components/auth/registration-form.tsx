@@ -9,6 +9,7 @@ import {
   type RegisterRequest,
 } from "@/lib/auth/registration-api";
 
+import { ConfirmationResend } from "./confirmation-resend";
 import styles from "./registration-form.module.css";
 
 type FieldName = keyof RegisterRequest;
@@ -155,6 +156,7 @@ export function RegistrationForm() {
           Confirme seu e-mail para ativar a conta. Sua avaliação começa somente
           após a confirmação.
         </Feedback>
+        <ConfirmationResend email={values.email.trim()} />
       </section>
     );
   }

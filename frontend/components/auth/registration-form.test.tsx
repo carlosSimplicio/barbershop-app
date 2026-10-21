@@ -54,6 +54,9 @@ test("sugere slug, usa o fuso detectado e mantém a confirmação pendente após
   expect(
     screen.getByText(/avaliação começa somente após a confirmação/i),
   ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /reenviar link de confirmação/i }),
+  ).toBeInTheDocument();
 });
 
 test("preserva o slug editado e permite corrigir o fuso sugerido", () => {

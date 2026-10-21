@@ -194,7 +194,7 @@
 
 ## Frontend
 
-- A home deslogada em `/` é uma landing page estática, renderizada no servidor e sem chamadas à API. `/cadastro` usa o layout de sessão e a guarda de visitantes, envia `POST /auth/register` pelo cliente tipado e mantém um estado de confirmação pendente após `202`, sem criar sessão ou iniciar o trial. O login, o reenvio, a leitura do fragmento, a confirmação e o consumo de `GET /establishment` ainda não possuem interface; os tipos TypeScript gerados do OpenAPI permanecem sincronizados.
+- A home deslogada em `/` é uma landing page estática, renderizada no servidor e sem chamadas à API. `/cadastro` usa o layout de sessão e a guarda de visitantes, envia `POST /auth/register` pelo cliente tipado e mantém um estado de confirmação pendente após `202`, sem criar sessão ou iniciar o trial. Nesse estado, um componente reutilizável permite solicitar `POST /auth/email-confirmation` para o mesmo e-mail; ele nunca mostra a mensagem bruta do backend e apresenta o mesmo sucesso genérico para qualquer `202`. O login ainda não possui interface para reutilizar essa ação; a leitura do fragmento, a confirmação e o consumo de `GET /establishment` também permanecem pendentes. Os tipos TypeScript gerados do OpenAPI permanecem sincronizados.
 
 - Use Next.js App Router, React, TypeScript estrito e npm, com `package-lock.json` versionado.
 - Não adicione lockfiles de pnpm, Yarn ou Bun.
