@@ -217,6 +217,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
 - [x] Oferecer formulário público de cadastro com validação de conveniência, conflitos específicos por campo e estado de confirmação pendente após `202`, sem iniciar o trial na interface.
 - [x] Permitir solicitar novo link no estado pós-cadastro com resposta genérica; a reutilização da ação no login depende da entrega dessa página.
+- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar para `/testes` após sucesso.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
@@ -470,7 +471,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Tratar nome do estabelecimento, e-mail, tokens e credenciais como sensíveis nos fluxos de onboarding entregues.
 - [ ] Estender o tratamento de dados sensíveis aos futuros fluxos de clientes e financeiro.
-- [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; o token transacional usa somente o fragmento controlado até a interface removê-lo.
+- [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; a interface de confirmação remove o token do fragmento antes de qualquer chamada de API e não o persiste.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros.
 - [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
 - [ ] Aplicar respostas resistentes a enumeração na recuperação e consulta pública futuras.
