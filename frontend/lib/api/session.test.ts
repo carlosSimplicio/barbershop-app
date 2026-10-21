@@ -1,10 +1,16 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
   apiFetch,
   configureApiSessionRecovery,
   runSessionAction,
 } from "./client";
+
+beforeEach(() => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue(
+    "__Secure-barbershop_csrf=csrf-current",
+  );
+});
 
 afterEach(async () => {
   configureApiSessionRecovery(null);
@@ -30,6 +36,43 @@ test("não renova nem repete uma mutação autenticada que recebeu 401", async (
     }),
   ).resolves.toMatchObject({ state: "error", status: 401 });
   expect(fetchMock).toHaveBeenCalledOnce();
+});
+
+test("visitante sem cookie CSRF permanece anônimo sem tentar refresh", async () => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue("");
+  const onInvalidSession = vi.fn();
+  configureApiSessionRecovery({ onInvalidSession });
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(errorResponse(403));
+
+  await expect(
+    apiFetch("/api/v1/auth/me", { authenticated: true }),
+  ).resolves.toMatchObject({ state: "error", status: 401 });
+  expect(fetchMock).toHaveBeenCalledOnce();
+  expect(onInvalidSession).toHaveBeenCalledOnce();
+});
+
+test("sem CSRF, Web Lock reconsulta a sessão sem tentar refresh", async () => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue("");
+  const requestLock = installWebLock();
+  const onInvalidSession = vi.fn();
+  configureApiSessionRecovery({ onInvalidSession });
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValueOnce(errorResponse(401));
+
+  await expect(
+    apiFetch("/api/v1/auth/me", { authenticated: true }),
+  ).resolves.toMatchObject({ state: "error", status: 401 });
+  expect(requestLock).toHaveBeenCalledOnce();
+  expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+    "/api/v1/auth/me",
+    "/api/v1/auth/me",
+  ]);
+  expect(onInvalidSession).toHaveBeenCalledOnce();
 });
 
 test("compartilha um refresh entre duas leituras autenticadas", async () => {

@@ -23,7 +23,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - O proprietário pode solicitar uma nova confirmação informando o e-mail. A resposta não revela se a conta existe, já foi confirmada ou recebeu um novo token; quando aplicável, o token anterior é invalidado antes do novo envio.
 - A confirmação recebe o token somente no corpo, recusa de forma indistinguível tokens inexistentes, expirados, substituídos ou usados e, quando válida, confirma a conta e autentica automaticamente o proprietário.
 - Antes da confirmação, o estabelecimento persistido não possui trial e o proprietário ainda não possui sessão. Depois da confirmação, a sessão autenticada pode consultar somente seu próprio estabelecimento, com identificador, nome, slug, fuso IANA e situação básica do trial; a resposta admite `trial: null` para estabelecimentos sem o benefício e, quando ele existe, informa `active` ou `expired` e seus limites exatos em UTC.
-- A interface de cadastro e confirmação permanece pendente. Quando for implementada, detectará o fuso do dispositivo, usará `America/Sao_Paulo` como fallback e permitirá confirmação ou alteração antes do envio; o backend valida e persiste somente o identificador IANA recebido.
+- A interface de cadastro detecta o fuso do dispositivo, usa `America/Sao_Paulo` como fallback e permite confirmá-lo ou alterá-lo antes do envio; o backend valida e persiste somente o identificador IANA recebido. Após o cadastro, a interface orienta a conferir o e-mail sem apresentar o trial como iniciado. A confirmação pelo link e o reenvio ainda não possuem interface.
 
 ## Planos, assinatura e trial
 
@@ -233,7 +233,7 @@ As três configurações são opcionais; valor ausente/`NULL` significa sem rest
 
 ## Experiência de uso
 
-- A home deslogada da plataforma apresenta sua proposta de valor em português e oferece caminhos para cadastro e login. Os formulários de cadastro e login ainda não estão disponíveis nesta etapa.
+- A home deslogada da plataforma apresenta sua proposta de valor em português e oferece caminhos para cadastro e login. O formulário de cadastro e o estado de confirmação pendente estão disponíveis; o login ainda não possui interface.
 - A página pública sempre exibe nome e logo do estabelecimento; ambos são obrigatórios.
 - Descrição curta, endereço, telefone de contato e links de redes sociais são opcionais e aparecem somente quando preenchidos.
 - Não renderize seções vazias ou placeholders para informações públicas opcionais ausentes.

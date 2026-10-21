@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
   configureApiSessionRecovery,
@@ -13,6 +13,12 @@ import {
 } from "@/lib/api/client";
 
 import { AuthProvider, useAuthSession } from "./auth-provider";
+
+beforeEach(() => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue(
+    "__Secure-barbershop_csrf=csrf-current",
+  );
+});
 
 afterEach(async () => {
   configureApiSessionRecovery(null);
@@ -35,6 +41,22 @@ test("descobre a identidade autenticada ao montar", async () => {
   );
 
   expect(await screen.findByText("owner")).toBeInTheDocument();
+});
+
+test("visitante sem cookie CSRF permanece anônimo sem bloquear a página pública", async () => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue("");
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(errorResponse(401));
+
+  render(
+    <AuthProvider>
+      <SessionProbe />
+    </AuthProvider>,
+  );
+
+  expect(await screen.findByText("anonymous")).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledOnce();
 });
 
 test("recupera a identidade após expirar o access token", async () => {

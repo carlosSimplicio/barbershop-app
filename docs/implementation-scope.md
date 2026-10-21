@@ -215,6 +215,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 5. Autenticação
 
 - [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
+- [x] Oferecer formulário público de cadastro com validação de conveniência, conflitos específicos por campo e estado de confirmação pendente após `202`, sem iniciar o trial na interface.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
@@ -224,7 +225,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
-- [x] Coordenar a renovação automática de leituras autenticadas na mesma aba e, em caso de sucesso, entre abas da mesma origem por Web Lock e rechecagem, sem expor ou persistir tokens no JavaScript. A falha indeterminada entre abas permanece pendente, como documentado em `docs/architecture.md`.
+- [x] Coordenar a renovação automática de leituras autenticadas na mesma aba e, em caso de sucesso, entre abas da mesma origem por Web Lock e rechecagem, sem expor ou persistir tokens no JavaScript. Uma visita sem cookie CSRF não tenta refresh e continua como sessão ausente; a falha indeterminada entre abas permanece pendente, como documentado em `docs/architecture.md`.
 - [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas coordenadas com a renovação; o uso nas páginas de login e testes ainda depende das respectivas etapas do plano.
 - [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
@@ -263,7 +264,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Manter o slug imutável nos endpoints atualmente entregues.
 - [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
-- [ ] Na futura interface, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação antes do cadastro.
+- [x] Na interface de cadastro, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação ou alteração antes do envio.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
 - [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
 - [ ] Interpretar valores ausentes dessas configurações como ausência de limite.

@@ -1,4 +1,4 @@
-import { sendRequest, type ApiResult } from "./transport";
+import { hasCsrfCookie, sendRequest, type ApiResult } from "./transport";
 
 type RecoveryResult = "rotated" | "external" | "invalid" | "unavailable";
 type Recovery = {
@@ -123,6 +123,11 @@ async function refresh(crossTabLocked: boolean): Promise<RecoveryResult> {
     } catch {
       return "unavailable";
     }
+  }
+
+  if (!hasCsrfCookie()) {
+    invalidateSession();
+    return "invalid";
   }
 
   try {
