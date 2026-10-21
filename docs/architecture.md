@@ -194,7 +194,7 @@
 
 ## Frontend
 
-- O onboarding desta etapa não possui interface. Apenas os tipos TypeScript gerados do OpenAPI permanecem sincronizados; cadastro, leitura do fragmento, confirmação e consumo de `GET /establishment` continuam manuais até um plano de frontend próprio.
+- A home deslogada em `/` é uma landing page estática, renderizada no servidor e sem chamadas à API. Os formulários de cadastro e login, a leitura do fragmento, a confirmação e o consumo de `GET /establishment` ainda não possuem interface; os tipos TypeScript gerados do OpenAPI permanecem sincronizados.
 
 - Use Next.js App Router, React, TypeScript estrito e npm, com `package-lock.json` versionado.
 - Não adicione lockfiles de pnpm, Yarn ou Bun.

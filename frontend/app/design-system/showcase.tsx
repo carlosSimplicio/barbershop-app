@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import {
+  ActionLink,
   AffixedInput,
   Button,
   Field,
@@ -141,6 +142,18 @@ export function DesignSystemShowcase() {
           </p>
           <p className={styles.instruction}>
             Use ponteiro e Tab para conferir hover, foco, clique e estado ativo.
+          </p>
+        </Showcase>
+        <Showcase title="Links de ação">
+          <div className={styles.actionGrid}>
+            <ActionLink href="/cadastro">Criar minha conta</ActionLink>
+            <ActionLink href="/login" variant="secondary">
+              Entrar
+            </ActionLink>
+          </div>
+          <p className={styles.instruction}>
+            Navegação usa links semânticos com foco visível; ações locais usam
+            botões.
           </p>
         </Showcase>
       </section>

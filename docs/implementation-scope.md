@@ -210,6 +210,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Manter página pública e agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
 - [x] Usar Server Components para cascas e conteúdo estático e Client Components somente nas fronteiras interativas necessárias.
 - [x] Consumir `/api/v1` diretamente; não criar BFF, Server Actions de negócio ou Route Handlers intermediários.
+- [x] Criar home deslogada responsiva em `pt-BR`, com proposta da plataforma e links para cadastro e login, sem chamadas à API.
 
 ## 5. Autenticação
 

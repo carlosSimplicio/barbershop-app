@@ -233,6 +233,7 @@ As três configurações são opcionais; valor ausente/`NULL` significa sem rest
 
 ## Experiência de uso
 
+- A home deslogada da plataforma apresenta sua proposta de valor em português e oferece caminhos para cadastro e login. Os formulários de cadastro e login ainda não estão disponíveis nesta etapa.
 - A página pública sempre exibe nome e logo do estabelecimento; ambos são obrigatórios.
 - Descrição curta, endereço, telefone de contato e links de redes sociais são opcionais e aparecem somente quando preenchidos.
 - Não renderize seções vazias ou placeholders para informações públicas opcionais ausentes.
