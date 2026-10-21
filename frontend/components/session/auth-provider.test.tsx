@@ -202,6 +202,25 @@ test("uma nova sessão reabilita a recuperação e atualiza o principal", async 
   expect(fetchMock).toHaveBeenCalledTimes(3);
 });
 
+test("usa o principal retornado pelo login mesmo se uma nova consulta falharia", async () => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue("");
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockResolvedValue(errorResponse(503));
+
+  render(
+    <AuthProvider>
+      <LoginSuccessProbe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText("anonymous")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Entrar com principal" }));
+
+  expect(await screen.findByText("professional:true")).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledOnce();
+});
+
 test("logout bem-sucedido limpa a identidade", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
     jsonResponse(principal("owner")),
@@ -269,6 +288,36 @@ function SessionProbe() {
         }
       >
         Sair
+      </button>
+    </div>
+  );
+}
+
+function LoginSuccessProbe() {
+  const { state, runAction } = useAuthSession();
+  return (
+    <div>
+      <output>
+        {state.status === "authenticated"
+          ? `${state.principal.role}:${state.principal.password_change_required}`
+          : state.status}
+      </output>
+      <button
+        onClick={() =>
+          void runAction(
+            async () => ({
+              state: "success",
+              status: 200,
+              data: {
+                ...principal("professional"),
+                password_change_required: true,
+              },
+            }),
+            "authenticated",
+          )
+        }
+      >
+        Entrar com principal
       </button>
     </div>
   );

@@ -1,0 +1,60 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--space-5);
+  background: var(--color-canvas);
+}
+
+.card {
+  width: min(100%, 30rem);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.brand {
+  display: block;
+  width: fit-content;
+  margin-bottom: var(--space-8);
+  color: var(--color-ink);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.04em;
+  text-decoration: none;
+}
+
+.eyebrow {
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.card h1 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  letter-spacing: -0.05em;
+}
+
+.lead {
+  margin: 0 0 var(--space-6);
+  color: var(--color-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+}
+
+.signUp {
+  margin: var(--space-6) 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.signUp a {
+  color: var(--color-primary-hover);
+  font-weight: var(--font-weight-bold);
+}

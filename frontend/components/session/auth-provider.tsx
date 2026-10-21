@@ -24,7 +24,7 @@ export type AuthState =
 type SessionContext = {
   state: AuthState;
   reload: () => Promise<void>;
-  runAction: <T>(
+  runAction: <T extends AuthPrincipal | void>(
     action: () => Promise<ApiResult<T>>,
     next: "authenticated" | "anonymous",
   ) => Promise<ApiResult<T>>;
@@ -87,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (next === "anonymous") {
           currentRequest.current?.abort();
           setState({ status: "anonymous" });
+        } else if (result.state === "success" && result.data) {
+          currentRequest.current?.abort();
+          setState({ status: "authenticated", principal: result.data });
         } else {
           await reload();
         }
