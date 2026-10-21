@@ -1,49 +1,22 @@
-import type { components } from "@/types/generated/api";
+import { recoverRead } from "./session";
+import { sendRequest, type ApiResult } from "./transport";
 
-type ApiError = components["schemas"]["ErrorResponse"];
+export type { ApiError, ApiResult } from "./transport";
+export { configureApiSessionRecovery } from "./session";
 
-export type ApiResult<T> =
-  | { state: "success"; data: T }
-  | { state: "empty" }
-  | { state: "error"; error: ApiError };
+export type ApiFetchOptions = RequestInit & {
+  authenticated?: boolean;
+  csrf?: boolean;
+};
 
-const fallbackError = (status: number): ApiError => ({
-  code: "unexpected_response",
-  message: `Não foi possível concluir a solicitação (${status}).`,
-  request_id: "unknown",
-});
-
-export async function apiFetch<T>(
+export function apiFetch<T>(
   path: `/api/v1/${string}`,
-  init: RequestInit = {},
+  options: ApiFetchOptions = {},
 ): Promise<ApiResult<T>> {
-  const headers = new Headers(init.headers);
-  if (!headers.has("Accept")) {
-    headers.set("Accept", "application/json");
-  }
-
-  const response = await fetch(path, {
-    ...init,
-    credentials: "include",
-    headers,
-  });
-
-  if (response.status === 204 || response.status === 205) {
-    return { state: "empty" };
-  }
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .then((body: unknown) => body as ApiError)
-      .catch(() => fallbackError(response.status));
-    return { state: "error", error };
-  }
-
-  const body = await response.text();
-  if (body === "") {
-    return { state: "empty" };
-  }
-
-  return { state: "success", data: JSON.parse(body) as T };
+  const { authenticated = false, csrf = false, ...init } = options;
+  const request = () => sendRequest<T>(path, init, csrf);
+  const method = init.method?.toUpperCase() ?? "GET";
+  return authenticated && (method === "GET" || method === "HEAD")
+    ? recoverRead(path, request)
+    : request();
 }

@@ -12,15 +12,15 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 
 ### 2. Tornar o transporte da API consciente de sessão e CSRF
 
-- **O que:** evoluir o wrapper de `fetch` para preservar status e erros tipados, acrescentar CSRF às mutações protegidas e permitir uma política de recuperação autenticada reutilizável pelos clientes de cada slice. Ler somente o cookie CSRF não `HttpOnly` no momento de cada mutação e nunca expor access ou refresh tokens ao JavaScript. Para chamadas autenticadas que retornarem `401`, coordenar uma única tentativa de refresh em andamento, repetir cada requisição original no máximo uma vez e encerrar a sessão se a renovação falhar; chamadas públicas e o próprio refresh não entram nesse ciclo.
+- **O que:** manter `client.ts` como entrada pequena, separar transporte, leitura do cookie CSRF e interpretação de respostas em `transport.ts`, e concentrar a recuperação de leituras em `session.ts`. Preservar status e erros tipados sem expor access ou refresh tokens ao JavaScript. Somente `GET`/`HEAD` autenticados que retornarem `401` entram na recuperação automática: uma promessa compartilhada evita refresh duplicado na aba e o Web Lock coordena abas. Dentro do lock, consultar `/auth/me` antes de renovar; se outra aba já autenticou, repetir automaticamente apenas `/auth/me`, para que leituras de domínio antigas não recebam dados de outra conta. Após refresh `204`, repetir a leitura uma vez. `401` definitivo notifica sessão inválida; falha indeterminada não reutiliza automaticamente o token nessa aba. Mutações, inclusive login, logout, troca de senha e refresh manual, seguem diretamente ao transporte nesta etapa e terão tratamento explícito no `AuthProvider` e nas ações futuras.
 - **Motivação:** os cookies são rotativos e o refresh token é de uso único; renovações concorrentes independentes poderiam ser interpretadas como reutilização e revogar a família da sessão. As páginas também precisam consumir o contrato OpenAPI sem duplicar serialização, erros, CSRF ou política de repetição.
-- **Onde:** `frontend/lib/api/client.ts` e testes; utilitários previstos sob `frontend/lib/auth`; tipos de `frontend/types/generated/api.ts` apenas como dependência gerada, sem edição manual.
+- **Onde:** `frontend/lib/api/client.ts`, `frontend/lib/api/transport.ts`, `frontend/lib/api/session.ts` e testes; tipos de `frontend/types/generated/api.ts` apenas como dependência gerada, sem edição manual.
 - **Base documental:** `docs/architecture.md`, seções “API contract-first”, “Erros”, “Autenticação”, “Contrato de sessão”, “Frontend”, “Renderização e API” e “Estado”; `docs/implementation-scope.md`, seções 4, 5 e 22; contrato vigente em `backend/openapi/openapi.yaml`.
-- **Verificação:** testes Vitest cobrem resultados tipados, envio de credenciais, inclusão de CSRF apenas quando exigido, leitura do cookie atualizado, uma única renovação para chamadas concorrentes, repetição única após refresh válido e ausência de loop. Confirmar que nenhum token sensível é persistido em `localStorage`, `sessionStorage`, URL ou logs.
+- **Verificação:** testes Vitest cobrem resultados tipados, envio de credenciais, inclusão de CSRF apenas quando exigido, uma única renovação para leituras concorrentes na mesma aba, parada após falha, aquisição do Web Lock, revalidação que evita segunda renovação entre abas, ausência de retry automático em mutações e em leituras de domínio após mudança externa de sessão, fallback sem Web Locks e repetição única. Confirmar que nenhum token sensível é persistido em `localStorage`, `sessionStorage`, URL ou logs.
 
 ### 3. Centralizar o estado da sessão e proteger a navegação
 
-- **O que:** criar o cliente tipado de `GET /auth/me` e `POST /auth/refresh` e um Context de sessão restrito a identidade e estado transversal. Representar carregamento, sessão autenticada e sessão ausente; inicializar a identidade com recuperação automática pelo transporte da subtarefa 2 e expor operações para que os fluxos seguintes sincronizem mudanças. Criar guardas reutilizáveis que enviem visitantes sem sessão de `/testes` para `/login` e usuários autenticados que abrirem `/login` ou `/cadastro` para `/testes`, usando substituição de histórico e uma tela de carregamento sem piscar conteúdo protegido.
+- **O que:** criar o cliente tipado de `GET /auth/me` e `POST /auth/refresh` e um único Context global de sessão, restrito a identidade e estado transversal, que registre uma vez a reação a uma sessão inválida. Representar carregamento, sessão autenticada e sessão ausente; inicializar a identidade com recuperação automática da subtarefa 2 e expor operações explícitas para sincronizar login, confirmação, troca de senha, refresh manual e logout, inclusive reiniciar a recuperação após uma nova sessão. Coordenar no Provider essas transições com uma renovação automática em andamento antes de reiniciar o estado, para que uma tentativa antiga não altere uma sessão nova; o transporte não serializa mutações. Criar guardas reutilizáveis que enviem visitantes sem sessão de `/testes` para `/login` e usuários autenticados que abrirem `/login` ou `/cadastro` para `/testes`, usando substituição de histórico e uma tela de carregamento sem piscar conteúdo protegido.
 - **Motivação:** os cookies `HttpOnly` não podem ser usados diretamente pelo React para decidir a identidade, e cada página não deve implementar sua própria descoberta ou recuperação de sessão.
 - **Onde:** componentes e hooks previstos sob `frontend/components/session` e `frontend/lib/auth`; composição no menor layout necessário sob `frontend/app`, sem transformar componentes estáticos em Client Components sem necessidade.
 - **Base documental:** `docs/architecture.md`, seções “Frontend”, “Renderização e API” e “Estado”; `docs/implementation-scope.md`, seções 4 e 5; decisão confirmada pelo usuário sobre guardas e uma tentativa automática de refresh.
@@ -60,7 +60,7 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 - **Motivação:** completar com segurança o cadastro, iniciar o único trial e aproveitar a autenticação automática já retornada pelo backend.
 - **Onde:** rota e estilos previstos em `frontend/app/confirmar-email`; componente específico sob `frontend/components/auth`; cliente e Context das subtarefas 2 e 3.
 - **Base documental:** `AGENTS.md`, regra universal para links transacionais; `docs/product.md`, seção “Cadastro, usuários e permissões”; `docs/architecture.md`, seções “Contrato de sessão” e “Frontend”; `docs/implementation-scope.md`, seções 5, 7 e 22; decisão confirmada pelo usuário de entregar a confirmação funcional.
-- **Verificação:** testes Vitest cobrem fragmento válido, remoção anterior à requisição, token ausente, resposta inválida/expirada, erro inesperado e sucesso autenticado com redirecionamento. Inspeção confirma ausência do token em URL após a captura, mensagens, armazenamento e logs.
+- **Verificação:** testes Vitest cobrem fragmento válido, remoção anterior à requisição, token ausente, resposta inválida/expirada, erro inesperado e sucesso com sincronização explícita do Provider e redirecionamento. Inspeção confirma ausência do token em URL após a captura, mensagens, armazenamento e logs.
 - **Dependências:** subtarefas 1–3.
 
 ### 8. Entregar login para proprietário e profissional
@@ -69,7 +69,7 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 - **Motivação:** permitir que os dois papéis usem as sessões existentes e alcancem a tela técnica solicitada, inclusive o fluxo especial de senha temporária.
 - **Onde:** rota e estilos previstos em `frontend/app/login`; componentes específicos sob `frontend/components/auth`; clientes e Context das subtarefas 2 e 3.
 - **Base documental:** `docs/product.md`, seção “Cadastro, usuários e permissões”; `docs/architecture.md`, seções “Autenticação”, “Contrato de sessão” e “Proprietário e profissional”; `docs/implementation-scope.md`, seções 4 e 5; decisão do usuário de redirecionar o login para `/testes`.
-- **Verificação:** testes Vitest cobrem login válido dos dois papéis, credenciais inválidas genéricas, confirmação obrigatória e reenvio, rate limit, erro inesperado, bloqueio de envio duplicado e redirecionamento sem manter `/login` no histórico.
+- **Verificação:** testes Vitest cobrem login válido dos dois papéis, credenciais inválidas genéricas, confirmação obrigatória e reenvio, rate limit, erro inesperado, bloqueio de envio duplicado, sincronização explícita do Provider e redirecionamento sem manter `/login` no histórico.
 - **Dependências:** subtarefas 1–3 e 6.
 
 ### 9. Criar a área autenticada e permitir nova consulta da sessão
@@ -92,7 +92,7 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 
 ### 11. Expor a renovação manual da sessão
 
-- **O que:** adicionar a `/testes` uma ação explícita de `POST /auth/refresh`, reutilizando o cliente e a coordenação da sessão já empregados na renovação automática. Após sucesso, reconsultar ou preservar coerentemente o principal; após falha de sessão, limpar o estado e redirecionar para `/login`.
+- **O que:** adicionar a `/testes` uma ação explícita de `POST /auth/refresh`, coordenada pelo Provider com eventual renovação automática em andamento e com os mesmos cookies e CSRF do transporte. Após sucesso, reconsultar ou preservar coerentemente o principal; após falha de sessão, limpar o estado e redirecionar para `/login`.
 - **Motivação:** permitir testar diretamente a rotação do refresh token sem criar uma segunda implementação concorrente da operação.
 - **Onde:** cliente em `frontend/lib/auth`; Context da subtarefa 3; seção de ação em `frontend/components/testing` e `frontend/app/testes`.
 - **Base documental:** `docs/architecture.md`, seções “Autenticação” e “Contrato de sessão”; `docs/implementation-scope.md`, seção 5; decisão confirmada pelo usuário de testar refresh manual e automático.
@@ -105,7 +105,7 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 - **Motivação:** profissionais com senha temporária não podem usar o restante do produto até concluir essa operação, embora possam manter ou encerrar a sessão.
 - **Onde:** cliente e estado em `frontend/lib/auth`; formulário em `frontend/components/testing`; página `frontend/app/testes`.
 - **Base documental:** `docs/product.md`, seção “Cadastro, usuários e permissões”; `docs/architecture.md`, seções “Contrato de sessão” e “Proprietário e profissional”; `docs/implementation-scope.md`, seção 5.
-- **Verificação:** testes Vitest cobrem visibilidade condicional, validação, senha igual à temporária, erro geral, sucesso com atualização de `password_change_required` e liberação da consulta do estabelecimento.
+- **Verificação:** testes Vitest cobrem visibilidade condicional, validação, senha igual à temporária, erro geral, sincronização explícita do Provider após sucesso com atualização de `password_change_required` e liberação da consulta do estabelecimento.
 - **Dependências:** subtarefas 3, 9 e 10.
 
 ### 13. Encerrar a sessão pela área de testes
@@ -114,7 +114,7 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 - **Motivação:** completar o ciclo de sessão e permitir validar a revogação e remoção de cookies pelo backend.
 - **Onde:** cliente e estado em `frontend/lib/auth`; ação em `frontend/components/testing`; página `frontend/app/testes`.
 - **Base documental:** `docs/architecture.md`, seção “Contrato de sessão”; `docs/implementation-scope.md`, seção 5; decisão confirmada pelo usuário de testar logout.
-- **Verificação:** testes Vitest cobrem `204`, repetição segura, prevenção de cliques duplicados, falha interna, limpeza do principal e redirecionamento com substituição de histórico.
+- **Verificação:** testes Vitest cobrem `204`, repetição segura, prevenção de cliques duplicados, falha interna, limpeza explícita do principal no Provider e redirecionamento com substituição de histórico.
 - **Dependências:** subtarefas 2, 3 e 9.
 
 ### 14. Sincronizar documentação, checklist e qualidade da entrega

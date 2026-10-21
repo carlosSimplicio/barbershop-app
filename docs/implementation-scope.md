@@ -223,6 +223,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
+- [x] Coordenar a renovação automática de leituras autenticadas na mesma aba e, em caso de sucesso, entre abas da mesma origem por Web Lock e rechecagem, sem expor ou persistir tokens no JavaScript. A coordenação com mutações de sessão e a falha indeterminada entre abas permanecem pendentes, como documentado em `docs/architecture.md`.
 - [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
