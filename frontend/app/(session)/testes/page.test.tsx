@@ -34,6 +34,9 @@ test("mostra apenas dados não sensíveis do principal autenticado", async () =>
   expect(
     screen.getByRole("heading", { name: "Área de testes" }),
   ).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Estabelecimento" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("user-id")).toBeInTheDocument();
   expect(screen.getByText("establishment-id")).toBeInTheDocument();
   expect(screen.getByText("Não")).toBeInTheDocument();

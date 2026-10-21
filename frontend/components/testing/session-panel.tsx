@@ -3,7 +3,7 @@
 import { useAuthSession } from "@/components/session/auth-provider";
 import { Button } from "@/components/ui";
 
-import styles from "./session-panel.module.css";
+import styles from "./testing-panel.module.css";
 
 export function SessionPanel() {
   const { state, reload } = useAuthSession();

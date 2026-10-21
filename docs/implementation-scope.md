@@ -268,6 +268,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
 - [x] Na interface de cadastro, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação ou alteração antes do envio.
+- [x] Consultar em `/testes` o estabelecimento da sessão sem enviar ID de tenant, exibindo nome, slug, fuso e trial ausente, ativo ou expirado; bloquear a consulta durante troca obrigatória de senha.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
 - [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
 - [ ] Interpretar valores ausentes dessas configurações como ausência de limite.

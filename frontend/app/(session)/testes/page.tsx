@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { SessionGuard } from "@/components/session/session-guard";
+import { EstablishmentPanel } from "@/components/testing/establishment-panel";
 import { SessionPanel } from "@/components/testing/session-panel";
 
 import styles from "./page.module.css";
@@ -24,6 +25,7 @@ export default function TestingPage() {
         </header>
         <div className={styles.sections}>
           <SessionPanel />
+          <EstablishmentPanel />
         </div>
       </main>
     </SessionGuard>
