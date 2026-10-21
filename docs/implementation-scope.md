@@ -228,7 +228,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
 - [x] Coordenar a renovação automática de leituras autenticadas na mesma aba e, em caso de sucesso, entre abas da mesma origem por Web Lock e rechecagem, sem expor ou persistir tokens no JavaScript. Uma visita sem cookie CSRF não tenta refresh e continua como sessão ausente; a falha indeterminada entre abas permanece pendente, como documentado em `docs/architecture.md`.
-- [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas coordenadas com a renovação; o uso na página de testes ainda depende da respectiva etapa do plano.
+- [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas coordenadas com a renovação.
+- [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`; as demais ações técnicas continuam pendentes.
 - [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
