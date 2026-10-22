@@ -19,7 +19,7 @@
 
 - Copie `.env.example` para `.env` e execute `make dev` para subir o ambiente de desenvolvimento. Use `make dev-down` para remover seus containers e redes, incluindo serviços órfãos, sem apagar os volumes persistentes.
 - A aplicação é publicada pelo Caddy em `https://localhost:8443`; `http://localhost:8088` apenas redireciona para HTTPS. A interface do Mailpit fica restrita a `http://127.0.0.1:8025`.
-- Quando houver migrations de domínio, execute `make migrate-up` para aplicá-las com a imagem isolada do Goose após o PostgreSQL ficar saudável.
+- Quando houver migrations de domínio, execute `make migrate-up` para reconstruir a imagem isolada do Goose com os arquivos atuais e aplicá-las após o PostgreSQL ficar saudável.
 - `compose.yaml` representa a topologia de produção; `compose.dev.yaml` fixa `APP_ENV=development` no backend, usa o estágio de desenvolvimento do frontend com `NODE_ENV=development` e hot reload, acrescenta o Mailpit e sua interface local e fixa o endereço HTTPS de desenvolvimento do Caddy. A imagem de produção do frontend continua usando o estágio `runtime` e o servidor standalone.
 - PostgreSQL e SMTP ficam na rede interna de dados. No override local, o Mailpit também participa de uma bridge exclusiva de desenvolvimento para publicar somente sua UI em `127.0.0.1`; a porta SMTP não é publicada. Backend e frontend ficam atrás da rede interna de proxy. Somente o Caddy participa também da rede de borda e publica as portas da aplicação.
 - No PostgreSQL 18, monte o volume persistente em `/var/lib/postgresql`; o layout interno versionado é responsabilidade da imagem oficial.

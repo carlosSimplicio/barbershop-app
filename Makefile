@@ -16,7 +16,7 @@ generate-check: generate
 	git diff --exit-code -- backend/openapi/generated backend/db/generated frontend/types/generated
 
 migrate-up:
-	docker compose --profile tools run --rm migrate up
+	docker compose --profile tools run --build --rm migrate up
 
 dev:
 	docker compose -f compose.yaml -f compose.dev.yaml up --build
