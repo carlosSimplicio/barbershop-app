@@ -1,0 +1,5 @@
+.resend {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}

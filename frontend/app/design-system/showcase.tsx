@@ -3,9 +3,11 @@
 import { useState } from "react";
 
 import {
+  ActionLink,
   AffixedInput,
   Button,
   Field,
+  Feedback,
   IconButton,
   PasswordField,
   SelectField,
@@ -142,6 +144,18 @@ export function DesignSystemShowcase() {
             Use ponteiro e Tab para conferir hover, foco, clique e estado ativo.
           </p>
         </Showcase>
+        <Showcase title="Links de ação">
+          <div className={styles.actionGrid}>
+            <ActionLink href="/cadastro">Criar minha conta</ActionLink>
+            <ActionLink href="/login" variant="secondary">
+              Entrar
+            </ActionLink>
+          </div>
+          <p className={styles.instruction}>
+            Navegação usa links semânticos com foco visível; ações locais usam
+            botões.
+          </p>
+        </Showcase>
       </section>
 
       <section className={styles.section} id="fields">
@@ -218,6 +232,23 @@ export function DesignSystemShowcase() {
             <SelectField disabled label="Seleção desabilitada">
               <option>Não editável</option>
             </SelectField>
+          </div>
+        </Showcase>
+        <Showcase title="Feedback assíncrono">
+          <div className={styles.feedbackGrid}>
+            <Feedback title="Cadastro recebido" variant="success">
+              Enviamos as instruções de confirmação para o seu e-mail.
+            </Feedback>
+            <Feedback title="Atenção necessária" variant="warning">
+              Sua sessão está perto de expirar.
+            </Feedback>
+            <Feedback
+              action={<Button>Tentar novamente</Button>}
+              title="Não foi possível concluir"
+              variant="error"
+            >
+              Confira sua conexão e repita a solicitação.
+            </Feedback>
           </div>
         </Showcase>
       </section>

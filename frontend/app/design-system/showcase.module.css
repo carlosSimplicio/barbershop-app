@@ -296,6 +296,11 @@
   gap: var(--space-4) var(--space-5);
 }
 
+.feedbackGrid {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .ruleGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

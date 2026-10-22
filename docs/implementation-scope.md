@@ -202,7 +202,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis.
 - [ ] Criar padrões compartilhados para tabelas.
 - [ ] Criar padrões compartilhados para modais.
-- [ ] Criar padrões compartilhados de feedback.
+- [x] Criar padrões compartilhados de feedback.
 - [ ] Criar padrões compartilhados para estados vazios.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
@@ -210,19 +210,26 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Manter página pública e agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
 - [x] Usar Server Components para cascas e conteúdo estático e Client Components somente nas fronteiras interativas necessárias.
 - [x] Consumir `/api/v1` diretamente; não criar BFF, Server Actions de negócio ou Route Handlers intermediários.
+- [x] Criar home deslogada responsiva em `pt-BR`, com proposta da plataforma e links para cadastro e login, sem chamadas à API.
 
 ## 5. Autenticação
 
 - [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
+- [x] Oferecer formulário público de cadastro com validação de conveniência, conflitos específicos por campo e estado de confirmação pendente após `202`, sem iniciar o trial na interface.
+- [x] Permitir solicitar novo link no estado pós-cadastro e no login após confirmação obrigatória, sempre com resposta genérica.
+- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar para `/testes` após sucesso.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
 - [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
 - [x] Iniciar o trial somente depois da confirmação do e-mail.
-- [x] Implementar login de proprietário e profissional com resposta genérica para credenciais inválidas.
+- [x] Implementar login de proprietário e profissional na API e em `/login`, com resposta genérica para credenciais inválidas, reenvio de confirmação e sincronização de sessão.
 - [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
 - [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
 - [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
+- [x] Coordenar a renovação automática de leituras autenticadas na mesma aba e, em caso de sucesso, entre abas da mesma origem por Web Lock e rechecagem, sem expor ou persistir tokens no JavaScript. Uma visita sem cookie CSRF não tenta refresh e continua como sessão ausente; a falha indeterminada entre abas permanece pendente, como documentado em `docs/architecture.md`.
+- [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas coordenadas com a renovação.
+- [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, executar `POST /auth/refresh` com coordenação de sessão, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
 - [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
@@ -260,7 +267,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Manter o slug imutável nos endpoints atualmente entregues.
 - [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
-- [ ] Na futura interface, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação antes do cadastro.
+- [x] Na interface de cadastro, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação ou alteração antes do envio.
+- [x] Consultar em `/testes` o estabelecimento da sessão sem enviar ID de tenant, exibindo nome, slug, fuso e trial ausente, ativo ou expirado; bloquear a consulta durante troca obrigatória de senha.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
 - [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
 - [ ] Interpretar valores ausentes dessas configurações como ausência de limite.
@@ -465,7 +473,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Tratar nome do estabelecimento, e-mail, tokens e credenciais como sensíveis nos fluxos de onboarding entregues.
 - [ ] Estender o tratamento de dados sensíveis aos futuros fluxos de clientes e financeiro.
-- [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; o token transacional usa somente o fragmento controlado até a interface removê-lo.
+- [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; a interface de confirmação remove o token do fragmento antes de qualquer chamada de API e não o persiste.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros.
 - [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
 - [ ] Aplicar respostas resistentes a enumeração na recuperação e consulta pública futuras.

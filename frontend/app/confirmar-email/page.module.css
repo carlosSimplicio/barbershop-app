@@ -1,0 +1,22 @@
+.panel {
+  display: grid;
+  gap: var(--space-5);
+  width: min(100%, 36rem);
+  padding: clamp(1.5rem, 6vw, 3rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panel h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1.1;
+}
+
+.brand {
+  width: fit-content;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}

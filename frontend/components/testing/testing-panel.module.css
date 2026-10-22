@@ -1,0 +1,37 @@
+.panel {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-5);
+  padding: clamp(var(--space-5), 4vw, var(--space-7));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.details > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.details dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.details dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}

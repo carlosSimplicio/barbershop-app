@@ -1,0 +1,129 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-canvas);
+}
+
+.brandPanel {
+  display: none;
+}
+
+.formPanel {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  padding: var(--space-5);
+}
+
+.formWrap {
+  width: min(100%, 36rem);
+}
+
+.mobileBrand,
+.brand {
+  color: var(--color-ink);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.04em;
+  text-decoration: none;
+}
+
+.mobileBrand {
+  display: block;
+  width: fit-content;
+  margin-bottom: var(--space-8);
+}
+
+.eyebrow {
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.formWrap h1 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  letter-spacing: -0.05em;
+}
+
+.lead {
+  margin: 0 0 var(--space-5);
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.signIn {
+  margin: var(--space-5) 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.signIn a {
+  color: var(--color-primary-hover);
+  font-weight: var(--font-weight-bold);
+}
+
+@media (min-width: 60rem) {
+  .page {
+    display: grid;
+    grid-template-columns: minmax(22rem, 0.82fr) minmax(32rem, 1.18fr);
+  }
+
+  .brandPanel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+    padding: clamp(2rem, 5vw, 4.5rem);
+    background: var(--color-accent);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .brandMark {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .brandCopy {
+    max-width: 32rem;
+  }
+
+  .brandHeading {
+    margin: var(--space-5) 0;
+    color: var(--color-ink);
+    font-size: clamp(2.5rem, 4vw, 4.5rem);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: -0.06em;
+    line-height: 1.05;
+  }
+
+  .brandCopy > p:not(.brandHeading) {
+    color: var(--color-ink);
+    line-height: 1.7;
+  }
+
+  .brandNote {
+    margin-top: var(--space-8);
+    font-size: var(--font-size-sm);
+  }
+
+  .formPanel {
+    padding: var(--space-7);
+  }
+
+  .mobileBrand {
+    display: none;
+  }
+}

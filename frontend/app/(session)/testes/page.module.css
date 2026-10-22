@@ -1,0 +1,39 @@
+.page {
+  width: min(100%, 72rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(var(--space-5), 5vw, var(--space-8));
+}
+
+.intro {
+  max-width: 42rem;
+  margin-bottom: var(--space-7);
+}
+
+.eyebrow {
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+}
+
+.intro p {
+  margin: 0;
+}
+
+.sections {
+  display: grid;
+  align-items: start;
+  gap: var(--space-5);
+}
+
+@media (min-width: 60rem) {
+  .sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
