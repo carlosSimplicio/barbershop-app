@@ -233,7 +233,7 @@ As três configurações são opcionais; valor ausente/`NULL` significa sem rest
 
 ## Experiência de uso
 
-- A home deslogada da plataforma apresenta sua proposta de valor em português e oferece caminhos para cadastro e login. O formulário de cadastro, o estado de confirmação pendente e o login estão disponíveis. Após autenticar, o usuário chega à área temporária `/testes`, que mostra apenas dados não sensíveis da sessão e permite consultar novamente a sessão e o estabelecimento, renovar manualmente a sessão, trocar a senha temporária quando exigido e encerrar a sessão.
+- A home deslogada da plataforma apresenta sua proposta de valor em português e oferece caminhos para cadastro e login. O formulário de cadastro, o estado de confirmação pendente e o login estão disponíveis. Após autenticar, o usuário chega à área temporária `/testes`, que mostra apenas dados não sensíveis da sessão e permite consultar novamente a sessão e o estabelecimento, trocar a senha temporária quando exigido e encerrar a sessão.
 - A página pública sempre exibe nome e logo do estabelecimento; ambos são obrigatórios.
 - Descrição curta, endereço, telefone de contato e links de redes sociais são opcionais e aparecem somente quando preenchidos.
 - Não renderize seções vazias ou placeholders para informações públicas opcionais ausentes.

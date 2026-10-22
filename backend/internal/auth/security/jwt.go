@@ -13,6 +13,7 @@ var ErrInvalidAccessToken = errors.New("invalid access token")
 
 type Principal struct {
 	UserID            string
+	SessionID         string
 	EstablishmentID   string
 	Role              string
 	CredentialVersion int64
@@ -20,6 +21,7 @@ type Principal struct {
 
 type AccessClaims struct {
 	Subject           string `json:"sub"`
+	SessionID         string `json:"session_id"`
 	EstablishmentID   string `json:"establishment_id"`
 	Role              string `json:"role"`
 	ExpiresAt         int64  `json:"exp"`
@@ -58,7 +60,7 @@ func NewJWTManager(activeKeyID string, privateKey ed25519.PrivateKey, publicKeys
 }
 
 func (manager *JWTManager) Issue(principal Principal, now time.Time) (string, error) {
-	if principal.UserID == "" || principal.EstablishmentID == "" ||
+	if principal.UserID == "" || principal.SessionID == "" || principal.EstablishmentID == "" ||
 		(principal.Role != "owner" && principal.Role != "professional") || principal.CredentialVersion <= 0 {
 		return "", errors.New("invalid access token principal")
 	}
@@ -67,7 +69,7 @@ func (manager *JWTManager) Issue(principal Principal, now time.Time) (string, er
 		return "", err
 	}
 	claims, err := json.Marshal(AccessClaims{
-		Subject: principal.UserID, EstablishmentID: principal.EstablishmentID, Role: principal.Role,
+		Subject: principal.UserID, SessionID: principal.SessionID, EstablishmentID: principal.EstablishmentID, Role: principal.Role,
 		ExpiresAt: now.Add(manager.lifetime).Unix(), CredentialVersion: principal.CredentialVersion,
 	})
 	if err != nil {
@@ -106,7 +108,7 @@ func (manager *JWTManager) Verify(token string, now time.Time) (AccessClaims, er
 		return AccessClaims{}, ErrInvalidAccessToken
 	}
 	var claims AccessClaims
-	if err := json.Unmarshal(claimsBytes, &claims); err != nil || claims.Subject == "" || claims.EstablishmentID == "" ||
+	if err := json.Unmarshal(claimsBytes, &claims); err != nil || claims.Subject == "" || claims.SessionID == "" || claims.EstablishmentID == "" ||
 		(claims.Role != "owner" && claims.Role != "professional") || claims.CredentialVersion <= 0 || claims.ExpiresAt <= now.Unix() {
 		return AccessClaims{}, ErrInvalidAccessToken
 	}

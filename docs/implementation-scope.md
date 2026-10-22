@@ -22,13 +22,13 @@ Critério de saída: um checkout limpo sobe localmente, frontend e backend se co
 
 Escopos principais: 5, 6, 21 e 22.
 
-- Implementar usuários, senhas, login, cookies, access JWT e refresh token rotativo.
+- Implementar usuários, senhas, login, cookies, access JWT e sessões revogáveis.
 - Implementar confirmação de e-mail, recuperação do proprietário e senha temporária do profissional.
 - Integrar Mailpit no ambiente local.
 - Estabelecer papéis, contexto de estabelecimento, isolamento de tenant, CSRF e rate limiting.
 - Criar a base da política centralizada de acesso por trial ou assinatura.
 
-Critério de saída: proprietário e profissional autenticam com segurança, sessões podem ser renovadas e revogadas e nenhum usuário acessa dados de outro estabelecimento ou papel.
+Critério de saída: proprietário e profissional autenticam com segurança, sessões expiram após 15 dias e podem ser revogadas, e nenhum usuário acessa dados de outro estabelecimento ou papel.
 
 ### Fase 3 — Onboarding e estabelecimento
 
@@ -224,16 +224,16 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
 - [x] Iniciar o trial somente depois da confirmação do e-mail.
 - [x] Implementar login de proprietário e profissional na API e em `/login`, com resposta genérica para credenciais inválidas, reenvio de confirmação e sincronização de sessão.
-- [x] Implementar access JWT de 15 minutos e refresh token rotativo com expiração deslizante após 7 dias de inatividade.
-- [x] Transportar tokens somente em cookies `HttpOnly`, `Secure` e `SameSite`, com escopo mínimo.
-- [x] Implementar renovação, logout da sessão atual, revogação e detecção de reutilização de refresh token.
-- [x] Coordenar a renovação automática de leituras autenticadas na mesma aba e, em caso de sucesso, entre abas da mesma origem por Web Lock e rechecagem, sem expor ou persistir tokens no JavaScript. Uma visita sem cookie CSRF não tenta refresh e continua como sessão ausente; a falha indeterminada entre abas permanece pendente, como documentado em `docs/architecture.md`.
-- [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas coordenadas com a renovação.
-- [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, executar `POST /auth/refresh` com coordenação de sessão, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
-- [ ] Definir a margem de detecção de reutilização após a expiração e as janelas de retenção de sessões, refresh tokens e tentativas de login.
-- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
-- [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
+- [x] Implementar access JWT e sessões com expiração fixa de 15 dias, sem refresh token ou renovação.
+- [x] Transportar access e CSRF em cookies `Secure` e `SameSite=Strict`, com escopo mínimo e `HttpOnly` no access.
+- [x] Implementar logout idempotente e revogação da sessão atual identificada no access JWT.
+- [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
+- [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas de login, confirmação, troca de senha e logout.
+- [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
+- [ ] Definir janelas de retenção de sessões, confirmações de e-mail e tentativas de login.
+- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
+- [x] Definir `Max-Age` de 15 dias para o cookie CSRF.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
 - [ ] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.

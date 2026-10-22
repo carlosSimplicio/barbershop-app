@@ -11,44 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const consumeRefreshToken = `-- name: ConsumeRefreshToken :exec
-UPDATE refresh_tokens
-SET consumed_at = $2,
-    replaced_by_id = $3
-WHERE id = $1
-  AND consumed_at IS NULL
-  AND revoked_at IS NULL
-`
-
-type ConsumeRefreshTokenParams struct {
-	ID           pgtype.UUID        `json:"id"`
-	ConsumedAt   pgtype.Timestamptz `json:"consumed_at"`
-	ReplacedByID pgtype.UUID        `json:"replaced_by_id"`
-}
-
-func (q *Queries) ConsumeRefreshToken(ctx context.Context, arg ConsumeRefreshTokenParams) error {
-	_, err := q.db.Exec(ctx, consumeRefreshToken, arg.ID, arg.ConsumedAt, arg.ReplacedByID)
-	return err
-}
-
 const createAuthSession = `-- name: CreateAuthSession :one
-INSERT INTO auth_sessions (user_id, idle_expires_at)
-VALUES ($1, $2)
-RETURNING id, user_id, idle_expires_at, revoked_at, created_at, updated_at
+INSERT INTO auth_sessions (id, user_id, expires_at)
+VALUES ($1, $2, $3)
+RETURNING id, user_id, expires_at, revoked_at, created_at, updated_at
 `
 
 type CreateAuthSessionParams struct {
-	UserID        pgtype.UUID        `json:"user_id"`
-	IdleExpiresAt pgtype.Timestamptz `json:"idle_expires_at"`
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) CreateAuthSession(ctx context.Context, arg CreateAuthSessionParams) (AuthSession, error) {
-	row := q.db.QueryRow(ctx, createAuthSession, arg.UserID, arg.IdleExpiresAt)
+	row := q.db.QueryRow(ctx, createAuthSession, arg.ID, arg.UserID, arg.ExpiresAt)
 	var i AuthSession
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.IdleExpiresAt,
+		&i.ExpiresAt,
 		&i.RevokedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -56,51 +37,56 @@ func (q *Queries) CreateAuthSession(ctx context.Context, arg CreateAuthSessionPa
 	return i, err
 }
 
-const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (session_id, token_hash, expires_at)
-VALUES ($1, $2, $3)
-RETURNING id, session_id, token_hash, expires_at, consumed_at, revoked_at, replaced_by_id, created_at
+const getActiveSessionUser = `-- name: GetActiveSessionUser :one
+SELECT
+    u.id,
+    u.establishment_id,
+    u.email,
+    u.normalized_email,
+    u.role,
+    u.active,
+    u.email_confirmed_at,
+    u.credential_version,
+    u.password_change_required
+FROM auth_sessions AS s
+JOIN users AS u ON u.id = s.user_id
+WHERE s.id = $1
+  AND s.revoked_at IS NULL
+  AND s.expires_at > $2
 `
 
-type CreateRefreshTokenParams struct {
-	SessionID pgtype.UUID        `json:"session_id"`
-	TokenHash []byte             `json:"token_hash"`
+type GetActiveSessionUserParams struct {
+	ID        pgtype.UUID        `json:"id"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
-func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, createRefreshToken, arg.SessionID, arg.TokenHash, arg.ExpiresAt)
-	var i RefreshToken
+type GetActiveSessionUserRow struct {
+	ID                     pgtype.UUID        `json:"id"`
+	EstablishmentID        pgtype.UUID        `json:"establishment_id"`
+	Email                  string             `json:"email"`
+	NormalizedEmail        string             `json:"normalized_email"`
+	Role                   string             `json:"role"`
+	Active                 bool               `json:"active"`
+	EmailConfirmedAt       pgtype.Timestamptz `json:"email_confirmed_at"`
+	CredentialVersion      int64              `json:"credential_version"`
+	PasswordChangeRequired bool               `json:"password_change_required"`
+}
+
+func (q *Queries) GetActiveSessionUser(ctx context.Context, arg GetActiveSessionUserParams) (GetActiveSessionUserRow, error) {
+	row := q.db.QueryRow(ctx, getActiveSessionUser, arg.ID, arg.ExpiresAt)
+	var i GetActiveSessionUserRow
 	err := row.Scan(
 		&i.ID,
-		&i.SessionID,
-		&i.TokenHash,
-		&i.ExpiresAt,
-		&i.ConsumedAt,
-		&i.RevokedAt,
-		&i.ReplacedByID,
-		&i.CreatedAt,
+		&i.EstablishmentID,
+		&i.Email,
+		&i.NormalizedEmail,
+		&i.Role,
+		&i.Active,
+		&i.EmailConfirmedAt,
+		&i.CredentialVersion,
+		&i.PasswordChangeRequired,
 	)
 	return i, err
-}
-
-const extendAuthSession = `-- name: ExtendAuthSession :exec
-UPDATE auth_sessions
-SET idle_expires_at = $2,
-    updated_at = $3
-WHERE id = $1
-  AND revoked_at IS NULL
-`
-
-type ExtendAuthSessionParams struct {
-	ID            pgtype.UUID        `json:"id"`
-	IdleExpiresAt pgtype.Timestamptz `json:"idle_expires_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ExtendAuthSession(ctx context.Context, arg ExtendAuthSessionParams) error {
-	_, err := q.db.Exec(ctx, extendAuthSession, arg.ID, arg.IdleExpiresAt, arg.UpdatedAt)
-	return err
 }
 
 const getAuthUserByID = `-- name: GetAuthUserByID :one
@@ -248,67 +234,6 @@ func (q *Queries) GetAuthUserByNormalizedEmail(ctx context.Context, normalizedEm
 	return i, err
 }
 
-const getRefreshTokenForUpdate = `-- name: GetRefreshTokenForUpdate :one
-SELECT
-    rt.id AS token_id,
-    rt.session_id,
-    rt.expires_at AS token_expires_at,
-    rt.consumed_at,
-    rt.revoked_at AS token_revoked_at,
-    s.user_id,
-    s.idle_expires_at,
-    s.revoked_at AS session_revoked_at
-FROM refresh_tokens AS rt
-JOIN auth_sessions AS s ON s.id = rt.session_id
-WHERE rt.token_hash = $1
-FOR UPDATE OF rt, s
-`
-
-type GetRefreshTokenForUpdateRow struct {
-	TokenID          pgtype.UUID        `json:"token_id"`
-	SessionID        pgtype.UUID        `json:"session_id"`
-	TokenExpiresAt   pgtype.Timestamptz `json:"token_expires_at"`
-	ConsumedAt       pgtype.Timestamptz `json:"consumed_at"`
-	TokenRevokedAt   pgtype.Timestamptz `json:"token_revoked_at"`
-	UserID           pgtype.UUID        `json:"user_id"`
-	IdleExpiresAt    pgtype.Timestamptz `json:"idle_expires_at"`
-	SessionRevokedAt pgtype.Timestamptz `json:"session_revoked_at"`
-}
-
-func (q *Queries) GetRefreshTokenForUpdate(ctx context.Context, tokenHash []byte) (GetRefreshTokenForUpdateRow, error) {
-	row := q.db.QueryRow(ctx, getRefreshTokenForUpdate, tokenHash)
-	var i GetRefreshTokenForUpdateRow
-	err := row.Scan(
-		&i.TokenID,
-		&i.SessionID,
-		&i.TokenExpiresAt,
-		&i.ConsumedAt,
-		&i.TokenRevokedAt,
-		&i.UserID,
-		&i.IdleExpiresAt,
-		&i.SessionRevokedAt,
-	)
-	return i, err
-}
-
-const revokeAllUserRefreshTokens = `-- name: RevokeAllUserRefreshTokens :exec
-UPDATE refresh_tokens AS rt
-SET revoked_at = COALESCE(rt.revoked_at, $2)
-FROM auth_sessions AS s
-WHERE rt.session_id = s.id
-  AND s.user_id = $1
-`
-
-type RevokeAllUserRefreshTokensParams struct {
-	UserID    pgtype.UUID        `json:"user_id"`
-	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
-}
-
-func (q *Queries) RevokeAllUserRefreshTokens(ctx context.Context, arg RevokeAllUserRefreshTokensParams) error {
-	_, err := q.db.Exec(ctx, revokeAllUserRefreshTokens, arg.UserID, arg.RevokedAt)
-	return err
-}
-
 const revokeAllUserSessions = `-- name: RevokeAllUserSessions :exec
 UPDATE auth_sessions
 SET revoked_at = COALESCE(revoked_at, $2),
@@ -331,31 +256,18 @@ UPDATE auth_sessions
 SET revoked_at = COALESCE(revoked_at, $2),
     updated_at = $2
 WHERE id = $1
+  AND user_id = $3
+  AND revoked_at IS NULL
 `
 
 type RevokeAuthSessionParams struct {
 	ID        pgtype.UUID        `json:"id"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	UserID    pgtype.UUID        `json:"user_id"`
 }
 
 func (q *Queries) RevokeAuthSession(ctx context.Context, arg RevokeAuthSessionParams) error {
-	_, err := q.db.Exec(ctx, revokeAuthSession, arg.ID, arg.UpdatedAt)
-	return err
-}
-
-const revokeRefreshTokensBySession = `-- name: RevokeRefreshTokensBySession :exec
-UPDATE refresh_tokens
-SET revoked_at = COALESCE(revoked_at, $2)
-WHERE session_id = $1
-`
-
-type RevokeRefreshTokensBySessionParams struct {
-	SessionID pgtype.UUID        `json:"session_id"`
-	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
-}
-
-func (q *Queries) RevokeRefreshTokensBySession(ctx context.Context, arg RevokeRefreshTokensBySessionParams) error {
-	_, err := q.db.Exec(ctx, revokeRefreshTokensBySession, arg.SessionID, arg.RevokedAt)
+	_, err := q.db.Exec(ctx, revokeAuthSession, arg.ID, arg.UpdatedAt, arg.UserID)
 	return err
 }
 

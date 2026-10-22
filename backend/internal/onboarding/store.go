@@ -97,7 +97,7 @@ type verificationTransaction interface {
 	ConfirmUser(context.Context, pgtype.UUID, time.Time) (bool, error)
 	Consume(context.Context, pgtype.UUID, time.Time) (bool, error)
 	CreateTrial(context.Context, verificationRecord, TrialWindow) error
-	CreateSession(context.Context, pgtype.UUID, []byte, time.Time) error
+	CreateSession(context.Context, pgtype.UUID, pgtype.UUID, time.Time) error
 	Commit(context.Context) error
 	Rollback(context.Context) error
 }
@@ -140,12 +140,8 @@ func (transaction *postgresVerificationTransaction) CreateTrial(ctx context.Cont
 	return err
 }
 
-func (transaction *postgresVerificationTransaction) CreateSession(ctx context.Context, userID pgtype.UUID, tokenHash []byte, expiresAt time.Time) error {
-	session, err := transaction.queries.CreateAuthSession(ctx, db.CreateAuthSessionParams{UserID: userID, IdleExpiresAt: timestamp(expiresAt)})
-	if err != nil {
-		return err
-	}
-	_, err = transaction.queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{SessionID: session.ID, TokenHash: tokenHash, ExpiresAt: timestamp(expiresAt)})
+func (transaction *postgresVerificationTransaction) CreateSession(ctx context.Context, userID, sessionID pgtype.UUID, expiresAt time.Time) error {
+	_, err := transaction.queries.CreateAuthSession(ctx, db.CreateAuthSessionParams{ID: sessionID, UserID: userID, ExpiresAt: timestamp(expiresAt)})
 	return err
 }
 
@@ -306,7 +302,11 @@ func (store *Store) ReplaceEmailConfirmation(ctx context.Context, userID string)
 	return confirmation, true, nil
 }
 
-func (store *Store) ConfirmEmailAndCreateSession(ctx context.Context, tokenHash, refreshTokenHash []byte, confirmedAt, refreshExpiresAt time.Time, beforeCommit func(auth.User) error) error {
+func (store *Store) ConfirmEmailAndCreateSession(ctx context.Context, tokenHash []byte, sessionID string, confirmedAt, expiresAt time.Time, beforeCommit func(auth.User) error) error {
+	var parsedSessionID pgtype.UUID
+	if err := parsedSessionID.Scan(sessionID); err != nil {
+		return fmt.Errorf("parse confirmed owner session: %w", err)
+	}
 	transaction, err := store.beginVerification(ctx)
 	if err != nil {
 		return fmt.Errorf("begin email confirmation verification: %w", err)
@@ -336,7 +336,7 @@ func (store *Store) ConfirmEmailAndCreateSession(ctx context.Context, tokenHash,
 	if err := transaction.CreateTrial(ctx, record, NewTrialWindow(confirmedAt)); err != nil {
 		return verificationWriteError("create establishment trial", err)
 	}
-	if err := transaction.CreateSession(ctx, record.UserID, refreshTokenHash, refreshExpiresAt); err != nil {
+	if err := transaction.CreateSession(ctx, record.UserID, parsedSessionID, expiresAt); err != nil {
 		return fmt.Errorf("create confirmed owner session: %w", err)
 	}
 	user := auth.User{

@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { SessionGuard } from "@/components/session/session-guard";
 import { EstablishmentPanel } from "@/components/testing/establishment-panel";
 import { LogoutPanel } from "@/components/testing/logout-panel";
-import { ManualRefreshPanel } from "@/components/testing/manual-refresh-panel";
 import { PasswordChangePanel } from "@/components/testing/password-change-panel";
 import { SessionPanel } from "@/components/testing/session-panel";
 
@@ -25,7 +24,6 @@ export default function TestingPage() {
         </header>
         <div className={styles.sections}>
           <SessionPanel />
-          <ManualRefreshPanel />
           <PasswordChangePanel />
           <EstablishmentPanel />
           <LogoutPanel />

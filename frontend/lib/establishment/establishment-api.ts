@@ -5,7 +5,6 @@ export type Establishment = components["schemas"]["EstablishmentResponse"];
 
 export function getEstablishment(signal?: AbortSignal) {
   return apiFetch<Establishment>("/api/v1/establishment", {
-    authenticated: true,
     signal,
   });
 }

@@ -17,12 +17,12 @@ type AuthLoginAttempt struct {
 }
 
 type AuthSession struct {
-	ID            pgtype.UUID        `json:"id"`
-	UserID        pgtype.UUID        `json:"user_id"`
-	IdleExpiresAt pgtype.Timestamptz `json:"idle_expires_at"`
-	RevokedAt     pgtype.Timestamptz `json:"revoked_at"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type EmailConfirmation struct {
@@ -50,17 +50,6 @@ type EstablishmentTrial struct {
 	StartsAt        pgtype.Timestamptz `json:"starts_at"`
 	EndsAt          pgtype.Timestamptz `json:"ends_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-}
-
-type RefreshToken struct {
-	ID           pgtype.UUID        `json:"id"`
-	SessionID    pgtype.UUID        `json:"session_id"`
-	TokenHash    []byte             `json:"token_hash"`
-	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
-	ConsumedAt   pgtype.Timestamptz `json:"consumed_at"`
-	RevokedAt    pgtype.Timestamptz `json:"revoked_at"`
-	ReplacedByID pgtype.UUID        `json:"replaced_by_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {

@@ -21,14 +21,14 @@ func TestEmailConfirmationVerificationHandlerReturnsPrincipalAndSecureCookies(t 
 			UserID: "018f47d2-e886-7f1c-8e8d-8b38eaf16463", EstablishmentID: "018f47d2-e886-7f1c-8e8d-8b38eaf16464",
 			Email: "owner@example.com", Role: "owner",
 		},
-		AccessToken: "access", RefreshToken: "refresh", CSRFToken: "csrf",
+		AccessToken: "access", CSRFToken: "csrf",
 	}}
 	recorder := performEmailConfirmationVerification(t, NewHandler(nil, nil, verifier), `{"token":"confirmation-token"}`)
 
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"role":"owner"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
-	if verifier.token != "confirmation-token" || len(recorder.Result().Cookies()) != 3 {
+	if verifier.token != "confirmation-token" || len(recorder.Result().Cookies()) != 2 {
 		t.Fatalf("token = %q, cookies = %#v", verifier.token, recorder.Result().Cookies())
 	}
 	for _, cookie := range recorder.Result().Cookies() {

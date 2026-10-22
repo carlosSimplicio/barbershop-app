@@ -8,18 +8,20 @@ import (
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
+	"github.com/google/uuid"
 )
 
 var testNow = time.Date(2026, time.October, 15, 12, 0, 0, 0, time.UTC)
 
 type loginStoreStub struct {
-	user               User
-	findErr            error
-	attempts           map[string][]time.Time
-	releasedAttempts   int
-	createdSession     bool
-	createdUserID      string
-	createdRefreshHash []byte
+	user             User
+	findErr          error
+	attempts         map[string][]time.Time
+	releasedAttempts int
+	createdSession   bool
+	createdUserID    string
+	createdSessionID string
+	createdExpiresAt time.Time
 }
 
 func (stub *loginStoreStub) FindUserByNormalizedEmail(context.Context, string) (User, error) {
@@ -51,10 +53,11 @@ func loginRetryAfter(events []time.Time, now time.Time) time.Duration {
 	return events[4].Add(15 * time.Minute).Sub(now)
 }
 
-func (stub *loginStoreStub) CreateSession(_ context.Context, userID string, refreshHash []byte, _ time.Time) error {
+func (stub *loginStoreStub) CreateSession(_ context.Context, userID, sessionID string, expiresAt time.Time) error {
 	stub.createdSession = true
 	stub.createdUserID = userID
-	stub.createdRefreshHash = append([]byte(nil), refreshHash...)
+	stub.createdSessionID = sessionID
+	stub.createdExpiresAt = expiresAt
 	return nil
 }
 
@@ -64,13 +67,20 @@ type passwordVerifierStub struct {
 
 func (stub passwordVerifierStub) Verify(string, string) (bool, error) { return stub.match, nil }
 
-type accessIssuerStub struct{}
+type accessIssuerStub struct {
+	claims    security.AccessClaims
+	verifyErr error
+}
 
 func (accessIssuerStub) Issue(principal security.Principal, _ time.Time) (string, error) {
-	if principal.UserID == "" {
+	if principal.UserID == "" || principal.SessionID == "" {
 		return "", errors.New("missing user")
 	}
 	return "access-token", nil
+}
+
+func (stub accessIssuerStub) Verify(string, time.Time) (security.AccessClaims, error) {
+	return stub.claims, stub.verifyErr
 }
 
 type signedIssuerStub struct{}
@@ -89,10 +99,10 @@ func TestLoginCreatesSessionForConfirmedActiveUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
-	if !store.createdSession || store.createdUserID != "user-1" || len(store.createdRefreshHash) == 0 {
+	if !store.createdSession || store.createdUserID != "user-1" || uuid.Validate(store.createdSessionID) != nil || !store.createdExpiresAt.Equal(testNow.Add(15*24*time.Hour)) {
 		t.Fatalf("session was not created correctly: %#v", store)
 	}
-	if result.AccessToken != "access-token" || result.CSRFToken != "csrf-token" || result.RefreshToken == "" {
+	if result.AccessToken != "access-token" || result.CSRFToken != "csrf-token" {
 		t.Fatalf("unexpected login result: %#v", result)
 	}
 	if result.Principal.Email != "user@example.com" {

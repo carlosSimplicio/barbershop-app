@@ -70,29 +70,9 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 	}
 }
 
-func (handler *Handler) PostAuthRefresh(c *gin.Context) {
-	refreshToken, _ := c.Cookie(refreshCookieName)
-	result, err := handler.sessions.Refresh(c.Request.Context(), refreshToken)
-	if err != nil {
-		if errors.Is(err, ErrInvalidSession) || errors.Is(err, ErrRefreshTokenReused) {
-			if errors.Is(err, ErrRefreshTokenReused) {
-				slog.Warn("refresh_token_reuse_detected", "request_id", httpserver.RequestID(c))
-			}
-			clearSessionCookies(c)
-			writeError(c, http.StatusUnauthorized, "invalid_session", "Entre novamente para continuar.")
-			return
-		}
-		slog.Error("authentication_refresh_failed", "request_id", httpserver.RequestID(c), "error", err)
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
-		return
-	}
-	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
-	c.Status(http.StatusNoContent)
-}
-
 func (handler *Handler) PostAuthLogout(c *gin.Context) {
-	refreshToken, _ := c.Cookie(refreshCookieName)
-	if err := handler.sessions.Logout(c.Request.Context(), refreshToken); err != nil {
+	accessToken, _ := c.Cookie(accessCookieName)
+	if err := handler.sessions.Logout(c.Request.Context(), accessToken); err != nil {
 		slog.Error("authentication_logout_failed", "request_id", httpserver.RequestID(c), "error", err)
 		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return
@@ -144,7 +124,7 @@ func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
 		}
 		return
 	}
-	setSessionCookies(c, result.AccessToken, result.RefreshToken, result.CSRFToken)
+	setSessionCookies(c, result.AccessToken, result.CSRFToken)
 	c.Status(http.StatusNoContent)
 }
 

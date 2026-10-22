@@ -13,12 +13,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const testSessionID = "018f47d2-e886-7f1c-8e8d-8b38eaf16466"
+
 func TestConfirmEmailAndCreateSessionCommitsExactTrialAndSession(t *testing.T) {
 	transaction := validVerificationTransaction(t)
 	store := testVerificationStore(transaction)
 
 	var user auth.User
-	err := store.ConfirmEmailAndCreateSession(context.Background(), []byte("confirmation"), []byte("refresh"), registrationTestNow, registrationTestNow.Add(7*24*time.Hour), func(confirmed auth.User) error {
+	err := store.ConfirmEmailAndCreateSession(context.Background(), []byte("confirmation"), testSessionID, registrationTestNow, registrationTestNow.Add(15*24*time.Hour), func(confirmed auth.User) error {
 		user = confirmed
 		return nil
 	})
@@ -54,7 +56,7 @@ func TestConfirmEmailAndCreateSessionRejectsEveryInvalidStateUniformly(t *testin
 			} else {
 				mutate(&transaction.record)
 			}
-			err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(context.Background(), nil, nil, registrationTestNow, registrationTestNow, successfulIssue)
+			err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(context.Background(), nil, testSessionID, registrationTestNow, registrationTestNow, successfulIssue)
 			if !errors.Is(err, ErrInvalidEmailConfirmation) || !reflect.DeepEqual(transaction.operations, []string{"lock"}) || !transaction.rolledBack {
 				t.Fatalf("error = %v, operations = %#v, rollback = %t", err, transaction.operations, transaction.rolledBack)
 			}
@@ -67,7 +69,7 @@ func TestConfirmEmailAndCreateSessionRejectsConcurrentReplay(t *testing.T) {
 		t.Run(failed, func(t *testing.T) {
 			transaction := validVerificationTransaction(t)
 			transaction.failAt = failed
-			err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(context.Background(), nil, nil, registrationTestNow, registrationTestNow, successfulIssue)
+			err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(context.Background(), nil, testSessionID, registrationTestNow, registrationTestNow, successfulIssue)
 			if !errors.Is(err, ErrInvalidEmailConfirmation) || !transaction.rolledBack {
 				t.Fatalf("error = %v, rollback = %t", err, transaction.rolledBack)
 			}
@@ -80,7 +82,7 @@ func TestConfirmEmailAndCreateSessionRollsBackTransactionalFailures(t *testing.T
 		t.Run(failed, func(t *testing.T) {
 			transaction := validVerificationTransaction(t)
 			transaction.failAt = failed
-			err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(context.Background(), nil, nil, registrationTestNow, registrationTestNow, successfulIssue)
+			err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(context.Background(), nil, testSessionID, registrationTestNow, registrationTestNow, successfulIssue)
 			if err == nil || !transaction.rolledBack {
 				t.Fatalf("error = %v, rollback = %t", err, transaction.rolledBack)
 			}
@@ -92,7 +94,7 @@ func TestConfirmEmailAndCreateSessionRollsBackWhenAuthenticationIssuanceFails(t 
 	transaction := validVerificationTransaction(t)
 	issueFailure := errors.New("authentication issuance failed")
 	err := testVerificationStore(transaction).ConfirmEmailAndCreateSession(
-		context.Background(), nil, nil, registrationTestNow, registrationTestNow,
+		context.Background(), nil, testSessionID, registrationTestNow, registrationTestNow,
 		func(auth.User) error { return issueFailure },
 	)
 	if !errors.Is(err, issueFailure) || !transaction.rolledBack {
@@ -161,7 +163,7 @@ func (stub *verificationTransactionStub) CreateTrial(_ context.Context, _ verifi
 	stub.trial = trial
 	return stub.operation("trial")
 }
-func (stub *verificationTransactionStub) CreateSession(context.Context, pgtype.UUID, []byte, time.Time) error {
+func (stub *verificationTransactionStub) CreateSession(context.Context, pgtype.UUID, pgtype.UUID, time.Time) error {
 	return stub.operation("session")
 }
 func (stub *verificationTransactionStub) Commit(context.Context) error {

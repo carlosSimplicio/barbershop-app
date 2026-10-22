@@ -1,9 +1,107 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-import { apiFetch } from "./client";
+import { apiFetch, configureApiSessionObserver } from "./client";
 
 afterEach(() => {
+  configureApiSessionObserver(null);
   vi.restoreAllMocks();
+});
+
+test("401 em mutação autenticada encerra a sessão sem repetir a chamada", async () => {
+  const onInvalidSession = vi.fn();
+  configureApiSessionObserver({ onInvalidSession });
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    jsonResponse(
+      {
+        code: "authentication_required",
+        message: "Entre novamente.",
+        request_id: "id",
+      },
+      401,
+    ),
+  );
+
+  await expect(
+    apiFetch("/api/v1/auth/password/change", {
+      csrf: true,
+      method: "POST",
+    }),
+  ).resolves.toMatchObject({ state: "error", status: 401 });
+  expect(fetchMock).toHaveBeenCalledOnce();
+  expect(onInvalidSession).toHaveBeenCalledOnce();
+});
+
+test("401 em leitura autenticada encerra a sessão sem repetir a chamada", async () => {
+  const onInvalidSession = vi.fn();
+  configureApiSessionObserver({ onInvalidSession });
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    jsonResponse(
+      {
+        code: "authentication_required",
+        message: "Entre novamente.",
+        request_id: "id",
+      },
+      401,
+    ),
+  );
+
+  await apiFetch("/api/v1/auth/me");
+
+  expect(fetchMock).toHaveBeenCalledOnce();
+  expect(onInvalidSession).toHaveBeenCalledOnce();
+});
+
+test("qualquer 401 encerra a sessão; 5xx não", async () => {
+  const onInvalidSession = vi.fn();
+  configureApiSessionObserver({ onInvalidSession });
+  vi.spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(
+      jsonResponse(
+        { code: "invalid_credentials", message: "Erro.", request_id: "id" },
+        401,
+      ),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse(
+        { code: "unavailable", message: "Erro.", request_id: "id" },
+        503,
+      ),
+    );
+
+  await apiFetch("/api/v1/auth/login", { method: "POST" });
+  await apiFetch("/api/v1/auth/me");
+
+  expect(onInvalidSession).toHaveBeenCalledOnce();
+});
+
+test("401 de leitura cancelada não encerra outra sessão", async () => {
+  let finishOldRead: ((response: Response) => void) | undefined;
+  vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+    () =>
+      new Promise<Response>((resolve) => {
+        finishOldRead = resolve;
+      }),
+  );
+  const controller = new AbortController();
+  const oldRead = apiFetch("/api/v1/auth/me", {
+    signal: controller.signal,
+  });
+  const onInvalidSession = vi.fn();
+  controller.abort();
+  configureApiSessionObserver({ onInvalidSession });
+  finishOldRead?.(
+    jsonResponse(
+      {
+        code: "authentication_required",
+        message: "Entre novamente.",
+        request_id: "id",
+      },
+      401,
+    ),
+  );
+  await oldRead;
+
+  expect(onInvalidSession).not.toHaveBeenCalled();
 });
 
 test("representa resposta 202 sem corpo como vazia e preserva o status", async () => {
@@ -21,7 +119,7 @@ test("preserva headers fornecidos e envia cookies", async () => {
     .spyOn(globalThis, "fetch")
     .mockResolvedValue(new Response(null, { status: 204 }));
 
-  await apiFetch<void>("/api/v1/auth/refresh", {
+  await apiFetch<void>("/api/v1/auth/logout", {
     method: "POST",
     headers: new Headers({ "Content-Type": "application/json" }),
   });

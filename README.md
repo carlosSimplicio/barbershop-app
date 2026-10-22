@@ -58,9 +58,15 @@ Com o ambiente local ativo e as migrations aplicadas, abra
 <https://localhost:8443>, siga para `/cadastro`, use um e-mail fictício
 exclusivo, confira o link no Mailpit e abra-o no navegador. A confirmação
 inicia a sessão e leva a `/testes`, onde é possível consultar a sessão e o
-estabelecimento, renovar a sessão, trocar a senha temporária quando exigido e
+estabelecimento, trocar a senha temporária quando exigido e
 sair. Depois, `/login` permite entrar novamente. O cadastro de profissionais e
 a definição de uma senha temporária ainda não estão disponíveis na interface.
+
+Login e confirmação emitem apenas os cookies access e CSRF, ambos com
+`Max-Age` de 15 dias. A API valida a sessão identificada no access JWT em cada
+requisição autenticada; não há renovação nem endpoint de refresh. Ao receber
+`401`, a interface encerra a sessão local. O logout revoga a sessão atual no
+backend e limpa os cookies.
 
 O roteiro abaixo continua disponível para diagnosticar o onboarding pela API.
 O `.env.example` já aponta `EMAIL_PROVIDER=smtp`,

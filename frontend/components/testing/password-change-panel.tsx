@@ -9,7 +9,7 @@ import { changeTemporaryPassword } from "@/lib/auth/password-api";
 
 import styles from "./testing-panel.module.css";
 
-type FeedbackKind = "error" | "session" | "denied" | null;
+type FeedbackKind = "error" | "denied" | null;
 
 export function PasswordChangePanel() {
   const { state, transitioning, runAction } = useAuthSession();
@@ -79,10 +79,6 @@ function PasswordChangeForm({
           field.current?.focus();
           return;
         }
-        if (result.status === 401) {
-          setFeedback("session");
-          return;
-        }
         if (result.error.code === "password_change_not_allowed") {
           setFeedback("denied");
           return;
@@ -108,11 +104,9 @@ function PasswordChangeForm({
       <p>Defina uma nova senha para liberar as funções do estabelecimento.</p>
       {feedback ? (
         <Feedback title="Não foi possível trocar a senha" variant="error">
-          {feedback === "session"
-            ? "Consulte sua sessão novamente antes de tentar."
-            : feedback === "denied"
-              ? "A troca não está disponível nesta sessão. Consulte sua sessão novamente."
-              : "Tente novamente mais tarde."}
+          {feedback === "denied"
+            ? "A troca não está disponível nesta sessão. Consulte sua sessão novamente."
+            : "Tente novamente mais tarde."}
         </Feedback>
       ) : null}
       <PasswordField

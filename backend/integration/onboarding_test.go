@@ -41,17 +41,16 @@ func TestOwnerRegistrationAndEmailConfirmation(t *testing.T) {
 	response = application.request(t, http.MethodPost, "/api/v1/auth/email-confirmation/verify", map[string]string{"token": confirmationToken})
 	assertStatus(t, response, http.StatusBadRequest)
 
-	var confirmedUsers, trials, sessions, refreshTokens int
+	var confirmedUsers, trials, sessions int
 	if err := integrationPool.QueryRow(context.Background(), `SELECT
 		(SELECT count(*) FROM users WHERE email_confirmed_at IS NOT NULL),
 		(SELECT count(*) FROM establishment_trials),
-		(SELECT count(*) FROM auth_sessions),
-		(SELECT count(*) FROM refresh_tokens)`).Scan(&confirmedUsers, &trials, &sessions, &refreshTokens); err != nil {
+		(SELECT count(*) FROM auth_sessions)`).Scan(&confirmedUsers, &trials, &sessions); err != nil {
 		t.Fatalf("query persisted confirmation: %v", err)
 	}
-	if confirmedUsers != 1 || trials != 1 || sessions != 1 || refreshTokens != 1 {
-		t.Fatalf("confirmation was not persisted completely: users=%d trials=%d sessions=%d refresh_tokens=%d",
-			confirmedUsers, trials, sessions, refreshTokens)
+	if confirmedUsers != 1 || trials != 1 || sessions != 1 {
+		t.Fatalf("confirmation was not persisted completely: users=%d trials=%d sessions=%d",
+			confirmedUsers, trials, sessions)
 	}
 }
 

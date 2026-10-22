@@ -34,7 +34,6 @@ beforeEach(() => {
     state: { status: "anonymous" },
     transitioning: false,
     reload: vi.fn(),
-    refresh: vi.fn(),
     runAction: runAction as unknown as ReturnType<
       typeof useAuthSession
     >["runAction"],

@@ -7,6 +7,8 @@ import (
 
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/platform/ratelimit"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -43,15 +45,14 @@ type LoginInput struct {
 }
 
 type LoginResult struct {
-	Principal    Principal
-	AccessToken  string
-	RefreshToken string
-	CSRFToken    string
+	Principal   Principal
+	AccessToken string
+	CSRFToken   string
 }
 
 type LoginStore interface {
 	FindUserByNormalizedEmail(context.Context, string) (User, error)
-	CreateSession(context.Context, string, []byte, time.Time) error
+	CreateSession(context.Context, string, string, time.Time) error
 }
 
 type PasswordVerifier interface {
@@ -119,21 +120,18 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 		return LoginResult{}, err
 	}
 
-	refreshToken, err := security.NewOpaqueToken()
-	if err != nil {
-		return LoginResult{}, err
-	}
+	sessionID := uuid.NewString()
 	accessToken, err := service.accessTokens.Issue(security.Principal{
-		UserID: user.ID, EstablishmentID: user.EstablishmentID, Role: user.Role, CredentialVersion: user.CredentialVersion,
+		UserID: user.ID, SessionID: sessionID, EstablishmentID: user.EstablishmentID, Role: user.Role, CredentialVersion: user.CredentialVersion,
 	}, now)
 	if err != nil {
 		return LoginResult{}, err
 	}
-	if err := service.store.CreateSession(ctx, user.ID, security.HashOpaqueToken(refreshToken), now.Add(7*24*time.Hour)); err != nil {
-		return LoginResult{}, err
-	}
 	csrfToken, err := service.csrfTokens.NewSignedToken()
 	if err != nil {
+		return LoginResult{}, err
+	}
+	if err := service.store.CreateSession(ctx, user.ID, sessionID, now.Add(15*24*time.Hour)); err != nil {
 		return LoginResult{}, err
 	}
 
@@ -142,7 +140,7 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 			UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
 			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
 		},
-		AccessToken: accessToken, RefreshToken: refreshToken, CSRFToken: csrfToken,
+		AccessToken: accessToken, CSRFToken: csrfToken,
 	}, nil
 }
 

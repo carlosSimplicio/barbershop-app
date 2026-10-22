@@ -5,37 +5,41 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"barbershop-app/backend/internal/auth/security"
 )
 
 type sessionStoreStub struct {
-	user                 User
-	findErr              error
-	rotateErr            error
-	revoked              bool
-	changed              bool
-	expectedVersion      int64
-	newPasswordHash      string
-	newCredentialVersion int64
+	user             User
+	findErr          error
+	revoked          bool
+	revokedSessionID string
+	revokedUserID    string
+	changed          bool
+	expectedVersion  int64
+	newPasswordHash  string
+	newSessionID     string
+	newExpiresAt     time.Time
 }
 
 func (stub *sessionStoreStub) FindUserByID(context.Context, string) (User, error) {
 	return stub.user, stub.findErr
 }
 
-func (stub *sessionStoreStub) RotateRefreshToken(context.Context, []byte, []byte, time.Time, time.Time) (User, error) {
-	return stub.user, stub.rotateErr
-}
-
-func (stub *sessionStoreStub) RevokeSessionByRefreshToken(context.Context, []byte, time.Time) error {
+func (stub *sessionStoreStub) RevokeSession(_ context.Context, sessionID, userID string, _ time.Time) error {
 	stub.revoked = true
+	stub.revokedSessionID = sessionID
+	stub.revokedUserID = userID
 	return nil
 }
 
-func (stub *sessionStoreStub) ChangeTemporaryPassword(_ context.Context, _ string, expectedVersion int64, passwordHash string, _ []byte, _, _ time.Time) (int64, error) {
+func (stub *sessionStoreStub) ChangeTemporaryPassword(_ context.Context, _ string, expectedVersion int64, passwordHash, sessionID string, _, expiresAt time.Time) error {
 	stub.changed = true
 	stub.expectedVersion = expectedVersion
 	stub.newPasswordHash = passwordHash
-	return stub.newCredentialVersion, nil
+	stub.newSessionID = sessionID
+	stub.newExpiresAt = expiresAt
+	return nil
 }
 
 type passwordManagerStub struct {
@@ -44,37 +48,6 @@ type passwordManagerStub struct {
 
 func (stub passwordManagerStub) Verify(string, string) (bool, error) { return stub.match, nil }
 func (stub passwordManagerStub) Hash(string) (string, error)         { return "new-password-hash", nil }
-
-func TestRefreshRotatesTokenAndReissuesSession(t *testing.T) {
-	store := &sessionStoreStub{user: validSessionUser()}
-	service := testSessionService(store, false)
-
-	result, err := service.Refresh(context.Background(), "current-refresh-token")
-	if err != nil {
-		t.Fatalf("refresh: %v", err)
-	}
-	if result.RefreshToken == "" || result.RefreshToken == "current-refresh-token" || result.AccessToken != "access-token" || result.CSRFToken != "csrf-token" {
-		t.Fatalf("unexpected refresh result: %#v", result)
-	}
-}
-
-func TestRefreshPreservesReuseDetectionError(t *testing.T) {
-	store := &sessionStoreStub{user: validSessionUser(), rotateErr: ErrRefreshTokenReused}
-	_, err := testSessionService(store, false).Refresh(context.Background(), "reused-token")
-	if !errors.Is(err, ErrRefreshTokenReused) {
-		t.Fatalf("error = %v, want ErrRefreshTokenReused", err)
-	}
-}
-
-func TestRefreshRejectsInactiveUser(t *testing.T) {
-	user := validSessionUser()
-	user.Active = false
-	store := &sessionStoreStub{user: user}
-	_, err := testSessionService(store, false).Refresh(context.Background(), "refresh-token")
-	if !errors.Is(err, ErrInvalidSession) {
-		t.Fatalf("error = %v, want ErrInvalidSession", err)
-	}
-}
 
 func TestLogoutWithoutTokenIsIdempotent(t *testing.T) {
 	store := &sessionStoreStub{}
@@ -86,20 +59,42 @@ func TestLogoutWithoutTokenIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestLogoutRevokesOnlySessionIdentifiedByAccessToken(t *testing.T) {
+	store := &sessionStoreStub{}
+	service := NewSessionService(store, passwordManagerStub{}, accessIssuerStub{claims: security.AccessClaims{
+		Subject: "user-1", SessionID: "session-1",
+	}}, signedIssuerStub{})
+	service.now = func() time.Time { return testNow }
+	if err := service.Logout(context.Background(), "valid-access"); err != nil {
+		t.Fatal(err)
+	}
+	if !store.revoked || store.revokedSessionID != "session-1" || store.revokedUserID != "user-1" {
+		t.Fatalf("unexpected revocation: %#v", store)
+	}
+}
+
+func TestLogoutWithInvalidAccessIsIdempotent(t *testing.T) {
+	store := &sessionStoreStub{}
+	service := NewSessionService(store, passwordManagerStub{}, accessIssuerStub{verifyErr: security.ErrInvalidAccessToken}, signedIssuerStub{})
+	if err := service.Logout(context.Background(), "invalid-access"); err != nil || store.revoked {
+		t.Fatalf("logout error = %v, revoked = %t", err, store.revoked)
+	}
+}
+
 func TestTemporaryPasswordChangeRevokesOldCredentialAndReissuesSession(t *testing.T) {
 	user := validSessionUser()
 	user.PasswordChangeRequired = true
-	store := &sessionStoreStub{user: user, newCredentialVersion: 4}
+	store := &sessionStoreStub{user: user}
 	service := testSessionService(store, false)
 
 	result, err := service.ChangeTemporaryPassword(context.Background(), Principal{UserID: user.ID}, "nova-senha-segura")
 	if err != nil {
 		t.Fatalf("change temporary password: %v", err)
 	}
-	if !store.changed || store.expectedVersion != 3 || store.newPasswordHash != "new-password-hash" {
+	if !store.changed || store.expectedVersion != 3 || store.newPasswordHash != "new-password-hash" || store.newSessionID == "" || !store.newExpiresAt.Equal(testNow.Add(15*24*time.Hour)) {
 		t.Fatalf("unexpected persistence call: %#v", store)
 	}
-	if result.Principal.PasswordChangeRequired || result.RefreshToken == "" {
+	if result.Principal.PasswordChangeRequired || result.AccessToken == "" || result.CSRFToken == "" {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 }
@@ -111,6 +106,15 @@ func TestTemporaryPasswordChangeRejectsSamePassword(t *testing.T) {
 	_, err := testSessionService(store, true).ChangeTemporaryPassword(context.Background(), Principal{UserID: user.ID}, "senha-temporaria")
 	if !errors.Is(err, ErrPasswordUnchanged) || store.changed {
 		t.Fatalf("error = %v, changed = %v", err, store.changed)
+	}
+}
+
+func TestTemporaryPasswordChangePreservesStorageFailure(t *testing.T) {
+	storageFailure := errors.New("database unavailable")
+	store := &sessionStoreStub{findErr: storageFailure}
+	_, err := testSessionService(store, false).ChangeTemporaryPassword(context.Background(), Principal{UserID: "user-1"}, "nova-senha-segura")
+	if !errors.Is(err, storageFailure) {
+		t.Fatalf("error = %v, want storage failure", err)
 	}
 }
 
