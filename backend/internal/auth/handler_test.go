@@ -34,8 +34,8 @@ func TestLoginHandlerReturnsPrincipalAndSecureCookies(t *testing.T) {
 		t.Fatalf("unexpected body: %s", recorder.Body.String())
 	}
 	cookies := recorder.Result().Cookies()
-	if len(cookies) != 3 {
-		t.Fatalf("cookie count = %d, want 3", len(cookies))
+	if len(cookies) != 2 {
+		t.Fatalf("cookie count = %d, want 2", len(cookies))
 	}
 	for _, cookie := range cookies {
 		if !cookie.Secure || cookie.SameSite != http.SameSiteStrictMode {

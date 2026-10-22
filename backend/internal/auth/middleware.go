@@ -3,11 +3,14 @@ package auth
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/platform/httpserver"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +23,6 @@ var publicPaths = map[string]struct{}{
 	"/api/v1/auth/email-confirmation":        {},
 	"/api/v1/auth/email-confirmation/verify": {},
 	"/api/v1/auth/login":                     {},
-	"/api/v1/auth/refresh":                   {},
 	"/api/v1/auth/logout":                    {},
 }
 
@@ -33,7 +35,7 @@ type SignedTokenVerifier interface {
 }
 
 type AuthUserStore interface {
-	FindUserByID(context.Context, string) (User, error)
+	FindActiveSessionUser(context.Context, string, time.Time) (User, error)
 }
 
 type Middleware struct {
@@ -98,12 +100,18 @@ func (middleware *Middleware) authenticate(c *gin.Context) (Principal, bool) {
 		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return Principal{}, false
 	}
-	claims, err := middleware.accessTokens.Verify(token, middleware.now().UTC())
+	now := middleware.now().UTC()
+	claims, err := middleware.accessTokens.Verify(token, now)
 	if err != nil {
 		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return Principal{}, false
 	}
-	user, err := middleware.users.FindUserByID(c.Request.Context(), claims.Subject)
+	user, err := middleware.users.FindActiveSessionUser(c.Request.Context(), claims.SessionID, now)
+	if err != nil && !errors.Is(err, ErrInvalidSession) {
+		slog.Error("authentication_session_lookup_failed", "request_id", httpserver.RequestID(c), "error", err)
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		return Principal{}, false
+	}
 	if err != nil || !userCanAuthenticate(user) || user.ID != claims.Subject || user.EstablishmentID != claims.EstablishmentID ||
 		user.Role != claims.Role || user.CredentialVersion != claims.CredentialVersion {
 		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
@@ -129,7 +137,7 @@ func requiresCSRF(method, path string) bool {
 	if !isUnsafeMethod(method) {
 		return false
 	}
-	return path == "/api/v1/auth/refresh" || path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change"
+	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change"
 }
 
 func requiresAccessToken(method, path string) bool {

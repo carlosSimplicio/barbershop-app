@@ -8,6 +8,7 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"github.com/google/uuid"
 )
 
 func TestVerifyEmailConfirmationCreatesSessionAndIssuesAuthentication(t *testing.T) {
@@ -24,17 +25,17 @@ func TestVerifyEmailConfirmationCreatesSessionAndIssuesAuthentication(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.AccessToken != "access" || result.CSRFToken != "csrf" || result.RefreshToken == "" {
+	if result.AccessToken != "access" || result.CSRFToken != "csrf" {
 		t.Fatalf("result = %#v", result)
 	}
-	if string(store.tokenHash) != string(security.HashOpaqueToken(token)) || len(store.refreshTokenHash) != 32 {
-		t.Fatal("expected hashed confirmation and refresh tokens")
+	if string(store.tokenHash) != string(security.HashOpaqueToken(token)) || uuid.Validate(store.sessionID) != nil {
+		t.Fatal("expected hashed confirmation token and generated session ID")
 	}
-	if !store.confirmedAt.Equal(registrationTestNow) || !store.refreshExpiresAt.Equal(registrationTestNow.Add(7*24*time.Hour)) {
-		t.Fatalf("timestamps = %s, %s", store.confirmedAt, store.refreshExpiresAt)
+	if !store.confirmedAt.Equal(registrationTestNow) || !store.expiresAt.Equal(registrationTestNow.Add(15*24*time.Hour)) {
+		t.Fatalf("timestamps = %s, %s", store.confirmedAt, store.expiresAt)
 	}
-	if issuer.refreshToken != result.RefreshToken || !issuer.now.Equal(registrationTestNow) {
-		t.Fatal("issuer did not receive persisted refresh token")
+	if issuer.sessionID != store.sessionID || !issuer.now.Equal(registrationTestNow) {
+		t.Fatal("issuer did not receive persisted session ID")
 	}
 }
 
@@ -71,21 +72,21 @@ func TestVerifyEmailConfirmationReturnsIssuanceFailureAfterPersistence(t *testin
 }
 
 type verificationStoreStub struct {
-	user             auth.User
-	err              error
-	called           bool
-	tokenHash        []byte
-	refreshTokenHash []byte
-	confirmedAt      time.Time
-	refreshExpiresAt time.Time
+	user        auth.User
+	err         error
+	called      bool
+	tokenHash   []byte
+	sessionID   string
+	confirmedAt time.Time
+	expiresAt   time.Time
 }
 
-func (stub *verificationStoreStub) ConfirmEmailAndCreateSession(_ context.Context, tokenHash, refreshTokenHash []byte, confirmedAt, refreshExpiresAt time.Time, beforeCommit func(auth.User) error) error {
+func (stub *verificationStoreStub) ConfirmEmailAndCreateSession(_ context.Context, tokenHash []byte, sessionID string, confirmedAt, expiresAt time.Time, beforeCommit func(auth.User) error) error {
 	stub.called = true
 	stub.tokenHash = tokenHash
-	stub.refreshTokenHash = refreshTokenHash
+	stub.sessionID = sessionID
 	stub.confirmedAt = confirmedAt
-	stub.refreshExpiresAt = refreshExpiresAt
+	stub.expiresAt = expiresAt
 	if stub.err != nil {
 		return stub.err
 	}
@@ -93,16 +94,15 @@ func (stub *verificationStoreStub) ConfirmEmailAndCreateSession(_ context.Contex
 }
 
 type verificationIssuerStub struct {
-	result       auth.LoginResult
-	err          error
-	refreshToken string
-	now          time.Time
+	result    auth.LoginResult
+	err       error
+	sessionID string
+	now       time.Time
 }
 
-func (stub *verificationIssuerStub) Issue(user auth.User, refreshToken string, now time.Time) (auth.LoginResult, error) {
-	stub.refreshToken = refreshToken
+func (stub *verificationIssuerStub) Issue(user auth.User, sessionID string, now time.Time) (auth.LoginResult, error) {
+	stub.sessionID = sessionID
 	stub.now = now
 	stub.result.Principal = auth.Principal{UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email, Role: user.Role}
-	stub.result.RefreshToken = refreshToken
 	return stub.result, stub.err
 }

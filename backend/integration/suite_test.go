@@ -43,10 +43,9 @@ import (
 )
 
 const (
-	trustedOrigin     = "https://app.example.test"
-	accessCookieName  = "__Secure-barbershop_access"
-	refreshCookieName = "__Secure-barbershop_refresh"
-	csrfCookieName    = "__Secure-barbershop_csrf"
+	trustedOrigin    = "https://app.example.test"
+	accessCookieName = "__Secure-barbershop_access"
+	csrfCookieName   = "__Secure-barbershop_csrf"
 )
 
 var integrationPool *pgxpool.Pool
@@ -111,10 +110,11 @@ func migrateDatabase(ctx context.Context, connectionString string) error {
 }
 
 type testApplication struct {
-	server    *httptest.Server
-	client    *http.Client
-	messages  *messageCapture
-	passwords *security.PasswordHasher
+	server       *httptest.Server
+	client       *http.Client
+	messages     *messageCapture
+	passwords    *security.PasswordHasher
+	accessTokens *security.JWTManager
 }
 
 func newTestApplication(t *testing.T) *testApplication {
@@ -132,7 +132,7 @@ func newTestApplication(t *testing.T) *testApplication {
 	if err != nil {
 		t.Fatalf("generate JWT key: %v", err)
 	}
-	accessTokens, err := security.NewJWTManager("integration-key", privateKey, map[string]ed25519.PublicKey{"integration-key": publicKey}, 15*time.Minute)
+	accessTokens, err := security.NewJWTManager("integration-key", privateKey, map[string]ed25519.PublicKey{"integration-key": publicKey}, 15*24*time.Hour)
 	if err != nil {
 		t.Fatalf("create JWT manager: %v", err)
 	}
@@ -177,7 +177,7 @@ func newTestApplication(t *testing.T) *testApplication {
 	client := server.Client()
 	client.Jar = jar
 
-	application := &testApplication{server: server, client: client, messages: messages, passwords: passwords}
+	application := &testApplication{server: server, client: client, messages: messages, passwords: passwords, accessTokens: accessTokens}
 	t.Cleanup(server.Close)
 	return application
 }
@@ -185,7 +185,7 @@ func newTestApplication(t *testing.T) *testApplication {
 func resetDatabase(t *testing.T) {
 	t.Helper()
 	_, err := integrationPool.Exec(context.Background(), `
-		TRUNCATE auth_login_attempts, refresh_tokens, auth_sessions, establishment_trials,
+		TRUNCATE auth_login_attempts, auth_sessions, establishment_trials,
 			email_confirmations, user_credentials, users, establishments RESTART IDENTITY CASCADE
 	`)
 	if err != nil {
@@ -257,12 +257,12 @@ func (application *testApplication) request(t *testing.T, method, path string, b
 }
 
 func requiresTestCSRF(path string) bool {
-	return path == "/api/v1/auth/refresh" || path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change"
+	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change"
 }
 
 func (application *testApplication) cookie(t *testing.T, name string) *http.Cookie {
 	t.Helper()
-	serverURL, err := url.Parse(application.server.URL + "/api/v1/auth/refresh")
+	serverURL, err := url.Parse(application.server.URL + "/api/v1/auth/logout")
 	if err != nil {
 		t.Fatalf("parse test server URL: %v", err)
 	}

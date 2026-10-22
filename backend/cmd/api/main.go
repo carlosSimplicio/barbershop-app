@@ -62,7 +62,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	accessTokens, err := security.NewJWTManager(configuration.JWTActiveKeyID, configuration.JWTPrivateKey, configuration.JWTPublicKeys, 15*time.Minute)
+	accessTokens, err := security.NewJWTManager(configuration.JWTActiveKeyID, configuration.JWTPrivateKey, configuration.JWTPublicKeys, 15*24*time.Hour)
 	if err != nil {
 		return err
 	}

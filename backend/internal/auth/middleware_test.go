@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +28,7 @@ type userStoreStub struct {
 	err  error
 }
 
-func (stub userStoreStub) FindUserByID(context.Context, string) (User, error) {
+func (stub userStoreStub) FindActiveSessionUser(context.Context, string, time.Time) (User, error) {
 	return stub.user, stub.err
 }
 
@@ -66,7 +67,7 @@ func TestMiddlewareAllowsPublicEmailConfirmationVerificationFromTrustedOriginWit
 func TestMiddlewareRequiresMatchingSignedCSRFToken(t *testing.T) {
 	middleware := testMiddleware(t, validSessionUser(), security.AccessClaims{})
 	headers := map[string]string{"Origin": "https://localhost:8443", "X-CSRF-Token": "different"}
-	status := runMiddlewareRequest(t, middleware, http.MethodPost, "/api/v1/auth/refresh", []*http.Cookie{{Name: csrfCookieName, Value: "cookie"}}, headers)
+	status := runMiddlewareRequest(t, middleware, http.MethodPost, "/api/v1/auth/logout", []*http.Cookie{{Name: csrfCookieName, Value: "cookie"}}, headers)
 	if status != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403", status)
 	}
@@ -75,7 +76,7 @@ func TestMiddlewareRequiresMatchingSignedCSRFToken(t *testing.T) {
 func TestMiddlewareDerivesTenantAndRoleFromCurrentUser(t *testing.T) {
 	user := validSessionUser()
 	claims := security.AccessClaims{
-		Subject: user.ID, EstablishmentID: user.EstablishmentID, Role: user.Role,
+		Subject: user.ID, SessionID: "session-1", EstablishmentID: user.EstablishmentID, Role: user.Role,
 		CredentialVersion: user.CredentialVersion, ExpiresAt: testNow.Add(time.Minute).Unix(),
 	}
 	middleware := testMiddleware(t, user, claims)
@@ -93,10 +94,35 @@ func TestMiddlewareRejectsEstablishmentRequestWithoutSession(t *testing.T) {
 	}
 }
 
+func TestMiddlewareDistinguishesUnavailableSessionStoreFromInvalidSession(t *testing.T) {
+	user := validSessionUser()
+	claims := security.AccessClaims{
+		Subject: user.ID, SessionID: "session-1", EstablishmentID: user.EstablishmentID, Role: user.Role,
+		CredentialVersion: user.CredentialVersion, ExpiresAt: testNow.Add(time.Minute).Unix(),
+	}
+	for _, tc := range []struct {
+		name   string
+		err    error
+		status int
+	}{
+		{name: "expired or revoked session", err: ErrInvalidSession, status: http.StatusUnauthorized},
+		{name: "database unavailable", err: errors.New("database unavailable"), status: http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			middleware := testMiddleware(t, user, claims)
+			middleware.users = userStoreStub{err: tc.err}
+			status := runMiddlewareRequest(t, middleware, http.MethodGet, "/api/v1/auth/me", []*http.Cookie{{Name: accessCookieName, Value: "access"}}, nil)
+			if status != tc.status {
+				t.Fatalf("status = %d, want %d", status, tc.status)
+			}
+		})
+	}
+}
+
 func TestMiddlewareRejectsTenantClaimThatDiffersFromDatabase(t *testing.T) {
 	user := validSessionUser()
 	claims := security.AccessClaims{
-		Subject: user.ID, EstablishmentID: "018f47d2-e886-7f1c-8e8d-8b38eaf16499", Role: user.Role,
+		Subject: user.ID, SessionID: "session-1", EstablishmentID: "018f47d2-e886-7f1c-8e8d-8b38eaf16499", Role: user.Role,
 		CredentialVersion: user.CredentialVersion, ExpiresAt: testNow.Add(time.Minute).Unix(),
 	}
 	middleware := testMiddleware(t, user, claims)
@@ -110,7 +136,7 @@ func TestMiddlewareRestrictsTemporaryPasswordFromEstablishment(t *testing.T) {
 	user := validSessionUser()
 	user.PasswordChangeRequired = true
 	claims := security.AccessClaims{
-		Subject: user.ID, EstablishmentID: user.EstablishmentID, Role: user.Role,
+		Subject: user.ID, SessionID: "session-1", EstablishmentID: user.EstablishmentID, Role: user.Role,
 		CredentialVersion: user.CredentialVersion, ExpiresAt: testNow.Add(time.Minute).Unix(),
 	}
 	middleware := testMiddleware(t, user, claims)

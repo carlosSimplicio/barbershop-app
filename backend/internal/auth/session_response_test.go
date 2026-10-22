@@ -12,7 +12,7 @@ func TestSessionCookieKeepsCSRFForFifteenDays(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	setSessionCookies(c, "access", "refresh", "csrf")
+	setSessionCookies(c, "access", "csrf")
 
 	for _, cookie := range recorder.Result().Cookies() {
 		if cookie.Name == csrfCookieName {

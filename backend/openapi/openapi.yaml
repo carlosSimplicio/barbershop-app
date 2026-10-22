@@ -112,38 +112,15 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalServerError"
-  /auth/refresh:
-    post:
-      operationId: postAuthRefresh
-      summary: Renova e rotaciona a sessão atual
-      tags: [authentication]
-      security:
-        - refreshCookie: []
-          csrfCookie: []
-          csrfHeader: []
-      responses:
-        "204":
-          description: Sessão renovada
-          headers:
-            Set-Cookie:
-              schema:
-                type: string
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
   /auth/logout:
     post:
       operationId: postAuthLogout
       summary: Encerra a sessão atual
+      description: Revoga a sessão identificada por um access cookie válido; também limpa os cookies quando o access está ausente ou inválido, após CSRF válido.
       tags: [authentication]
       security:
         - csrfCookie: []
           csrfHeader: []
-      parameters:
-        - $ref: "#/components/parameters/OptionalRefreshCookie"
       responses:
         "204":
           description: Sessão encerrada ou já ausente
@@ -243,10 +220,6 @@ components:
       type: apiKey
       in: cookie
       name: __Secure-barbershop_access
-    refreshCookie:
-      type: apiKey
-      in: cookie
-      name: __Secure-barbershop_refresh
     csrfCookie:
       type: apiKey
       in: cookie
@@ -255,13 +228,6 @@ components:
       type: apiKey
       in: header
       name: X-CSRF-Token
-  parameters:
-    OptionalRefreshCookie:
-      name: __Secure-barbershop_refresh
-      in: cookie
-      required: false
-      schema:
-        type: string
   schemas:
     EmailConfirmationRequest:
       type: object

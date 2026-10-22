@@ -6,20 +6,25 @@ import (
 	"time"
 
 	"barbershop-app/backend/internal/auth/security"
+
+	"github.com/google/uuid"
 )
 
 var (
 	ErrInvalidSession       = errors.New("invalid authentication session")
-	ErrRefreshTokenReused   = errors.New("refresh token reused")
 	ErrPasswordChangeDenied = errors.New("password change is not allowed")
 	ErrPasswordUnchanged    = errors.New("new password must differ from temporary password")
 )
 
 type SessionStore interface {
 	FindUserByID(context.Context, string) (User, error)
-	RotateRefreshToken(context.Context, []byte, []byte, time.Time, time.Time) (User, error)
-	RevokeSessionByRefreshToken(context.Context, []byte, time.Time) error
-	ChangeTemporaryPassword(context.Context, string, int64, string, []byte, time.Time, time.Time) (int64, error)
+	RevokeSession(context.Context, string, string, time.Time) error
+	ChangeTemporaryPassword(context.Context, string, int64, string, string, time.Time, time.Time) error
+}
+
+type AccessTokenManager interface {
+	AccessTokenIssuer
+	Verify(string, time.Time) (security.AccessClaims, error)
 }
 
 type PasswordManager interface {
@@ -30,39 +35,29 @@ type PasswordManager interface {
 type SessionService struct {
 	store        SessionStore
 	passwords    PasswordManager
-	accessTokens AccessTokenIssuer
+	accessTokens AccessTokenManager
 	csrfTokens   SignedTokenIssuer
 	now          func() time.Time
 }
 
-func NewSessionService(store SessionStore, passwords PasswordManager, accessTokens AccessTokenIssuer, csrfTokens SignedTokenIssuer) *SessionService {
+func NewSessionService(store SessionStore, passwords PasswordManager, accessTokens AccessTokenManager, csrfTokens SignedTokenIssuer) *SessionService {
 	return &SessionService{store: store, passwords: passwords, accessTokens: accessTokens, csrfTokens: csrfTokens, now: time.Now}
 }
 
-func (service *SessionService) Refresh(ctx context.Context, currentToken string) (LoginResult, error) {
-	if currentToken == "" {
-		return LoginResult{}, ErrInvalidSession
-	}
-	newRefreshToken, err := security.NewOpaqueToken()
-	if err != nil {
-		return LoginResult{}, err
-	}
-	now := service.now().UTC()
-	user, err := service.store.RotateRefreshToken(ctx, security.HashOpaqueToken(currentToken), security.HashOpaqueToken(newRefreshToken), now, now.Add(7*24*time.Hour))
-	if err != nil {
-		return LoginResult{}, err
-	}
-	if !userCanAuthenticate(user) {
-		return LoginResult{}, ErrInvalidSession
-	}
-	return service.Issue(user, newRefreshToken, now)
-}
-
-func (service *SessionService) Logout(ctx context.Context, refreshToken string) error {
-	if refreshToken == "" {
+func (service *SessionService) Logout(ctx context.Context, accessToken string) error {
+	if accessToken == "" {
 		return nil
 	}
-	return service.store.RevokeSessionByRefreshToken(ctx, security.HashOpaqueToken(refreshToken), service.now().UTC())
+	now := service.now().UTC()
+	claims, err := service.accessTokens.Verify(accessToken, now)
+	if err != nil {
+		return nil
+	}
+	err = service.store.RevokeSession(ctx, claims.SessionID, claims.Subject, now)
+	if errors.Is(err, ErrInvalidSession) {
+		return nil
+	}
+	return err
 }
 
 func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, principal Principal, newPassword string) (LoginResult, error) {
@@ -70,6 +65,9 @@ func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, prin
 		return LoginResult{}, err
 	}
 	user, err := service.store.FindUserByID(ctx, principal.UserID)
+	if err != nil && !errors.Is(err, ErrUserNotFound) {
+		return LoginResult{}, err
+	}
 	if err != nil || !userCanAuthenticate(user) || !user.PasswordChangeRequired {
 		return LoginResult{}, ErrPasswordChangeDenied
 	}
@@ -84,26 +82,25 @@ func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, prin
 	if err != nil {
 		return LoginResult{}, err
 	}
-	refreshToken, err := security.NewOpaqueToken()
-	if err != nil {
-		return LoginResult{}, err
-	}
 	now := service.now().UTC()
-	credentialVersion, err := service.store.ChangeTemporaryPassword(
-		ctx, user.ID, user.CredentialVersion, passwordHash, security.HashOpaqueToken(refreshToken), now, now.Add(7*24*time.Hour),
-	)
+	sessionID := uuid.NewString()
+	previousVersion := user.CredentialVersion
+	user.CredentialVersion++
+	user.PasswordChangeRequired = false
+	result, err := service.Issue(user, sessionID, now)
 	if err != nil {
 		return LoginResult{}, err
 	}
-	user.CredentialVersion = credentialVersion
-	user.PasswordChangeRequired = false
-	return service.Issue(user, refreshToken, now)
+	if err := service.store.ChangeTemporaryPassword(ctx, user.ID, previousVersion, passwordHash, sessionID, now, now.Add(15*24*time.Hour)); err != nil {
+		return LoginResult{}, err
+	}
+	return result, nil
 }
 
-func (service *SessionService) Issue(user User, refreshToken string, now time.Time) (LoginResult, error) {
+func (service *SessionService) Issue(user User, sessionID string, now time.Time) (LoginResult, error) {
 	now = now.UTC()
 	accessToken, err := service.accessTokens.Issue(security.Principal{
-		UserID: user.ID, EstablishmentID: user.EstablishmentID, Role: user.Role, CredentialVersion: user.CredentialVersion,
+		UserID: user.ID, SessionID: sessionID, EstablishmentID: user.EstablishmentID, Role: user.Role, CredentialVersion: user.CredentialVersion,
 	}, now)
 	if err != nil {
 		return LoginResult{}, err
@@ -117,7 +114,7 @@ func (service *SessionService) Issue(user User, refreshToken string, now time.Ti
 			UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
 			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
 		},
-		AccessToken: accessToken, RefreshToken: refreshToken, CSRFToken: csrfToken,
+		AccessToken: accessToken, CSRFToken: csrfToken,
 	}, nil
 }
 

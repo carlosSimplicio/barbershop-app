@@ -3,6 +3,7 @@ package security
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 func TestJWTManagerIssuesAndVerifiesAccessToken(t *testing.T) {
 	manager := testJWTManager(t)
 	now := time.Date(2026, time.October, 15, 12, 0, 0, 0, time.UTC)
-	token, err := manager.Issue(Principal{UserID: "user-1", EstablishmentID: "shop-1", Role: "owner", CredentialVersion: 3}, now)
+	token, err := manager.Issue(Principal{UserID: "user-1", SessionID: "session-1", EstablishmentID: "shop-1", Role: "owner", CredentialVersion: 3}, now)
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
 	}
@@ -20,7 +21,7 @@ func TestJWTManagerIssuesAndVerifiesAccessToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify token: %v", err)
 	}
-	if claims.Subject != "user-1" || claims.EstablishmentID != "shop-1" || claims.Role != "owner" || claims.CredentialVersion != 3 {
+	if claims.Subject != "user-1" || claims.SessionID != "session-1" || claims.EstablishmentID != "shop-1" || claims.Role != "owner" || claims.CredentialVersion != 3 {
 		t.Fatalf("unexpected claims: %#v", claims)
 	}
 }
@@ -28,7 +29,7 @@ func TestJWTManagerIssuesAndVerifiesAccessToken(t *testing.T) {
 func TestJWTManagerRejectsTamperingUnknownKeyAndExpiry(t *testing.T) {
 	manager := testJWTManager(t)
 	now := time.Date(2026, time.October, 15, 12, 0, 0, 0, time.UTC)
-	token, err := manager.Issue(Principal{UserID: "user-1", EstablishmentID: "shop-1", Role: "professional", CredentialVersion: 1}, now)
+	token, err := manager.Issue(Principal{UserID: "user-1", SessionID: "session-1", EstablishmentID: "shop-1", Role: "professional", CredentialVersion: 1}, now)
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
 	}
@@ -38,13 +39,56 @@ func TestJWTManagerRejectsTamperingUnknownKeyAndExpiry(t *testing.T) {
 	if _, err := manager.Verify(parts[0]+"."+tamperedPayload+"."+parts[2], now); err == nil {
 		t.Fatal("expected tampered token to fail")
 	}
-	if _, err := manager.Verify(token, now.Add(16*time.Minute)); err == nil {
+	if _, err := manager.Verify(token, now.Add(15*24*time.Hour-time.Second)); err != nil {
+		t.Fatalf("access token should remain valid before 15 days: %v", err)
+	}
+	if _, err := manager.Verify(token, now.Add(15*24*time.Hour)); err == nil {
 		t.Fatal("expected expired token to fail")
 	}
 
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA","typ":"JWT","kid":"unknown"}`))
 	if _, err := manager.Verify(header+"."+parts[1]+"."+parts[2], now); err == nil {
 		t.Fatal("expected unknown key to fail")
+	}
+}
+
+func TestJWTManagerRejectsPrincipalWithoutSession(t *testing.T) {
+	manager := testJWTManager(t)
+	_, err := manager.Issue(Principal{
+		UserID: "user-1", EstablishmentID: "shop-1", Role: "owner", CredentialVersion: 1,
+	}, time.Date(2026, time.October, 15, 12, 0, 0, 0, time.UTC))
+	if err == nil {
+		t.Fatal("access token without a session must be rejected")
+	}
+}
+
+func TestJWTManagerRejectsPreviouslySignedTokenWithoutSessionClaim(t *testing.T) {
+	manager := testJWTManager(t)
+	now := time.Date(2026, time.October, 15, 12, 0, 0, 0, time.UTC)
+	token, err := manager.Issue(Principal{
+		UserID: "user-1", SessionID: "session-1", EstablishmentID: "shop-1", Role: "owner", CredentialVersion: 1,
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(token, ".")
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var claims map[string]any
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		t.Fatal(err)
+	}
+	delete(claims, "session_id")
+	legacyPayload, err := json.Marshal(claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unsigned := parts[0] + "." + base64.RawURLEncoding.EncodeToString(legacyPayload)
+	legacyToken := unsigned + "." + base64.RawURLEncoding.EncodeToString(ed25519.Sign(manager.privateKey, []byte(unsigned)))
+	if _, err := manager.Verify(legacyToken, now); err == nil {
+		t.Fatal("previously signed access token without session ID must be rejected")
 	}
 }
 
@@ -57,7 +101,7 @@ func testJWTManager(t *testing.T) *JWTManager {
 	privateKey := ed25519.NewKeyFromSeed(seed)
 	manager, err := NewJWTManager("key-1", privateKey, map[string]ed25519.PublicKey{
 		"key-1": privateKey.Public().(ed25519.PublicKey),
-	}, 15*time.Minute)
+	}, 15*24*time.Hour)
 	if err != nil {
 		t.Fatalf("new JWT manager: %v", err)
 	}

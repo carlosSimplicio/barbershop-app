@@ -62,6 +62,12 @@ estabelecimento, trocar a senha temporária quando exigido e
 sair. Depois, `/login` permite entrar novamente. O cadastro de profissionais e
 a definição de uma senha temporária ainda não estão disponíveis na interface.
 
+Login e confirmação emitem apenas os cookies access e CSRF, ambos com
+`Max-Age` de 15 dias. A API valida a sessão identificada no access JWT em cada
+requisição autenticada; não há renovação nem endpoint de refresh. Ao receber
+`401`, a interface encerra a sessão local. O logout revoga a sessão atual no
+backend e limpa os cookies.
+
 O roteiro abaixo continua disponível para diagnosticar o onboarding pela API.
 O `.env.example` já aponta `EMAIL_PROVIDER=smtp`,
 `SMTP_HOST=mailpit` e a porta

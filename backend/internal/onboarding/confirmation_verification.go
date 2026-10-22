@@ -7,12 +7,14 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+
+	"github.com/google/uuid"
 )
 
 var ErrInvalidEmailConfirmation = errors.New("invalid email confirmation")
 
 type EmailConfirmationVerificationStore interface {
-	ConfirmEmailAndCreateSession(context.Context, []byte, []byte, time.Time, time.Time, func(auth.User) error) error
+	ConfirmEmailAndCreateSession(context.Context, []byte, string, time.Time, time.Time, func(auth.User) error) error
 }
 
 type AuthenticationIssuer interface {
@@ -33,17 +35,14 @@ func (service *EmailConfirmationVerificationService) Verify(ctx context.Context,
 	if !security.ValidateOpaqueToken(token) {
 		return auth.LoginResult{}, ErrInvalidEmailConfirmation
 	}
-	refreshToken, err := security.NewOpaqueToken()
-	if err != nil {
-		return auth.LoginResult{}, err
-	}
+	sessionID := uuid.NewString()
 	now := service.now().UTC()
 	var result auth.LoginResult
-	err = service.store.ConfirmEmailAndCreateSession(
-		ctx, security.HashOpaqueToken(token), security.HashOpaqueToken(refreshToken), now, now.Add(7*24*time.Hour),
+	err := service.store.ConfirmEmailAndCreateSession(
+		ctx, security.HashOpaqueToken(token), sessionID, now, now.Add(15*24*time.Hour),
 		func(user auth.User) error {
 			var issueErr error
-			result, issueErr = service.issuer.Issue(user, refreshToken, now)
+			result, issueErr = service.issuer.Issue(user, sessionID, now)
 			return issueErr
 		},
 	)

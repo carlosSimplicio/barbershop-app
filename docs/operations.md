@@ -54,7 +54,7 @@
 
 - Com `make dev` em execução e as migrations aplicadas, abra `https://localhost:8443` e siga da home para `/cadastro`.
 - Use um e-mail fictício exclusivo, confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva a `/testes`.
-- Em `/testes`, consulte novamente a sessão e o estabelecimento, saia e entre outra vez por `/login`. Inspecione no navegador os cookies e confirme `Secure`, `HttpOnly`, `SameSite=Strict` e os caminhos documentados em `docs/architecture.md`; somente o cookie CSRF é legível pelo JavaScript.
+- Em `/testes`, consulte novamente a sessão e o estabelecimento, saia e entre outra vez por `/login`. Inspecione os dois cookies e confirme `Secure`, `SameSite=Strict`, `Max-Age` de 15 dias e os caminhos documentados em `docs/architecture.md`; somente o access é `HttpOnly`, e somente o CSRF é legível pelo JavaScript.
 - A criação de profissional com senha temporária ainda não possui fluxo entregue. A validação manual desse papel requer uma conta de teste preparada separadamente; não use uma conta real nem exponha sua senha em comandos ou logs.
 
 ### Validação local do onboarding pela API
@@ -87,6 +87,7 @@
 - Migrations precisam ser compatíveis com a versão ainda ativa durante a atualização.
 - Para mudanças destrutivas, use etapas expansivas e contrativas em releases separadas.
 - A migration `00002_owner_onboarding.sql` exige que `establishments` esteja vazia, pois os registros mínimos anteriores não possuem nome, slug ou fuso que possam ser preenchidos sem inventar dados. Se a precondição falhar, interrompa o deploy e trate explicitamente os registros antes de reaplicar; não os apague nem atribua valores fictícios.
+- A migration `00003_access_only_sessions.sql` remove `refresh_tokens` e seus hashes. A aplicação existe somente em ambiente local nesta mudança; pare o backend antigo antes de aplicar a migration. O `Down` recria a tabela vazia e não recupera os hashes descartados. Antes de qualquer release em produção, reavalie a estratégia de migração e a ausência de backup.
 
 ## Persistência
 
@@ -98,7 +99,7 @@
 
 ### Manutenção dos dados de autenticação
 
-- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `refresh_tokens`, `email_confirmations` ou `auth_login_attempts`; enquanto isso, as quatro tabelas crescem sem limite. Implemente e valide essa manutenção antes de operar autenticação continuamente em produção.
+- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `email_confirmations` ou `auth_login_attempts`; enquanto isso, as três tabelas crescem sem limite. Implemente e valide essa manutenção antes de operar autenticação continuamente em produção.
 - Execute a manutenção ao menos diariamente como comando idempotente e observável, invocado pelo ambiente da VPS sem criar um novo serviço permanente. Proteja execuções concorrentes e processe exclusões em lotes para limitar bloqueios, WAL e picos de I/O.
 - Antes de habilitar exclusões, registre apenas contagens agregadas dos candidatos, valide as janelas definidas na arquitetura e confirme a ordem exigida pelas chaves estrangeiras. Nunca registre hashes, tokens, IPs, e-mails ou identificadores individuais.
 - Acompanhe por tabela a contagem aproximada, o tamanho total e a idade do registro elegível mais antigo. Confirmações só podem ser removidas depois de consumidas, invalidadas ou expiradas e da margem operacional definida. Emita alerta quando a rotina falhar ou quando a idade ultrapassar a janela esperada; não dependa apenas do tamanho atual do volume.

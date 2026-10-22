@@ -5,8 +5,6 @@ import (
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/onboarding"
-	api "barbershop-app/backend/openapi/generated"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,11 +39,7 @@ func (handler *Handler) PostAuthEmailConfirmationVerify(c *gin.Context) {
 	handler.onboarding.PostAuthEmailConfirmationVerify(c)
 }
 
-func (handler *Handler) PostAuthRefresh(c *gin.Context) {
-	handler.authentication.PostAuthRefresh(c)
-}
-
-func (handler *Handler) PostAuthLogout(c *gin.Context, _ api.PostAuthLogoutParams) {
+func (handler *Handler) PostAuthLogout(c *gin.Context) {
 	handler.authentication.PostAuthLogout(c)
 }
 
