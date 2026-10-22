@@ -234,6 +234,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, refresh tokens, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [ ] Limitar a frequência de renovação por sessão para impedir crescimento acelerado por loops ou abuso de um cliente autenticado.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
+- [x] Definir `Max-Age` de 15 dias para o cookie CSRF.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
 - [ ] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.

@@ -30,7 +30,7 @@ func WriteSessionResponse(c *gin.Context, result LoginResult) error {
 func setSessionCookies(c *gin.Context, accessToken, refreshToken, csrfToken string) {
 	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Value: accessToken, Path: "/api/v1", MaxAge: 15 * 60, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 	http.SetCookie(c.Writer, &http.Cookie{Name: refreshCookieName, Value: refreshToken, Path: "/api/v1/auth", MaxAge: 7 * 24 * 60 * 60, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Value: csrfToken, Path: "/", MaxAge: 7 * 24 * 60 * 60, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Value: csrfToken, Path: "/", MaxAge: 15 * 24 * 60 * 60, Secure: true, SameSite: http.SameSiteStrictMode})
 }
 
 func clearSessionCookies(c *gin.Context) {

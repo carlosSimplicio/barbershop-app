@@ -1,6 +1,6 @@
 # Autenticação somente com access token e CSRF por 15 dias
 
-Remover o refresh token e a renovação da sessão. Access JWT e CSRF terão validade fixa de 15 dias; o logout continuará revogando imediatamente a sessão atual no backend. Tokens e sessões locais emitidos pelo modelo anterior podem ser invalidados.
+Remover o refresh token e a renovação da sessão. O access JWT terá validade fixa de 15 dias e o cookie CSRF terá `Max-Age` de 15 dias; o logout continuará revogando imediatamente a sessão atual no backend. Tokens e sessões locais emitidos pelo modelo anterior podem ser invalidados.
 
 ### 1. Remover a renovação do frontend
 
@@ -10,13 +10,13 @@ Remover o refresh token e a renovação da sessão. Access JWT e CSRF terão val
 - **Base documental:** decisão desta conversa; `docs/product.md`, seção “Experiência de uso”; `docs/architecture.md`, seção “Contrato de sessão”; `docs/implementation-scope.md`, seção 5, todos a atualizar para o novo fluxo.
 - **Verificação:** `401` em leitura autenticada leva ao estado sem sessão sem retry nem chamada de refresh; falha de rede ou `5xx` continua indicada como indisponibilidade; ações explícitas não deixam respostas antigas sobrescrever o principal novo; `/testes` mantém consulta, troca de senha e logout. Testes Vitest protegem esses fluxos.
 
-### 2. Fazer o CSRF expirar no backend após 15 dias
+### 2. Ajustar o cookie CSRF para 15 dias
 
-- **O que:** incluir prazo assinado no token CSRF e validá-lo no backend; ajustar o cookie CSRF para `Max-Age` de 15 dias, preservando `Secure`, `SameSite=Strict`, `Path=/`, comparação com `X-CSRF-Token` e validação de `Origin`. Atualizar `docs/architecture.md` no mesmo trabalho.
-- **Motivação:** hoje somente o cookie expira, após 7 dias; a assinatura aceita indefinidamente um valor reapresentado. A validade de 15 dias deve valer também para o verificador.
-- **Onde:** `backend/internal/auth/security/token.go`, `backend/internal/auth/middleware.go`, `backend/internal/auth/session_response.go`, testes correspondentes e `docs/architecture.md`.
-- **Base documental:** confirmação desta conversa, que substitui o comportamento descrito em `docs/architecture.md`, seções “Autenticação” e “Contrato de sessão”.
-- **Verificação:** CSRF válido é aceito até seu prazo; expirado, alterado, ausente ou diferente do header é recusado; cookie tem `Max-Age` de 15 dias. Cobrir em testes Go e integração HTTP com relógio controlado.
+- **O que:** ajustar o cookie CSRF para `Max-Age` de 15 dias, preservando `Secure`, `SameSite=Strict`, `Path=/`, comparação com `X-CSRF-Token`, assinatura do token e validação de `Origin`. Não incluir prazo assinado no token. Atualizar `docs/architecture.md` no mesmo trabalho.
+- **Motivação:** hoje o navegador descarta o cookie após 7 dias. O access JWT e a sessão terão expiração própria de 15 dias na subtarefa 3; um prazo adicional no token CSRF acrescentaria complexidade sem benefício proporcional para esta aplicação.
+- **Onde:** `backend/internal/auth/session_response.go`, teste correspondente e `docs/architecture.md`.
+- **Base documental:** decisão desta conversa, que substitui o comportamento descrito em `docs/architecture.md`, seção “Contrato de sessão”.
+- **Verificação:** o cookie CSRF emitido tem `Max-Age` de 15 dias e mantém os demais atributos. Cobrir em teste Go da resposta HTTP.
 
 ### 3. Substituir o ciclo de sessão no backend e no contrato
 
@@ -33,7 +33,7 @@ Remover o refresh token e a renovação da sessão. Access JWT e CSRF terão val
 - **Motivação:** impedir que o modelo antigo permaneça apresentado como contrato vigente ou que a simplificação introduza regressões de autorização, tenant ou tratamento de erros.
 - **Onde:** documentos citados, `docs/implementation-scope.md`, OpenAPI e fluxos de autenticação afetados.
 - **Base documental:** `AGENTS.md`, seções “Documentação obrigatória por contexto” e “Revisão final de features”; decisão desta conversa.
-- **Verificação:** código, testes, contrato, documentação e checkboxes descrevem somente access e CSRF de 15 dias; instruções manuais percorrem confirmação, `/auth/me`, logout e novo login sem refresh; nenhum token aparece em URL, logs ou armazenamento web.
+- **Verificação:** código, testes, contrato, documentação e checkboxes descrevem access de 15 dias e cookie CSRF com `Max-Age` de 15 dias; instruções manuais percorrem confirmação, `/auth/me`, logout e novo login sem refresh; nenhum token aparece em URL, logs ou armazenamento web.
 - **Dependências:** 1 a 3.
 
 ## Verificação conjunta
