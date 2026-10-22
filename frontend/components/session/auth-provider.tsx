@@ -10,17 +10,8 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import {
-  configureApiSessionRecovery,
-  runManualRefresh,
-  runSessionAction,
-  type ApiResult,
-} from "@/lib/api/client";
-import {
-  getCurrentSession,
-  refreshCurrentSession,
-  type AuthPrincipal,
-} from "@/lib/auth/session-api";
+import { configureApiSessionObserver, type ApiResult } from "@/lib/api/client";
+import { getCurrentSession, type AuthPrincipal } from "@/lib/auth/session-api";
 
 export type AuthState =
   | { status: "loading" | "anonymous" | "unavailable" }
@@ -30,7 +21,6 @@ type SessionContext = {
   state: AuthState;
   transitioning: boolean;
   reload: () => Promise<void>;
-  refresh: () => Promise<ApiResult<void>>;
   runAction: <T extends AuthPrincipal | void>(
     action: () => Promise<ApiResult<T>>,
     next: "authenticated" | "anonymous",
@@ -43,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
   const [transitioning, setTransitioning] = useState(false);
   const currentRequest = useRef<AbortController | null>(null);
-  const transition = useRef<Promise<unknown> | null>(null);
+  const actionPending = useRef(false);
 
   const load = useCallback(async () => {
     currentRequest.current?.abort();
@@ -67,38 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reload = useCallback(async () => {
-    if (transition.current) {
-      try {
-        await transition.current;
-      } catch {
-        // The action reports its own failure.
-      }
-      return;
-    }
+    if (actionPending.current) return;
     setState({ status: "loading" });
     await load();
   }, [load]);
 
-  const startTransition = useCallback(
-    async <T,>(action: () => Promise<T>): Promise<T> => {
-      if (transition.current)
-        throw new Error("Session action already in progress");
-      const pending = action();
-      transition.current = pending;
-      setTransitioning(true);
-      try {
-        return await pending;
-      } finally {
-        transition.current = null;
-        setTransitioning(false);
-      }
-    },
-    [],
-  );
-
   useEffect(() => {
     let mounted = true;
-    configureApiSessionRecovery({
+    configureApiSessionObserver({
       onInvalidSession: () => {
         currentRequest.current?.abort();
         setState({ status: "anonymous" });
@@ -110,14 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
       currentRequest.current?.abort();
-      configureApiSessionRecovery(null);
+      configureApiSessionObserver(null);
     };
   }, [load]);
 
   const runAction = useCallback<SessionContext["runAction"]>(
-    (action, next) =>
-      startTransition(async () => {
-        const result = await runSessionAction(action, next);
+    async (action, next) => {
+      if (actionPending.current)
+        throw new Error("Session action already in progress");
+      actionPending.current = true;
+      setTransitioning(true);
+      try {
+        const result = await action();
         if (result.state !== "error") {
           if (next === "anonymous") {
             currentRequest.current?.abort();
@@ -131,26 +101,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
         return result;
-      }),
-    [load, startTransition],
-  );
-
-  const refresh = useCallback(
-    () =>
-      startTransition(async () => {
-        const result = await runManualRefresh(refreshCurrentSession);
-        if (result.state !== "error") {
-          setState({ status: "loading" });
-          await load();
-        }
-        return result;
-      }),
-    [load, startTransition],
+      } finally {
+        actionPending.current = false;
+        setTransitioning(false);
+      }
+    },
+    [load],
   );
 
   return (
     <AuthSessionContext.Provider
-      value={{ state, transitioning, reload, refresh, runAction }}
+      value={{ state, transitioning, reload, runAction }}
     >
       {children}
     </AuthSessionContext.Provider>

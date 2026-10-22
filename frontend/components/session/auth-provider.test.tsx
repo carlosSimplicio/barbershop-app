@@ -7,10 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import {
-  configureApiSessionRecovery,
-  runSessionAction,
-} from "@/lib/api/client";
+import { apiFetch, configureApiSessionObserver } from "@/lib/api/client";
 
 import { AuthProvider, useAuthSession } from "./auth-provider";
 
@@ -20,12 +17,8 @@ beforeEach(() => {
   );
 });
 
-afterEach(async () => {
-  configureApiSessionRecovery(null);
-  await runSessionAction(
-    async () => ({ state: "empty", status: 204 }),
-    "authenticated",
-  );
+afterEach(() => {
+  configureApiSessionObserver(null);
   vi.restoreAllMocks();
 });
 
@@ -59,12 +52,10 @@ test("visitante sem cookie CSRF permanece anônimo sem bloquear a página públi
   expect(fetchMock).toHaveBeenCalledOnce();
 });
 
-test("recupera a identidade após expirar o access token", async () => {
+test("access expirado deixa a sessão anônima sem tentar refresh", async () => {
   const fetchMock = vi
     .spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(errorResponse(401))
-    .mockResolvedValueOnce(new Response(null, { status: 204 }))
-    .mockResolvedValueOnce(jsonResponse(principal("professional")));
+    .mockResolvedValue(errorResponse(401));
 
   render(
     <AuthProvider>
@@ -72,19 +63,15 @@ test("recupera a identidade após expirar o access token", async () => {
     </AuthProvider>,
   );
 
-  expect(await screen.findByText("professional")).toBeInTheDocument();
-  expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
-    "/api/v1/auth/me",
-    "/api/v1/auth/refresh",
-    "/api/v1/auth/me",
-  ]);
+  expect(await screen.findByText("anonymous")).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledOnce();
 });
 
 test("distingue sessão ausente de erro temporário", async () => {
   const fetchMock = vi
     .spyOn(globalThis, "fetch")
     .mockResolvedValueOnce(errorResponse(401))
-    .mockResolvedValueOnce(errorResponse(401));
+    .mockResolvedValueOnce(errorResponse(503));
   const first = render(
     <AuthProvider>
       <SessionProbe />
@@ -93,50 +80,13 @@ test("distingue sessão ausente de erro temporário", async () => {
   expect(await screen.findByText("anonymous")).toBeInTheDocument();
   first.unmount();
 
-  fetchMock.mockResolvedValueOnce(errorResponse(503));
   render(
     <AuthProvider>
       <SessionProbe />
     </AuthProvider>,
   );
   expect(await screen.findByText("unavailable")).toBeInTheDocument();
-});
-
-test("não declara logout quando a rotação tem resultado indeterminado", async () => {
-  vi.spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(errorResponse(401))
-    .mockResolvedValueOnce(errorResponse(503));
-
-  render(
-    <AuthProvider>
-      <SessionProbe />
-    </AuthProvider>,
-  );
-
-  expect(await screen.findByText("unavailable")).toBeInTheDocument();
-});
-
-test("remontagem após falha indeterminada não reutiliza o refresh token", async () => {
-  const fetchMock = vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(errorResponse(401))
-    .mockResolvedValueOnce(errorResponse(503))
-    .mockResolvedValueOnce(errorResponse(401));
-  const first = render(
-    <AuthProvider>
-      <SessionProbe />
-    </AuthProvider>,
-  );
-  expect(await screen.findByText("unavailable")).toBeInTheDocument();
-  first.unmount();
-
-  render(
-    <AuthProvider>
-      <SessionProbe />
-    </AuthProvider>,
-  );
-  expect(await screen.findByText("unavailable")).toBeInTheDocument();
-  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 test("ação falha durante a descoberta não deixa a sessão carregando", async () => {
@@ -183,10 +133,47 @@ test("ação falha durante a descoberta não deixa a sessão carregando", async 
   expect(screen.getByText("anonymous")).toBeInTheDocument();
 });
 
-test("uma nova sessão reabilita a recuperação e atualiza o principal", async () => {
+test("401 durante ação pendente encerra a sessão imediatamente", async () => {
+  let finishAction:
+    | ((result: {
+        state: "error";
+        status: 400;
+        error: { code: string; message: string; request_id: string };
+      }) => void)
+    | undefined;
+  vi.spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(jsonResponse(principal("owner")))
+    .mockResolvedValueOnce(errorResponse(401));
+
+  render(
+    <AuthProvider>
+      <PendingFailureProbe
+        action={() =>
+          new Promise((resolve) => {
+            finishAction = resolve;
+          })
+        }
+      />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText("authenticated")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Falhar" }));
+  await apiFetch("/api/v1/establishment");
+  expect(await screen.findByText("anonymous")).toBeInTheDocument();
+  await act(async () => {
+    finishAction?.({
+      state: "error",
+      status: 400,
+      error: { code: "invalid_password", message: "Erro.", request_id: "id" },
+    });
+  });
+
+  expect(screen.getByText("anonymous")).toBeInTheDocument();
+});
+
+test("uma nova sessão atualiza o principal após 401", async () => {
   const fetchMock = vi
     .spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(errorResponse(401))
     .mockResolvedValueOnce(errorResponse(401))
     .mockResolvedValueOnce(jsonResponse(principal("owner")));
 
@@ -199,7 +186,7 @@ test("uma nova sessão reabilita a recuperação e atualiza o principal", async 
   fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
   expect(await screen.findByText("owner")).toBeInTheDocument();
-  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 test("usa o principal retornado pelo login mesmo se uma nova consulta falharia", async () => {

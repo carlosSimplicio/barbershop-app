@@ -9,10 +9,6 @@ export type ApiResult<T> =
 
 const csrfCookieName = "__Secure-barbershop_csrf";
 
-export function hasCsrfCookie() {
-  return Boolean(readCookie(csrfCookieName));
-}
-
 export async function sendRequest<T>(
   path: `/api/v1/${string}`,
   init: RequestInit,

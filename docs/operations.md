@@ -54,7 +54,7 @@
 
 - Com `make dev` em execução e as migrations aplicadas, abra `https://localhost:8443` e siga da home para `/cadastro`.
 - Use um e-mail fictício exclusivo, confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva a `/testes`.
-- Em `/testes`, consulte novamente a sessão e o estabelecimento, renove a sessão, saia e entre outra vez por `/login`. Inspecione no navegador os cookies e confirme `Secure`, `HttpOnly`, `SameSite=Strict` e os caminhos documentados em `docs/architecture.md`; somente o cookie CSRF é legível pelo JavaScript.
+- Em `/testes`, consulte novamente a sessão e o estabelecimento, saia e entre outra vez por `/login`. Inspecione no navegador os cookies e confirme `Secure`, `HttpOnly`, `SameSite=Strict` e os caminhos documentados em `docs/architecture.md`; somente o cookie CSRF é legível pelo JavaScript.
 - A criação de profissional com senha temporária ainda não possui fluxo entregue. A validação manual desse papel requer uma conta de teste preparada separadamente; não use uma conta real nem exponha sua senha em comandos ou logs.
 
 ### Validação local do onboarding pela API

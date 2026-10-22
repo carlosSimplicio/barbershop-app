@@ -1,10 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  configureApiSessionRecovery,
-  runSessionAction,
-} from "@/lib/api/client";
+import { configureApiSessionObserver } from "@/lib/api/client";
 
 import { AuthProvider } from "./auth-provider";
 import { SessionGuard } from "./session-guard";
@@ -12,12 +9,8 @@ import { SessionGuard } from "./session-guard";
 const replace = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 
-afterEach(async () => {
-  configureApiSessionRecovery(null);
-  await runSessionAction(
-    async () => ({ state: "empty", status: 204 }),
-    "authenticated",
-  );
+afterEach(() => {
+  configureApiSessionObserver(null);
   vi.restoreAllMocks();
   replace.mockReset();
 });
