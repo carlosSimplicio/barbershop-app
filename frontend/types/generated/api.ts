@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/recovery/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redefine a senha do proprietário com link de uso único */
+        post: operations["postAuthPasswordRecoveryVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -184,6 +201,10 @@ export interface components {
         PasswordRecoveryRequest: {
             /** Format: email */
             email: string;
+        };
+        PasswordRecoveryVerifyRequest: {
+            token: string;
+            new_password: string;
         };
         EmailConfirmationRequest: {
             /** Format: email */
@@ -430,6 +451,31 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    postAuthPasswordRecoveryVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordRecoveryVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Senha redefinida e sessões anteriores revogadas; nenhuma sessão criada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalServerError"];
         };
     };

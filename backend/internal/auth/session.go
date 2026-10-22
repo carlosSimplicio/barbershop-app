@@ -13,7 +13,7 @@ import (
 var (
 	ErrInvalidSession       = errors.New("invalid authentication session")
 	ErrPasswordChangeDenied = errors.New("password change is not allowed")
-	ErrPasswordUnchanged    = errors.New("new password must differ from temporary password")
+	ErrPasswordUnchanged    = errors.New("new password must differ from current password")
 )
 
 type SessionStore interface {

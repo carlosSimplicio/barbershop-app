@@ -97,9 +97,10 @@ func run() error {
 	confirmationVerification := onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions)
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
 	passwordRecovery := auth.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
+	passwordRecoveryVerification := auth.NewPasswordRecoveryVerificationService(authStore, passwords)
 	handler := httpapi.NewHandler(
 		health.NewHandler(pool),
-		auth.NewHandler(login, sessions, passwordRecovery),
+		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
 		establishment.NewHandler(establishments),
 	)

@@ -135,6 +135,12 @@ type PasswordRecoveryRequest struct {
 	Email openapi_types.Email `json:"email"`
 }
 
+// PasswordRecoveryVerifyRequest defines model for PasswordRecoveryVerifyRequest.
+type PasswordRecoveryVerifyRequest struct {
+	NewPassword string `json:"new_password"`
+	Token       string `json:"token"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -186,6 +192,9 @@ type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
 // PostAuthPasswordRecoveryJSONRequestBody defines body for PostAuthPasswordRecovery for application/json ContentType.
 type PostAuthPasswordRecoveryJSONRequestBody = PasswordRecoveryRequest
 
+// PostAuthPasswordRecoveryVerifyJSONRequestBody defines body for PostAuthPasswordRecoveryVerify for application/json ContentType.
+type PostAuthPasswordRecoveryVerifyJSONRequestBody = PasswordRecoveryVerifyRequest
+
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
 
@@ -212,6 +221,9 @@ type ServerInterface interface {
 	// PostAuthPasswordRecovery Solicita link de recuperação da senha do proprietário
 	// (POST /auth/password/recovery)
 	PostAuthPasswordRecovery(c *gin.Context)
+	// PostAuthPasswordRecoveryVerify Redefine a senha do proprietário com link de uso único
+	// (POST /auth/password/recovery/verify)
+	PostAuthPasswordRecoveryVerify(c *gin.Context)
 	// PostAuthRegister Cadastra proprietário e estabelecimento
 	// (POST /auth/register)
 	PostAuthRegister(c *gin.Context)
@@ -323,6 +335,19 @@ func (siw *ServerInterfaceWrapper) PostAuthPasswordRecovery(c *gin.Context) {
 	siw.Handler.PostAuthPasswordRecovery(c)
 }
 
+// PostAuthPasswordRecoveryVerify operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthPasswordRecoveryVerify(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthPasswordRecoveryVerify(c)
+}
+
 // PostAuthRegister operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthRegister(c *gin.Context) {
 
@@ -393,6 +418,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/auth/email-confirmation", wrapper.PostAuthEmailConfirmation)
 	router.POST(options.BaseURL+"/auth/email-confirmation/verify", wrapper.PostAuthEmailConfirmationVerify)
 	router.POST(options.BaseURL+"/auth/password/recovery", wrapper.PostAuthPasswordRecovery)
+	router.POST(options.BaseURL+"/auth/password/recovery/verify", wrapper.PostAuthPasswordRecoveryVerify)
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)

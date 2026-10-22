@@ -235,7 +235,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [x] Definir `Max-Age` de 15 dias para o cookie CSRF.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
-- [ ] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
+- [x] Entregar solicitação e verificação da recuperação de senha do proprietário na API.
+- [ ] Entregar as telas de solicitação e redefinição e ligar o fluxo ao login.
+- [x] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.

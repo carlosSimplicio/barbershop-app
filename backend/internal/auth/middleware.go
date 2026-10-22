@@ -23,6 +23,7 @@ var publicPaths = map[string]struct{}{
 	"/api/v1/auth/email-confirmation":        {},
 	"/api/v1/auth/email-confirmation/verify": {},
 	"/api/v1/auth/password/recovery":         {},
+	"/api/v1/auth/password/recovery/verify":  {},
 	"/api/v1/auth/login":                     {},
 	"/api/v1/auth/logout":                    {},
 }

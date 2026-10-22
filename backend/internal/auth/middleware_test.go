@@ -68,6 +68,18 @@ func TestMiddlewareAllowsPublicPasswordRecoveryRequestFromTrustedOriginWithoutSe
 	}
 }
 
+func TestMiddlewareAllowsPublicPasswordRecoveryVerificationFromTrustedOriginWithoutSession(t *testing.T) {
+	middleware := testMiddleware(t, validSessionUser(), security.AccessClaims{})
+	status := runMiddlewareRequest(t, middleware, http.MethodPost, "/api/v1/auth/password/recovery/verify", nil, map[string]string{"Origin": "https://localhost:8443"})
+	if status != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", status)
+	}
+	status = runMiddlewareRequest(t, middleware, http.MethodPost, "/api/v1/auth/password/recovery/verify", nil, map[string]string{"Origin": "https://evil.example"})
+	if status != http.StatusForbidden {
+		t.Fatalf("untrusted origin status = %d, want 403", status)
+	}
+}
+
 func TestMiddlewareAllowsPublicEmailConfirmationVerificationFromTrustedOriginWithoutSession(t *testing.T) {
 	middleware := testMiddleware(t, validSessionUser(), security.AccessClaims{})
 	status := runMiddlewareRequest(t, middleware, http.MethodPost, "/api/v1/auth/email-confirmation/verify", nil, map[string]string{"Origin": "https://localhost:8443"})

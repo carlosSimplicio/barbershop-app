@@ -19,17 +19,48 @@ import (
 )
 
 type Handler struct {
-	login    *LoginService
-	sessions *SessionService
-	recovery PasswordRecoveryRequester
+	login                *LoginService
+	sessions             *SessionService
+	recovery             PasswordRecoveryRequester
+	recoveryVerification PasswordRecoveryVerifier
 }
 
 type PasswordRecoveryRequester interface {
 	Request(ctx context.Context, email, ip string) (PasswordRecoveryRequestResult, error)
 }
 
-func NewHandler(login *LoginService, sessions *SessionService, recovery PasswordRecoveryRequester) *Handler {
-	return &Handler{login: login, sessions: sessions, recovery: recovery}
+type PasswordRecoveryVerifier interface {
+	Verify(context.Context, string, string) error
+}
+
+func NewHandler(login *LoginService, sessions *SessionService, recovery PasswordRecoveryRequester, recoveryVerification PasswordRecoveryVerifier) *Handler {
+	return &Handler{login: login, sessions: sessions, recovery: recovery, recoveryVerification: recoveryVerification}
+}
+
+func (handler *Handler) PostAuthPasswordRecoveryVerify(c *gin.Context) {
+	var request api.PasswordRecoveryVerifyRequest
+	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	if err := handler.recoveryVerification.Verify(c.Request.Context(), request.Token, request.NewPassword); err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidPasswordRecovery):
+			writeError(c, http.StatusBadRequest, "invalid_password_recovery", "Link inválido ou expirado.")
+		case errors.Is(err, security.ErrInvalidPassword):
+			writeFieldError(c, "new_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+		case errors.Is(err, ErrPasswordUnchanged):
+			writeFieldError(c, "new_password", "password_unchanged", "Escolha uma senha diferente da atual.")
+		default:
+			slog.Error("password_recovery_verification_failed", "request_id", httpserver.RequestID(c))
+			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		}
+		return
+	}
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
 
 func (handler *Handler) PostAuthPasswordRecovery(c *gin.Context) {

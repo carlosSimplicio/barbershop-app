@@ -99,7 +99,7 @@
 
 ### Manutenção dos dados de autenticação
 
-- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `email_confirmations`, `password_recovery_tokens` ou `auth_login_attempts`; quando os respectivos fluxos gravarem dados, essas tabelas poderão crescer sem limite. O schema dos tokens de recuperação já existe, mas sua emissão ainda não foi entregue. Implemente e valide a manutenção antes de operar autenticação continuamente em produção.
+- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `email_confirmations`, `password_recovery_tokens` ou `auth_login_attempts`; os fluxos atuais já gravam nessas tabelas, que poderão crescer sem limite. A emissão e o consumo de tokens de recuperação já estão entregues na API. Implemente e valide a manutenção antes de operar autenticação continuamente em produção.
 - Execute a manutenção ao menos diariamente como comando idempotente e observável, invocado pelo ambiente da VPS sem criar um novo serviço permanente. Proteja execuções concorrentes e processe exclusões em lotes para limitar bloqueios, WAL e picos de I/O.
 - Antes de habilitar exclusões, registre apenas contagens agregadas dos candidatos, valide as janelas definidas na arquitetura e confirme a ordem exigida pelas chaves estrangeiras. Nunca registre hashes, tokens, IPs, e-mails ou identificadores individuais.
 - Acompanhe por tabela a contagem aproximada, o tamanho total e a idade do registro elegível mais antigo. Confirmações e tokens de recuperação só podem ser removidos depois de consumidos, invalidados ou expirados e da margem operacional definida. Emita alerta quando a rotina falhar ou quando a idade ultrapassar a janela esperada; não dependa apenas do tamanho atual do volume.
