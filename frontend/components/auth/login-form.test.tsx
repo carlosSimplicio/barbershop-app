@@ -94,6 +94,16 @@ test("recusa campos inválidos e foca o primeiro erro", () => {
   expect(screen.getByText("Informe sua senha.")).toBeInTheDocument();
 });
 
+test("oferece acesso à recuperação de senha pelo login", () => {
+  render(<LoginForm />);
+  const recoveryLink = screen.getByRole("link", {
+    name: "Esqueci minha senha",
+  });
+  expect(recoveryLink).toHaveAttribute("href", "/recuperar-senha");
+  recoveryLink.focus();
+  expect(recoveryLink).toHaveFocus();
+});
+
 test("mostra credenciais inválidas sem revelar detalhes do servidor", async () => {
   vi.mocked(login).mockResolvedValue({
     state: "error",

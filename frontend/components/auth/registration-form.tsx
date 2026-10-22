@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
+import { EMAIL_MAX_LENGTH, validateEmail } from "@/lib/auth/email-validation";
 import {
   registerOwner,
   type RegisterRequest,
@@ -207,7 +208,7 @@ export function RegistrationForm() {
           readOnly={submitting}
           error={errors.email}
           label="Seu e-mail"
-          maxLength={254}
+          maxLength={EMAIL_MAX_LENGTH}
           onChange={(event) => update("email", event.target.value)}
           placeholder="voce@exemplo.com"
           ref={emailRef}
@@ -304,14 +305,7 @@ function validate(values: RegisterRequest): FieldErrors {
   if (!values.time_zone || values.time_zone === "Local") {
     errors.time_zone = "Informe um fuso horário IANA válido.";
   }
-  if (
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()) ||
-    values.email.length > 254
-  ) {
-    errors.email = values.email.trim()
-      ? "Digite um e-mail válido."
-      : "Informe seu e-mail.";
-  }
+  errors.email = validateEmail(values.email);
   if (!values.password) {
     errors.password = "Crie uma senha.";
   } else if (
