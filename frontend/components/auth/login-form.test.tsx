@@ -32,7 +32,9 @@ beforeEach(() => {
   >);
   vi.mocked(useAuthSession).mockReturnValue({
     state: { status: "anonymous" },
+    refreshing: false,
     reload: vi.fn(),
+    refresh: vi.fn(),
     runAction: runAction as unknown as ReturnType<
       typeof useAuthSession
     >["runAction"],

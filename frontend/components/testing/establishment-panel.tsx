@@ -16,7 +16,7 @@ type View =
   | { status: "success"; establishment: Establishment };
 
 export function EstablishmentPanel() {
-  const { state } = useAuthSession();
+  const { state, refreshing } = useAuthSession();
   if (state.status !== "authenticated") return null;
 
   const { principal } = state;
@@ -25,14 +25,17 @@ export function EstablishmentPanel() {
     <EstablishmentRequest
       key={identity}
       passwordChangeRequired={principal.password_change_required}
+      refreshing={refreshing}
     />
   );
 }
 
 function EstablishmentRequest({
   passwordChangeRequired,
+  refreshing,
 }: {
   passwordChangeRequired: boolean;
+  refreshing: boolean;
 }) {
   const [view, setView] = useState<View>({ status: "idle" });
   const request = useRef<AbortController | null>(null);
@@ -40,7 +43,7 @@ function EstablishmentRequest({
   useEffect(() => () => request.current?.abort(), []);
 
   async function consult() {
-    if (passwordChangeRequired || request.current) return;
+    if (passwordChangeRequired || refreshing || request.current) return;
     const controller = new AbortController();
     request.current = controller;
     setView({ status: "loading" });
@@ -82,7 +85,9 @@ function EstablishmentRequest({
         <EstablishmentDetails establishment={view.establishment} />
       ) : null}
       <Button
-        disabled={passwordChangeRequired || view.status === "loading"}
+        disabled={
+          passwordChangeRequired || refreshing || view.status === "loading"
+        }
         onClick={() => void consult()}
       >
         {view.status === "loading"

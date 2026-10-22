@@ -12,10 +12,15 @@ import type { ReactNode } from "react";
 
 import {
   configureApiSessionRecovery,
+  runManualRefresh,
   runSessionAction,
   type ApiResult,
 } from "@/lib/api/client";
-import { getCurrentSession, type AuthPrincipal } from "@/lib/auth/session-api";
+import {
+  getCurrentSession,
+  refreshCurrentSession,
+  type AuthPrincipal,
+} from "@/lib/auth/session-api";
 
 export type AuthState =
   | { status: "loading" | "anonymous" | "unavailable" }
@@ -23,7 +28,9 @@ export type AuthState =
 
 type SessionContext = {
   state: AuthState;
+  refreshing: boolean;
   reload: () => Promise<void>;
+  refresh: () => Promise<ApiResult<void>>;
   runAction: <T extends AuthPrincipal | void>(
     action: () => Promise<ApiResult<T>>,
     next: "authenticated" | "anonymous",
@@ -34,7 +41,9 @@ const AuthSessionContext = createContext<SessionContext | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
+  const [refreshing, setRefreshing] = useState(false);
   const currentRequest = useRef<AbortController | null>(null);
+  const manualRefresh = useRef<Promise<ApiResult<void>> | null>(null);
 
   const load = useCallback(async () => {
     currentRequest.current?.abort();
@@ -58,6 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reload = useCallback(async () => {
+    if (manualRefresh.current) {
+      try {
+        await manualRefresh.current;
+      } catch {
+        // The refresh action reports its own failure.
+      }
+      return;
+    }
     setState({ status: "loading" });
     await load();
   }, [load]);
@@ -99,8 +116,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [reload],
   );
 
+  const refresh = useCallback(async () => {
+    if (manualRefresh.current) return manualRefresh.current;
+    setRefreshing(true);
+    const operation = (async () => {
+      const result = await runManualRefresh(refreshCurrentSession);
+      if (result.state !== "error") {
+        setState({ status: "loading" });
+        await load();
+      }
+      return result;
+    })();
+    manualRefresh.current = operation;
+    try {
+      return await operation;
+    } finally {
+      manualRefresh.current = null;
+      setRefreshing(false);
+    }
+  }, [load]);
+
   return (
-    <AuthSessionContext.Provider value={{ state, reload, runAction }}>
+    <AuthSessionContext.Provider
+      value={{ state, refreshing, reload, refresh, runAction }}
+    >
       {children}
     </AuthSessionContext.Provider>
   );

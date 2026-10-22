@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import {
   apiFetch,
   configureApiSessionRecovery,
+  runManualRefresh,
   runSessionAction,
 } from "./client";
 
@@ -232,6 +233,65 @@ test("falha indeterminada do refresh não tenta reutilizar o token", async () =>
 
   expect(onInvalidSession).not.toHaveBeenCalled();
   expect(fetchMock).toHaveBeenCalledTimes(3);
+});
+
+test("renovação manual indeterminada bloqueia uma segunda tentativa", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(503));
+  const action = () =>
+    apiFetch<void>("/api/v1/auth/refresh", {
+      method: "POST",
+      csrf: true,
+    });
+
+  await expect(runManualRefresh(action)).resolves.toMatchObject({
+    state: "error",
+    status: 503,
+    error: { code: "session_recovery_unavailable" },
+  });
+  await expect(runManualRefresh(action)).resolves.toMatchObject({
+    state: "error",
+    status: 503,
+  });
+  expect(fetchMock).toHaveBeenCalledOnce();
+});
+
+test("renovação manual aguarda a tentativa automática em andamento", async () => {
+  let finishAutomatic: ((response: Response) => void) | undefined;
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(errorResponse(401))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishAutomatic = resolve;
+        }),
+    )
+    .mockResolvedValueOnce(jsonResponse({ user_id: "current-user" }))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  configureApiSessionRecovery({ onInvalidSession: vi.fn() });
+  const read = apiFetch("/api/v1/auth/me", { authenticated: true });
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+  const action = vi.fn(() =>
+    apiFetch<void>("/api/v1/auth/refresh", { method: "POST", csrf: true }),
+  );
+  const manual = runManualRefresh(action);
+  expect(action).not.toHaveBeenCalled();
+  finishAutomatic?.(new Response(null, { status: 204 }));
+
+  await expect(Promise.all([read, manual])).resolves.toEqual([
+    expect.objectContaining({ state: "error", status: 401 }),
+    expect.objectContaining({ state: "empty", status: 204 }),
+  ]);
+  expect(action).toHaveBeenCalledOnce();
+  expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+    "/api/v1/auth/me",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/me",
+    "/api/v1/auth/refresh",
+  ]);
 });
 
 test("401 no retry não cria loop de recuperação", async () => {

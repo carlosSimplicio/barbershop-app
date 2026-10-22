@@ -37,6 +37,45 @@ export async function runSessionAction<T>(
   }
 }
 
+export function runManualRefresh(
+  action: () => Promise<ApiResult<void>>,
+): Promise<ApiResult<void>> {
+  return runSessionAction(async () => {
+    if (recovery.result === "invalid") return sessionError(401);
+    if (recovery.result === "unavailable") return sessionError(503);
+
+    try {
+      const result = await action();
+      if (result.status === 401) {
+        invalidateSession();
+      } else if (result.status !== 204 && result.status !== 403) {
+        recovery.result = "unavailable";
+        return sessionError(503);
+      }
+      return result;
+    } catch {
+      // The server may have consumed the token before the connection failed.
+      recovery.result = "unavailable";
+      return sessionError(503);
+    }
+  }, "authenticated");
+}
+
+function sessionError<T>(status: 401 | 503): ApiResult<T> {
+  return {
+    state: "error",
+    status,
+    error: {
+      code: status === 401 ? "session_invalid" : "session_recovery_unavailable",
+      message:
+        status === 401
+          ? "Sessão inválida."
+          : "Não foi possível verificar sua sessão.",
+      request_id: "unknown",
+    },
+  };
+}
+
 export async function recoverRead<T>(
   path: `/api/v1/${string}`,
   request: () => Promise<ApiResult<T>>,
@@ -61,15 +100,7 @@ export async function recoverRead<T>(
   }
 
   if (result === "unavailable") {
-    return {
-      state: "error",
-      status: 503,
-      error: {
-        code: "session_recovery_unavailable",
-        message: "Não foi possível verificar sua sessão.",
-        request_id: "unknown",
-      },
-    };
+    return sessionError(503);
   }
 
   if (
