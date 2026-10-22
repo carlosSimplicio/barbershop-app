@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,6 +12,7 @@ import (
 
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/platform/httpserver"
+	"barbershop-app/backend/internal/platform/ratelimit"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -19,10 +21,49 @@ import (
 type Handler struct {
 	login    *LoginService
 	sessions *SessionService
+	recovery PasswordRecoveryRequester
 }
 
-func NewHandler(login *LoginService, sessions *SessionService) *Handler {
-	return &Handler{login: login, sessions: sessions}
+type PasswordRecoveryRequester interface {
+	Request(ctx context.Context, email, ip string) (PasswordRecoveryRequestResult, error)
+}
+
+func NewHandler(login *LoginService, sessions *SessionService, recovery PasswordRecoveryRequester) *Handler {
+	return &Handler{login: login, sessions: sessions, recovery: recovery}
+}
+
+func (handler *Handler) PostAuthPasswordRecovery(c *gin.Context) {
+	var request api.PasswordRecoveryRequest
+	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	result, err := handler.recovery.Request(c.Request.Context(), string(request.Email), c.ClientIP())
+	if err != nil {
+		var rateLimitError ratelimit.Error
+		switch {
+		case errors.Is(err, ErrInvalidEmail):
+			writeFieldError(c, "email", "invalid_email", "Informe um e-mail válido.")
+		case errors.As(err, &rateLimitError):
+			retryAfter := int(math.Ceil(rateLimitError.RetryAfter.Seconds()))
+			if retryAfter < 1 {
+				retryAfter = 1
+			}
+			c.Header("Retry-After", strconv.Itoa(retryAfter))
+			writeError(c, http.StatusTooManyRequests, "password_recovery_rate_limited", "Muitas tentativas. Tente novamente mais tarde.")
+		default:
+			slog.Error("password_recovery_request_failed", "request_id", httpserver.RequestID(c))
+			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		}
+		return
+	}
+	if result.DeliveryFailed {
+		slog.Warn("password_recovery_delivery_failed", "request_id", httpserver.RequestID(c))
+	}
+	c.Status(http.StatusAccepted)
+	c.Writer.WriteHeaderNow()
 }
 
 func (handler *Handler) PostAuthLogin(c *gin.Context) {

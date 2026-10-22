@@ -157,7 +157,8 @@ func newTestApplication(t *testing.T) *testApplication {
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
-		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions),
+		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
+			auth.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, messages, trustedOrigin)),
 		onboarding.NewHandler(
 			onboarding.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys),
 			onboarding.NewEmailConfirmationRequestService(onboardingStore, onboarding.NewConfirmationService(onboardingStore, confirmationMailer), rateLimitStore, rateKeys),

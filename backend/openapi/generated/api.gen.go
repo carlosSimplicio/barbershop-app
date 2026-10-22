@@ -130,6 +130,11 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// PasswordRecoveryRequest defines model for PasswordRecoveryRequest.
+type PasswordRecoveryRequest struct {
+	Email openapi_types.Email `json:"email"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -178,6 +183,9 @@ type PostAuthLoginJSONRequestBody = LoginRequest
 // PostAuthPasswordChangeJSONRequestBody defines body for PostAuthPasswordChange for application/json ContentType.
 type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
 
+// PostAuthPasswordRecoveryJSONRequestBody defines body for PostAuthPasswordRecovery for application/json ContentType.
+type PostAuthPasswordRecoveryJSONRequestBody = PasswordRecoveryRequest
+
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
 
@@ -201,6 +209,9 @@ type ServerInterface interface {
 	// PostAuthPasswordChange Substitui a senha temporária obrigatória
 	// (POST /auth/password/change)
 	PostAuthPasswordChange(c *gin.Context)
+	// PostAuthPasswordRecovery Solicita link de recuperação da senha do proprietário
+	// (POST /auth/password/recovery)
+	PostAuthPasswordRecovery(c *gin.Context)
 	// PostAuthRegister Cadastra proprietário e estabelecimento
 	// (POST /auth/register)
 	PostAuthRegister(c *gin.Context)
@@ -299,6 +310,19 @@ func (siw *ServerInterfaceWrapper) PostAuthPasswordChange(c *gin.Context) {
 	siw.Handler.PostAuthPasswordChange(c)
 }
 
+// PostAuthPasswordRecovery operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthPasswordRecovery(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostAuthPasswordRecovery(c)
+}
+
 // PostAuthRegister operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthRegister(c *gin.Context) {
 
@@ -368,6 +392,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 	router.POST(options.BaseURL+"/auth/email-confirmation", wrapper.PostAuthEmailConfirmation)
 	router.POST(options.BaseURL+"/auth/email-confirmation/verify", wrapper.PostAuthEmailConfirmationVerify)
+	router.POST(options.BaseURL+"/auth/password/recovery", wrapper.PostAuthPasswordRecovery)
 	router.POST(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)

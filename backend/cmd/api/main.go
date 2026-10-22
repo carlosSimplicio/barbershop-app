@@ -96,9 +96,12 @@ func run() error {
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	confirmationVerification := onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions)
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
+	passwordRecovery := auth.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
 	handler := httpapi.NewHandler(
-		health.NewHandler(pool), auth.NewHandler(login, sessions),
-		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification), establishment.NewHandler(establishments),
+		health.NewHandler(pool),
+		auth.NewHandler(login, sessions, passwordRecovery),
+		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
+		establishment.NewHandler(establishments),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())
