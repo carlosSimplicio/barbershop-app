@@ -64,6 +64,7 @@ test("mostra a troca obrigatória apenas para o profissional com senha temporár
   expect(
     screen.getByRole("button", { name: "Consultar estabelecimento" }),
   ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Sair da sessão" })).toBeEnabled();
 });
 
 test.each([
@@ -518,6 +519,93 @@ test("refresh inválido remove a identidade e envia para login", async () => {
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
   expect(screen.queryByText("user-id")).not.toBeInTheDocument();
+});
+
+test("logout 204 limpa o principal e substitui a rota sem nova consulta", async () => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue(
+    "__Secure-barbershop_csrf=csrf-current",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(sessionResponse())
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  renderPage();
+  await screen.findByText("Proprietário");
+
+  fireEvent.click(screen.getByRole("button", { name: "Sair da sessão" }));
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  expect(screen.queryByText("user-id")).not.toBeInTheDocument();
+  expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+    "/api/v1/auth/me",
+    "/api/v1/auth/logout",
+  ]);
+  const options = fetchMock.mock.calls[1]?.[1];
+  expect(options).toMatchObject({ method: "POST", credentials: "include" });
+  expect(new Headers(options?.headers).get("X-CSRF-Token")).toBe(
+    "csrf-current",
+  );
+  expect(options?.body).toBeUndefined();
+});
+
+test("cliques duplicados não repetem o POST de logout", async () => {
+  let finishLogout: ((response: Response) => void) | undefined;
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(sessionResponse())
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishLogout = resolve;
+        }),
+    );
+  renderPage();
+  await screen.findByText("Proprietário");
+
+  const button = screen.getByRole("button", { name: "Sair da sessão" });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole("button", { name: "Saindo…" })).toBeDisabled();
+  finishLogout?.(new Response(null, { status: 204 }));
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+test("falha interna no logout preserva o principal e permite tentar novamente", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(sessionResponse())
+    .mockResolvedValueOnce(errorResponse(500))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  renderPage();
+  await screen.findByText("Proprietário");
+
+  fireEvent.click(screen.getByRole("button", { name: "Sair da sessão" }));
+
+  expect(await screen.findByText("Não foi possível sair")).toBeInTheDocument();
+  expect(screen.getByText("user-id")).toBeInTheDocument();
+  expect(replace).not.toHaveBeenCalled();
+  expect(document.body).not.toHaveTextContent("detalhe privado");
+  fireEvent.click(screen.getByRole("button", { name: "Sair da sessão" }));
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});
+
+test("resposta inesperada no logout não limpa a identidade", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(sessionResponse())
+    .mockResolvedValueOnce(new Response(null, { status: 205 }));
+  renderPage();
+  await screen.findByText("Proprietário");
+
+  fireEvent.click(screen.getByRole("button", { name: "Sair da sessão" }));
+
+  expect(await screen.findByText("Não foi possível sair")).toBeInTheDocument();
+  expect(screen.getByText("user-id")).toBeInTheDocument();
+  expect(replace).not.toHaveBeenCalled();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 function renderPage() {

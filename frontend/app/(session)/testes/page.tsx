@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { SessionGuard } from "@/components/session/session-guard";
 import { EstablishmentPanel } from "@/components/testing/establishment-panel";
+import { LogoutPanel } from "@/components/testing/logout-panel";
 import { ManualRefreshPanel } from "@/components/testing/manual-refresh-panel";
 import { PasswordChangePanel } from "@/components/testing/password-change-panel";
 import { SessionPanel } from "@/components/testing/session-panel";
@@ -20,16 +21,14 @@ export default function TestingPage() {
         <header className={styles.intro}>
           <span className={styles.eyebrow}>Ambiente temporário</span>
           <h1>Área de testes</h1>
-          <p>
-            Confira sua sessão atual. As demais funções serão adicionadas aqui
-            em seções separadas.
-          </p>
+          <p>Confira sua sessão atual e experimente as funções disponíveis.</p>
         </header>
         <div className={styles.sections}>
           <SessionPanel />
           <ManualRefreshPanel />
           <PasswordChangePanel />
           <EstablishmentPanel />
+          <LogoutPanel />
         </div>
       </main>
     </SessionGuard>
