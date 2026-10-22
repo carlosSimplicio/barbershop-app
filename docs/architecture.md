@@ -137,11 +137,11 @@
 
 ### Retenção dos dados de autenticação
 
-- Access JWTs e tokens CSRF não geram registros próprios; cada login cria uma linha em `auth_sessions`. Cada cadastro ou substituição elegível cria uma linha em `email_confirmations`; falhas de login e tentativas válidas de cadastro ou confirmação criam eventos separados por dimensão em `auth_login_attempts`, com escopos independentes.
-- A implementação atual não executa limpeza de sessões, confirmações de e-mail ou eventos de rate limiting. A query de exclusão de eventos antigos existe, mas ainda não está ligada a uma rotina operacional. Portanto, essas três tabelas têm crescimento ilimitado até a implementação da retenção e não devem ser consideradas prontas para operação prolongada em produção.
-- A retenção deve remover eventos de rate limiting de todos os escopos depois da maior janela aplicável, atualmente 24 horas, acrescida de margem operacional; remover confirmações consumidas, invalidadas ou expiradas somente depois da janela operacional definida; e remover sessões expiradas ou revogadas depois da janela operacional definida.
+- Access JWTs e tokens CSRF não geram registros próprios; cada login cria uma linha em `auth_sessions`. Cada cadastro ou substituição elegível cria uma linha em `email_confirmations`; falhas de login e tentativas válidas de cadastro ou confirmação criam eventos separados por dimensão em `auth_login_attempts`, com escopos independentes. A tabela `password_recovery_tokens` já existe para guardar o hash do token, sua expiração e os estados de consumo ou invalidação, permitindo no máximo um token ativo por usuário; a emissão e o consumo pelo fluxo de recuperação ainda não estão implementados.
+- A implementação atual não executa limpeza de sessões, confirmações de e-mail, tokens de recuperação ou eventos de rate limiting. A query de exclusão de eventos antigos existe, mas ainda não está ligada a uma rotina operacional. Essas tabelas poderão crescer sem limite quando seus fluxos gravarem dados e não devem ser consideradas prontas para operação prolongada em produção.
+- A retenção deve remover eventos de rate limiting de todos os escopos depois da maior janela aplicável, atualmente 24 horas, acrescida de margem operacional; remover confirmações e tokens de recuperação consumidos, invalidados ou expirados somente depois da janela operacional definida; e remover sessões expiradas ou revogadas depois da janela operacional definida.
 - Execute a limpeza em lotes limitados, com índices apropriados para os predicados de expiração e um único executor por vez.
-- Monitore quantidade de linhas, tamanho total e idade do registro elegível mais antigo em `auth_sessions`, `email_confirmations` e `auth_login_attempts`. Confie no autovacuum para tornar espaço apagado reutilizável; não use `VACUUM FULL` como manutenção rotineira.
+- Monitore quantidade de linhas, tamanho total e idade do registro elegível mais antigo em `auth_sessions`, `email_confirmations`, `password_recovery_tokens` e `auth_login_attempts`. Confie no autovacuum para tornar espaço apagado reutilizável; não use `VACUUM FULL` como manutenção rotineira.
 
 ### Proprietário e profissional
 

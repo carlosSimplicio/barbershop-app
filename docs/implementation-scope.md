@@ -230,8 +230,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
 - [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas de login, confirmação, troca de senha e logout.
 - [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
-- [ ] Definir janelas de retenção de sessões, confirmações de e-mail e tentativas de login.
-- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
+- [ ] Definir janelas de retenção de sessões, confirmações de e-mail, tokens de recuperação de senha e tentativas de login.
+- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail, tokens de recuperação de senha e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [x] Definir `Max-Age` de 15 dias para o cookie CSRF.
 - [ ] Implementar recuperação de senha por e-mail somente para o proprietário.

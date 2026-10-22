@@ -52,6 +52,16 @@ type EstablishmentTrial struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
+type PasswordRecoveryToken struct {
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	TokenHash     []byte             `json:"token_hash"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	ConsumedAt    pgtype.Timestamptz `json:"consumed_at"`
+	InvalidatedAt pgtype.Timestamptz `json:"invalidated_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type User struct {
 	ID                     pgtype.UUID        `json:"id"`
 	EstablishmentID        pgtype.UUID        `json:"establishment_id"`
