@@ -2,6 +2,8 @@
 
 **Status:** implementado e verificado.
 
+**Registro histórico:** este plano descreve o modelo de refresh originalmente implementado. O contrato atual de sessão, que remove refresh e usa access JWT e cookie CSRF por 15 dias, está em [access-csrf-only-auth-plan.md](access-csrf-only-auth-plan.md) e em `docs/architecture.md`. As etapas abaixo permanecem como registro da implementação original, não como instruções para novas mudanças.
+
 Entregar a fundação de autenticação para proprietários e profissionais: login, sessão atual, JWT, refresh rotativo, logout, senha temporária, CSRF, rate limiting e middleware de autorização. Cadastro, confirmação e recuperação por e-mail, criação de profissionais, trial e telas ficam para etapas posteriores.
 
 ## Interfaces públicas

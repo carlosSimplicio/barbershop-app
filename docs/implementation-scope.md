@@ -28,7 +28,7 @@ Escopos principais: 5, 6, 21 e 22.
 - Estabelecer papéis, contexto de estabelecimento, isolamento de tenant, CSRF e rate limiting.
 - Criar a base da política centralizada de acesso por trial ou assinatura.
 
-Critério de saída: proprietário e profissional autenticam com segurança, sessões podem ser renovadas e revogadas e nenhum usuário acessa dados de outro estabelecimento ou papel.
+Critério de saída: proprietário e profissional autenticam com segurança, sessões expiram após 15 dias e podem ser revogadas, e nenhum usuário acessa dados de outro estabelecimento ou papel.
 
 ### Fase 3 — Onboarding e estabelecimento
 

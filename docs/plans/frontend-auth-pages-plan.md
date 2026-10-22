@@ -1,5 +1,7 @@
 # Primeiras páginas e sessão do frontend
 
+**Registro histórico:** as etapas de refresh, recuperação automática e Web Lock deste plano foram substituídas por [access-csrf-only-auth-plan.md](access-csrf-only-auth-plan.md). O frontend atual envia os cookies e encerra a sessão local ao receber `401`, conforme `docs/architecture.md`. As etapas abaixo permanecem como registro da implementação original, não como instruções para novas mudanças.
+
 Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mail, o login e uma área autenticada de testes que permita validar todos os endpoints atuais de sessão e estabelecimento.
 
 ### 1. Criar o padrão compartilhado de feedback do design system
