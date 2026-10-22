@@ -28,7 +28,7 @@ export type AuthState =
 
 type SessionContext = {
   state: AuthState;
-  refreshing: boolean;
+  transitioning: boolean;
   reload: () => Promise<void>;
   refresh: () => Promise<ApiResult<void>>;
   runAction: <T extends AuthPrincipal | void>(
@@ -41,9 +41,9 @@ const AuthSessionContext = createContext<SessionContext | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
-  const [refreshing, setRefreshing] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const currentRequest = useRef<AbortController | null>(null);
-  const manualRefresh = useRef<Promise<ApiResult<void>> | null>(null);
+  const transition = useRef<Promise<unknown> | null>(null);
 
   const load = useCallback(async () => {
     currentRequest.current?.abort();
@@ -67,17 +67,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reload = useCallback(async () => {
-    if (manualRefresh.current) {
+    if (transition.current) {
       try {
-        await manualRefresh.current;
+        await transition.current;
       } catch {
-        // The refresh action reports its own failure.
+        // The action reports its own failure.
       }
       return;
     }
     setState({ status: "loading" });
     await load();
   }, [load]);
+
+  const startTransition = useCallback(
+    async <T,>(action: () => Promise<T>): Promise<T> => {
+      if (transition.current)
+        throw new Error("Session action already in progress");
+      const pending = action();
+      transition.current = pending;
+      setTransitioning(true);
+      try {
+        return await pending;
+      } finally {
+        transition.current = null;
+        setTransitioning(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -98,47 +115,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [load]);
 
   const runAction = useCallback<SessionContext["runAction"]>(
-    async (action, next) => {
-      const result = await runSessionAction(action, next);
-      if (result.state !== "error") {
-        if (next === "anonymous") {
-          currentRequest.current?.abort();
-          setState({ status: "anonymous" });
-        } else if (result.state === "success" && result.data) {
-          currentRequest.current?.abort();
-          setState({ status: "authenticated", principal: result.data });
-        } else {
-          await reload();
+    (action, next) =>
+      startTransition(async () => {
+        const result = await runSessionAction(action, next);
+        if (result.state !== "error") {
+          if (next === "anonymous") {
+            currentRequest.current?.abort();
+            setState({ status: "anonymous" });
+          } else if (result.state === "success" && result.data) {
+            currentRequest.current?.abort();
+            setState({ status: "authenticated", principal: result.data });
+          } else {
+            setState({ status: "loading" });
+            await load();
+          }
         }
-      }
-      return result;
-    },
-    [reload],
+        return result;
+      }),
+    [load, startTransition],
   );
 
-  const refresh = useCallback(async () => {
-    if (manualRefresh.current) return manualRefresh.current;
-    setRefreshing(true);
-    const operation = (async () => {
-      const result = await runManualRefresh(refreshCurrentSession);
-      if (result.state !== "error") {
-        setState({ status: "loading" });
-        await load();
-      }
-      return result;
-    })();
-    manualRefresh.current = operation;
-    try {
-      return await operation;
-    } finally {
-      manualRefresh.current = null;
-      setRefreshing(false);
-    }
-  }, [load]);
+  const refresh = useCallback(
+    () =>
+      startTransition(async () => {
+        const result = await runManualRefresh(refreshCurrentSession);
+        if (result.state !== "error") {
+          setState({ status: "loading" });
+          await load();
+        }
+        return result;
+      }),
+    [load, startTransition],
+  );
 
   return (
     <AuthSessionContext.Provider
-      value={{ state, refreshing, reload, refresh, runAction }}
+      value={{ state, transitioning, reload, refresh, runAction }}
     >
       {children}
     </AuthSessionContext.Provider>

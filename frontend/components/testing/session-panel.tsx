@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import styles from "./testing-panel.module.css";
 
 export function SessionPanel() {
-  const { state, refreshing, reload } = useAuthSession();
+  const { state, transitioning, reload } = useAuthSession();
   if (state.status !== "authenticated") return null;
 
   const { principal } = state;
@@ -33,7 +33,7 @@ export function SessionPanel() {
           <dd>{principal.password_change_required ? "Sim" : "Não"}</dd>
         </div>
       </dl>
-      <Button disabled={refreshing} onClick={() => void reload()}>
+      <Button disabled={transitioning} onClick={() => void reload()}>
         Consultar sessão novamente
       </Button>
     </section>

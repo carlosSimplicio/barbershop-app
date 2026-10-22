@@ -29,7 +29,7 @@ beforeEach(() => {
   } as unknown as ReturnType<typeof useRouter>);
   vi.mocked(useAuthSession).mockReturnValue({
     state: { status: "anonymous" },
-    refreshing: false,
+    transitioning: false,
     reload: vi.fn(),
     refresh: vi.fn(),
     runAction: runAction as unknown as ReturnType<

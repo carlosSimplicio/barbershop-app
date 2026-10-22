@@ -10,13 +10,13 @@ import styles from "./testing-panel.module.css";
 type Status = "idle" | "loading" | "error" | "unavailable";
 
 export function ManualRefreshPanel() {
-  const { state, refresh } = useAuthSession();
+  const { state, transitioning, refresh } = useAuthSession();
   const pending = useRef(false);
   const [status, setStatus] = useState<Status>("idle");
   if (state.status !== "authenticated") return null;
 
   async function renew() {
-    if (pending.current || status === "unavailable") return;
+    if (pending.current || transitioning || status === "unavailable") return;
     pending.current = true;
     setStatus("loading");
     try {
@@ -52,7 +52,7 @@ export function ManualRefreshPanel() {
         </Feedback>
       ) : null}
       <Button
-        disabled={status === "loading" || status === "unavailable"}
+        disabled={transitioning || status === "unavailable"}
         onClick={() => void renew()}
       >
         {status === "loading" ? "Renovando…" : "Renovar sessão"}
