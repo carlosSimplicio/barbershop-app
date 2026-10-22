@@ -52,11 +52,18 @@ O Caddy é o único ponto público da aplicação. Ele encaminha `/api/v1` para 
 backend e as demais rotas para o Next.js. PostgreSQL, backend, frontend e SMTP
 permanecem nas redes internas do Compose.
 
-## Onboarding local pela API
+## Onboarding local
 
-A interface de onboarding ainda não existe. Para validar o fluxo, mantenha o
-ambiente local ativo, aplique as migrations e use um e-mail fictício exclusivo
-para cada execução. O `.env.example` já aponta `EMAIL_PROVIDER=smtp`,
+Com o ambiente local ativo e as migrations aplicadas, abra
+<https://localhost:8443>, siga para `/cadastro`, use um e-mail fictício
+exclusivo, confira o link no Mailpit e abra-o no navegador. A confirmação
+inicia a sessão e leva a `/testes`, onde é possível consultar a sessão e o
+estabelecimento, renovar a sessão, trocar a senha temporária quando exigido e
+sair. Depois, `/login` permite entrar novamente. O cadastro de profissionais e
+a definição de uma senha temporária ainda não estão disponíveis na interface.
+
+O roteiro abaixo continua disponível para diagnosticar o onboarding pela API.
+O `.env.example` já aponta `EMAIL_PROVIDER=smtp`,
 `SMTP_HOST=mailpit` e a porta
 `1025` para o Mailpit de desenvolvimento; essa configuração não é aceita como
 provedor real de produção. Todas as mutações precisam da origem HTTPS confiável:

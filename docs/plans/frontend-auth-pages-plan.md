@@ -131,3 +131,8 @@ Entregar a home deslogada, o fluxo completo de cadastro e confirmação de e-mai
 - Executar o fluxo manual por `https://localhost:8443`: home → cadastro → inspeção do e-mail no Mailpit → confirmação → `/testes` → consulta da sessão e estabelecimento → refresh → logout → login. Repetir o trecho login → `/testes` com profissional de senha temporária para validar o bloqueio e a troca obrigatória.
 - Confirmar no navegador que cookies `Secure`, `HttpOnly`, `SameSite=Strict` e seus `Path` permanecem conforme o backend; somente o cookie CSRF é lido pelo frontend e nenhum token aparece em URL, logs ou armazenamento web.
 - Não adicionar E2E ou testes de integração do frontend; a validação automatizada permanece em Vitest, conforme a decisão arquitetural vigente.
+
+## Registro da verificação
+
+- As subtarefas 1–13 foram implementadas em commits separados. A jornada do proprietário foi percorrida no navegador local: home, cadastro, confirmação pelo Mailpit, consultas em `/testes`, renovação, logout e novo login. O fragmento desapareceu da URL antes da verificação; os três cookies apresentaram os atributos e caminhos previstos. A inspeção exploratória cobriu largura móvel e desktop, foco por teclado e tema claro e escuro.
+- O trecho manual com profissional de senha temporária não foi executado: a criação do profissional e a definição dessa senha ainda não foram entregues, como registra `docs/implementation-scope.md`. A troca e o bloqueio de domínio permanecem cobertos por testes Vitest e de integração do backend; a verificação manual depende de uma conta de teste preparada separadamente.
