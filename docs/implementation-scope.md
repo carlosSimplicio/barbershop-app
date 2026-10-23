@@ -260,7 +260,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.
 - [ ] Impedir profissional de acessar despesas, resultado geral ou dados financeiros de colegas.
 - [ ] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado.
-- [ ] Centralizar a política de escrita baseada em trial ou assinatura e aplicá-la também aos endpoints públicos.
+- [x] Criar componente reutilizável que decide o direito de escrita a partir do trial persistido, incluindo o início e excluindo o fim.
+- [ ] Estender a decisão de escrita aos períodos de assinatura e aplicá-la aos endpoints de mutação autenticados e públicos.
 - [ ] Com acesso expirado, permitir autenticação, leitura e assinatura/renovação, bloqueando demais mutações.
 - [ ] Cobrir a matriz de autorização e isolamento com testes unitários.
 
@@ -451,7 +452,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Modelar catálogo com planos, opções de preço e período, sem assumir plano único no schema ou domínio.
 - [ ] Preservar versão, preço e termos contratados no histórico da assinatura.
 - [ ] Preparar adicionais como itens independentes com preço e direitos próprios, sem implementar adicional real no MVP.
-- [ ] Centralizar resolução de direitos e evitar condicionais espalhadas por nome de plano.
+- [x] Centralizar a decisão de escrita durante o trial, sem condicionar endpoints diretamente às datas do benefício.
+- [ ] Estender a resolução de direitos aos planos, períodos e adicionais futuros sem condicionais espalhadas por nome de plano.
 - [ ] Criar interface de gateway de cobrança desacoplada.
 - [ ] Implementar gateway mockado, explicitamente configurado e identificado, sem dados ou dinheiro reais.
 - [ ] Permitir assinatura mockada mensal de `BRL 20,00`, aprovada imediatamente e de forma idempotente.

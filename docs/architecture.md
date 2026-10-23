@@ -191,6 +191,7 @@
 - A renovação mockada é manual e idempotente. Período ativo é estendido a partir do fim atual; assinatura expirada cria novo período a partir da reativação.
 - Modele cancelamento ao fim do período separadamente de expiração imediata; direitos permanecem ativos até `current_period_end`.
 - Centralize a política de acesso por assinatura: trial ou período ativo concede escrita; expiração preserva leitura e bloqueia mutações, exceto autenticação e assinatura/renovação.
+- O componente `backend/internal/entitlements` já consulta o trial persistido por estabelecimento e concede escrita somente do instante inicial inclusivo ao final exclusivo. Sem trial ou depois do término, retorna recusa de escrita; erro de consulta não concede acesso. Ainda não há períodos de assinatura nem endpoints de domínio ligados a esse componente. A integração com o cadastro de profissionais ocorrerá na próxima etapa.
 - Aplique a política no backend e não apenas na interface. Todos os endpoints públicos de mutação da agenda devem respeitar o direito de acesso do estabelecimento.
 - Expiração não altera estados nem remove agendamentos; apenas bloqueia suas mutações até a reativação.
 - Estados, webhooks, idempotência e acesso por plano devem ser definidos antes de implementar a integração de cobrança.
