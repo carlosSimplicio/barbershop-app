@@ -1,6 +1,6 @@
 ---
 name: barbershop-task-planner
-description: Produz planos concisos e objetivos para implementar funcionalidades, correções ou mudanças técnicas no barbershop-app. Use para identificar alterações, motivação, localização, base documental e subtarefas verificáveis; não use para executar a implementação.
+description: Produz planos concisos para implementar funcionalidades, correções ou mudanças técnicas no barbershop-app, com requisitos de entrega objetivos em cada subtarefa. Use para planejar, não para executar a implementação.
 ---
 
 # Planejar tarefas do barbershop-app
@@ -43,6 +43,8 @@ Planeje somente. Não altere implementação, contrato, migrations, documentaç�
 - Separe fundações compartilhadas por responsabilidade quando puderem ser implementadas e verificadas de forma independente. Schema e queries, validação de domínio, rate limiting, transporte externo, configuração operacional e serviço transacional normalmente são subtarefas distintas, mesmo quando o primeiro endpoint depende de todas elas.
 - Prefira mais subtarefas delimitadas a uma subtarefa de “fundações” que atravesse vários subsistemas, tipos de risco ou formas de verificação. Mantenha juntas apenas mudanças realmente inseparáveis para produzir um estado válido.
 - Cada subtarefa deve produzir um resultado observável e possuir sua própria forma de verificação.
+- Liste em cada subtarefa os requisitos de entrega como pontos separados e verificáveis. Cada ponto deve descrever uma condição que precisa estar verdadeira para aceitar a subtarefa, com comportamento, limite ou artefato concreto quando aplicável. Evite itens vagos como “funcionar corretamente”, “seguir boas práticas” ou apenas “implementar a funcionalidade”.
+- Mantenha os requisitos de entrega ligados ao resultado principal da subtarefa. Se a lista reunir responsabilidades independentes, divida a subtarefa e declare as dependências.
 - Planeje cada subtarefa para caber em um commit focado e em uma revisão manual independente. Se o revisor precisar compreender várias preocupações não relacionadas para aprová-la, divida novamente.
 - Declare dependências entre subtarefas; não descreva como independente algo que só possa ser avaliado após outra entrega.
 - Prefira uma fatia vertical verificável quando ela puder ser concluída sem criar estados intermediários inconsistentes. Use etapas por camada somente quando a dependência técnica exigir.
@@ -58,6 +60,7 @@ Antes de finalizar o plano, faça um gate de granularidade para cada subtarefa:
 2. Confirme que ela pode passar por implementação, testes, revisão e commit sem carregar trabalho de outra responsabilidade independente.
 3. Procure enumerações extensas no campo **O que**, muitos diretórios sem uma mesma invariante ou verificações de naturezas diferentes; quando houver, divida a subtarefa e declare as dependências.
 4. Não deixe uma subtarefa grande apenas para reduzir a quantidade total de etapas do plano.
+5. Confirme que cada requisito de entrega é específico, verificável e pertence ao resultado principal; não substitua a lista por critérios genéricos nem repita nela o procedimento de teste.
 
 ## Formato da saída
 
@@ -69,7 +72,8 @@ Comece com o título da tarefa e uma frase descrevendo o resultado esperado. Em 
 - **Motivação:** por que a alteração é necessária e qual comportamento ou problema ela atende.
 - **Onde:** arquivos, pacotes, endpoints, tabelas, componentes ou documentos afetados. Use caminhos e símbolos confirmados pela inspeção; quando ainda não existirem, indique o diretório ou artefato previsto.
 - **Base documental:** caminho e seção ou requisito que justificam a alteração. Quando uma decisão confirmada pelo usuário ainda não estiver nos `docs` ou substituir uma regra vigente, identifique a decisão e os documentos que serão criados ou atualizados na mesma entrega; não apresente uma preferência como requisito existente.
-- **Verificação:** critérios observáveis e testes unitários que permitem avaliar esta subtarefa isoladamente.
+- **Requisitos de entrega:** sublista Markdown obrigatória, com um requisito objetivo por bullet. Separe condições distintas em itens próprios e expresse o resultado esperado, sem descrever apenas atividades de implementação.
+- **Verificação:** testes e checagens concretas que demonstram o atendimento dos requisitos de entrega, sem repetir a lista.
 - **Dependências:** somente quando existirem.
 
 Ao final, inclua **Verificação conjunta** somente quando houver comandos ou checagens que façam sentido apenas para o conjunto da entrega. Não entregue o plano como concluído enquanto houver decisões pendentes; pergunte e aguarde as respostas primeiro.
@@ -83,7 +87,7 @@ Não acrescente introduções longas, estimativas não solicitadas, pseudocódig
 - Para bugs, descreva o comportamento que falhava e o resultado esperado do teste de regressão.
 - Evite casos esdrúxulos sem origem em requisito, risco real ou regressão conhecida, assim como testes de getters, detalhes de mock, marcação estática ou comportamento de bibliotecas.
 - Não use meta de cobertura como substituto para cenários significativos.
-- Mantenha o escopo atual de testes unitários com `testing` no backend e Vitest no frontend; não proponha integração, testcontainers ou E2E sem nova decisão documentada.
+- Mantenha testes unitários com `testing` no backend e Vitest no frontend. Para fluxos que cruzem HTTP, autenticação, transações, SQL ou PostgreSQL, planeje testes de integração do backend com Testcontainers conforme `AGENTS.md`. Não proponha E2E nem integração do frontend sem nova decisão documentada.
 
 ## Restrições recorrentes
 
