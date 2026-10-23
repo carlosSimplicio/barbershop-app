@@ -1,12 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { useAuthSession } from "@/components/session/auth-provider";
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
+import {
+  EMAIL_MAX_LENGTH,
+  INVALID_EMAIL_MESSAGE,
+  validateEmail,
+} from "@/lib/auth/email-validation";
 import { login, type LoginRequest } from "@/lib/auth/login-api";
+import {
+  INVALID_PASSWORD_MESSAGE,
+  validatePassword,
+} from "@/lib/auth/password-validation";
 
 import { ConfirmationResend } from "./confirmation-resend";
 import styles from "./login-form.module.css";
@@ -62,10 +72,10 @@ export function LoginForm() {
         const fieldErrors: FieldErrors = {};
         for (const issue of result.error.fields ?? []) {
           if (issue.field === "email" && issue.code === "invalid_email") {
-            fieldErrors.email = "Digite um e-mail válido.";
+            fieldErrors.email = INVALID_EMAIL_MESSAGE;
           }
           if (issue.field === "password" && issue.code === "invalid_password") {
-            fieldErrors.password = "Use de 8 a 32 caracteres, sem espaços.";
+            fieldErrors.password = INVALID_PASSWORD_MESSAGE;
           }
         }
         if (fieldErrors.email || fieldErrors.password) {
@@ -130,7 +140,7 @@ export function LoginForm() {
         autoComplete="username"
         error={errors.email}
         label="E-mail"
-        maxLength={254}
+        maxLength={EMAIL_MAX_LENGTH}
         onChange={(event) => update("email", event.target.value)}
         placeholder="voce@exemplo.com"
         readOnly={submitting}
@@ -150,6 +160,9 @@ export function LoginForm() {
         required
         value={values.password}
       />
+      <Link className={styles.recoveryLink} href="/recuperar-senha">
+        Esqueci minha senha
+      </Link>
       <Button className={styles.submit} disabled={submitting} type="submit">
         {submitting ? "Entrando…" : "Entrar"}
       </Button>
@@ -162,18 +175,7 @@ export function LoginForm() {
 
 function validate(values: LoginRequest): FieldErrors {
   const errors: FieldErrors = {};
-  const email = values.email.trim();
-  if (!email) errors.email = "Informe seu e-mail.";
-  else if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = "Digite um e-mail válido.";
-  }
-  if (!values.password) errors.password = "Informe sua senha.";
-  else if (
-    [...values.password].length < 8 ||
-    [...values.password].length > 32 ||
-    /\s/.test(values.password)
-  ) {
-    errors.password = "Use de 8 a 32 caracteres, sem espaços.";
-  }
+  errors.email = validateEmail(values.email);
+  errors.password = validatePassword(values.password, "Informe sua senha.");
   return errors;
 }

@@ -6,6 +6,10 @@ import type { FormEvent } from "react";
 import { useAuthSession } from "@/components/session/auth-provider";
 import { Button, Feedback, PasswordField } from "@/components/ui";
 import { changeTemporaryPassword } from "@/lib/auth/password-api";
+import {
+  INVALID_PASSWORD_MESSAGE,
+  validatePassword,
+} from "@/lib/auth/password-validation";
 
 import styles from "./testing-panel.module.css";
 
@@ -48,7 +52,10 @@ function PasswordChangeForm({
     event.preventDefault();
     if (pending.current || transitioning) return;
 
-    const validationError = validatePassword(password);
+    const validationError = validatePassword(
+      password,
+      "Informe uma nova senha.",
+    );
     if (validationError) {
       setError(validationError);
       field.current?.focus();
@@ -70,7 +77,7 @@ function PasswordChangeForm({
           (issue) => issue.field === "new_password",
         );
         if (fieldError?.code === "invalid_password") {
-          setError("Use de 8 a 32 caracteres, sem espaços.");
+          setError(INVALID_PASSWORD_MESSAGE);
           field.current?.focus();
           return;
         }
@@ -129,16 +136,4 @@ function PasswordChangeForm({
       </Button>
     </form>
   );
-}
-
-function validatePassword(password: string) {
-  if (!password) return "Informe uma nova senha.";
-  if (
-    [...password].length < 8 ||
-    [...password].length > 32 ||
-    /\s/.test(password)
-  ) {
-    return "Use de 8 a 32 caracteres, sem espaços.";
-  }
-  return null;
 }

@@ -80,6 +80,48 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /auth/password/recovery:
+    post:
+      operationId: postAuthPasswordRecovery
+      summary: Solicita link de recuperação da senha do proprietário
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordRecoveryRequest"
+      responses:
+        "202":
+          description: Solicitação recebida sem revelar o estado da conta
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /auth/password/recovery/verify:
+    post:
+      operationId: postAuthPasswordRecoveryVerify
+      summary: Redefine a senha do proprietário com link de uso único
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordRecoveryVerifyRequest"
+      responses:
+        "204":
+          description: Senha redefinida e sessões anteriores revogadas; nenhuma sessão criada
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /auth/login:
     post:
       operationId: postAuthLogin
@@ -229,6 +271,28 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    PasswordRecoveryRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    PasswordRecoveryVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 128
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 32
     EmailConfirmationRequest:
       type: object
       additionalProperties: false

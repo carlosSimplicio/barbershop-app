@@ -5,6 +5,15 @@ import type { FormEvent } from "react";
 
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
 import {
+  EMAIL_MAX_LENGTH,
+  INVALID_EMAIL_MESSAGE,
+  validateEmail,
+} from "@/lib/auth/email-validation";
+import {
+  INVALID_PASSWORD_MESSAGE,
+  validatePassword,
+} from "@/lib/auth/password-validation";
+import {
   registerOwner,
   type RegisterRequest,
 } from "@/lib/auth/registration-api";
@@ -28,8 +37,8 @@ const serverMessages: Record<string, string> = {
   invalid_slug: "Use de 3 a 63 letras minúsculas, números ou hífens.",
   reserved_slug: "Este endereço está reservado. Escolha outro.",
   invalid_time_zone: "Informe um fuso horário IANA válido.",
-  invalid_email: "Digite um e-mail válido.",
-  invalid_password: "Use de 8 a 32 caracteres, sem espaços.",
+  invalid_email: INVALID_EMAIL_MESSAGE,
+  invalid_password: INVALID_PASSWORD_MESSAGE,
   email_unavailable: "Este e-mail já está cadastrado.",
   slug_unavailable: "Este endereço não está disponível.",
 };
@@ -207,7 +216,7 @@ export function RegistrationForm() {
           readOnly={submitting}
           error={errors.email}
           label="Seu e-mail"
-          maxLength={254}
+          maxLength={EMAIL_MAX_LENGTH}
           onChange={(event) => update("email", event.target.value)}
           placeholder="voce@exemplo.com"
           ref={emailRef}
@@ -304,22 +313,7 @@ function validate(values: RegisterRequest): FieldErrors {
   if (!values.time_zone || values.time_zone === "Local") {
     errors.time_zone = "Informe um fuso horário IANA válido.";
   }
-  if (
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()) ||
-    values.email.length > 254
-  ) {
-    errors.email = values.email.trim()
-      ? "Digite um e-mail válido."
-      : "Informe seu e-mail.";
-  }
-  if (!values.password) {
-    errors.password = "Crie uma senha.";
-  } else if (
-    [...values.password].length < 8 ||
-    [...values.password].length > 32 ||
-    /\s/.test(values.password)
-  ) {
-    errors.password = "Use de 8 a 32 caracteres, sem espaços.";
-  }
+  errors.email = validateEmail(values.email);
+  errors.password = validatePassword(values.password, "Crie uma senha.");
   return errors;
 }

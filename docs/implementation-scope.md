@@ -230,18 +230,21 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
 - [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas de login, confirmação, troca de senha e logout.
 - [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
-- [ ] Definir janelas de retenção de sessões, confirmações de e-mail e tentativas de login.
-- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
+- [ ] Definir janelas de retenção de sessões, confirmações de e-mail, tokens de recuperação de senha e tentativas de login.
+- [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail, tokens de recuperação de senha e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
 - [x] Definir `Max-Age` de 15 dias para o cookie CSRF.
-- [ ] Implementar recuperação de senha por e-mail somente para o proprietário.
-- [ ] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
+- [x] Implementar recuperação de senha por e-mail somente para o proprietário.
+- [x] Entregar solicitação e verificação da recuperação de senha do proprietário na API.
+- [x] Oferecer entrada pelo login e tela de solicitação de recuperação com resposta genérica.
+- [x] Entregar a tela de redefinição e concluir o retorno ao login após sucesso.
+- [x] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
 - [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
-- [ ] Estender a limitação progressiva à recuperação quando esse fluxo for implementado.
+- [x] Estender a limitação progressiva à solicitação de recuperação por IP e e-mail normalizado.
 - [ ] Não implementar MFA, troca periódica ou consulta de senha comprometida no MVP.
 
 ## 6. Autorização e multi-tenancy
@@ -462,10 +465,11 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Criar interface pequena de envio desacoplada do provedor.
 - [x] Versionar o template de confirmação de e-mail em `pt-BR`.
-- [ ] Versionar o template de recuperação de senha em `pt-BR` quando esse fluxo for implementado.
+- [x] Versionar o template de solicitação de recuperação de senha em `pt-BR`.
 - [x] Integrar Mailpit por SMTP somente no ambiente local.
 - [x] Não registrar endereço completo, token, link ou credencial nas falhas dos fluxos de onboarding entregues.
-- [ ] Preservar a mesma garantia nos fluxos futuros de e-mail transacional.
+- [x] Não registrar endereço completo, token ou link nas falhas de solicitação de recuperação.
+- [ ] Preservar a mesma garantia nos demais fluxos futuros de e-mail transacional.
 - [x] Falhar com segurança em produção quando o envio obrigatório não possuir provedor real configurado.
 - [ ] Escolher e integrar um provedor real antes da disponibilização de produção que dependa de confirmação e recuperação.
 
@@ -476,9 +480,11 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; a interface de confirmação remove o token do fragmento antes de qualquer chamada de API e não o persiste.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros.
 - [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
-- [ ] Aplicar respostas resistentes a enumeração na recuperação e consulta pública futuras.
+- [x] Aplicar resposta genérica à solicitação de recuperação para contas elegíveis, ausentes e inelegíveis.
+- [ ] Aplicar respostas resistentes a enumeração na verificação do token de recuperação e na consulta pública futura.
 - [x] Aplicar rate limiting ao login, cadastro e solicitação de confirmação por IP e e-mail normalizado.
-- [ ] Aplicar rate limiting à recuperação e aos futuros fluxos públicos suscetíveis a abuso.
+- [x] Aplicar rate limiting à solicitação de recuperação.
+- [ ] Aplicar rate limiting aos futuros fluxos públicos suscetíveis a abuso quando implementados.
 - [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.

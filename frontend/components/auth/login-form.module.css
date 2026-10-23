@@ -7,3 +7,13 @@
   width: 100%;
   margin-top: var(--space-2);
 }
+
+.recoveryLink {
+  display: inline-flex;
+  min-height: var(--control-touch-target);
+  align-items: center;
+  justify-self: end;
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}

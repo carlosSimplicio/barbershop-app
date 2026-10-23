@@ -55,6 +55,7 @@
 - Com `make dev` em execução e as migrations aplicadas, abra `https://localhost:8443` e siga da home para `/cadastro`.
 - Use um e-mail fictício exclusivo, confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva a `/testes`.
 - Em `/testes`, consulte novamente a sessão por `GET /auth/me` e o estabelecimento, saia e entre outra vez por `/login`, sem chamada de refresh. Inspecione os dois cookies e confirme `Secure`, `SameSite=Strict`, `Max-Age` de 15 dias e os caminhos documentados em `docs/architecture.md`; somente o access é `HttpOnly`, e somente o CSRF é legível pelo JavaScript.
+- Para recuperação, mantenha uma segunda sessão de teste aberta para verificar a revogação, saia da sessão usada para o fluxo e use “Esqueci minha senha” em `/login` com o e-mail confirmado do proprietário. Abra o link mais recente no Mailpit e confira que `/redefinir-senha` remove fragmento e query antes de mostrar o formulário; defina uma senha diferente da atual, volte ao login e entre com a nova senha. Confira que o link usado não pode ser reutilizado e que a segunda sessão anterior retorna `401`. Não copie token ou senha para logs, URL query ou capturas públicas.
 - A criação de profissional com senha temporária ainda não possui fluxo entregue. A validação manual desse papel requer uma conta de teste preparada separadamente; não use uma conta real nem exponha sua senha em comandos ou logs.
 
 ### Validação local do onboarding pela API
@@ -99,10 +100,10 @@
 
 ### Manutenção dos dados de autenticação
 
-- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `email_confirmations` ou `auth_login_attempts`; enquanto isso, as três tabelas crescem sem limite. Implemente e valide essa manutenção antes de operar autenticação continuamente em produção.
+- Ainda não existe tarefa agendada para retenção de `auth_sessions`, `email_confirmations`, `password_recovery_tokens` ou `auth_login_attempts`; os fluxos atuais já gravam nessas tabelas, que poderão crescer sem limite. A emissão e o consumo de tokens de recuperação já estão entregues na API. Implemente e valide a manutenção antes de operar autenticação continuamente em produção.
 - Execute a manutenção ao menos diariamente como comando idempotente e observável, invocado pelo ambiente da VPS sem criar um novo serviço permanente. Proteja execuções concorrentes e processe exclusões em lotes para limitar bloqueios, WAL e picos de I/O.
 - Antes de habilitar exclusões, registre apenas contagens agregadas dos candidatos, valide as janelas definidas na arquitetura e confirme a ordem exigida pelas chaves estrangeiras. Nunca registre hashes, tokens, IPs, e-mails ou identificadores individuais.
-- Acompanhe por tabela a contagem aproximada, o tamanho total e a idade do registro elegível mais antigo. Confirmações só podem ser removidas depois de consumidas, invalidadas ou expiradas e da margem operacional definida. Emita alerta quando a rotina falhar ou quando a idade ultrapassar a janela esperada; não dependa apenas do tamanho atual do volume.
+- Acompanhe por tabela a contagem aproximada, o tamanho total e a idade do registro elegível mais antigo. Confirmações e tokens de recuperação só podem ser removidos depois de consumidos, invalidados ou expirados e da margem operacional definida. Emita alerta quando a rotina falhar ou quando a idade ultrapassar a janela esperada; não dependa apenas do tamanho atual do volume.
 - Deixe o autovacuum recuperar o espaço para reutilização normal. `VACUUM FULL` exige bloqueio e reescrita da tabela e só pode ser uma intervenção excepcional planejada.
 
 ## Logs e desempenho

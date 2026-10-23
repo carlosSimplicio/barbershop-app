@@ -18,7 +18,7 @@ func TestLoginHandlerReturnsPrincipalAndSecureCookies(t *testing.T) {
 		EmailConfirmed: true, CredentialVersion: 1, PasswordHash: "stored-hash", PasswordChangeRequired: true,
 	}, attempts: map[string][]time.Time{}}
 	service := testLoginService(store, true)
-	handler := NewHandler(service, nil)
+	handler := NewHandler(service, nil, nil, nil)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"user@example.com","password":"senha-segura"}`))
@@ -46,7 +46,7 @@ func TestLoginHandlerReturnsPrincipalAndSecureCookies(t *testing.T) {
 
 func TestLoginHandlerRejectsUnknownFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := NewHandler(testLoginService(&loginStoreStub{attempts: map[string][]time.Time{}}, false), nil)
+	handler := NewHandler(testLoginService(&loginStoreStub{attempts: map[string][]time.Time{}}, false), nil, nil, nil)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"user@example.com","password":"senha-segura","admin":true}`))

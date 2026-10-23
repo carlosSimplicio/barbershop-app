@@ -27,6 +27,14 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 	handler.authentication.PostAuthLogin(c)
 }
 
+func (handler *Handler) PostAuthPasswordRecovery(c *gin.Context) {
+	handler.authentication.PostAuthPasswordRecovery(c)
+}
+
+func (handler *Handler) PostAuthPasswordRecoveryVerify(c *gin.Context) {
+	handler.authentication.PostAuthPasswordRecoveryVerify(c)
+}
+
 func (handler *Handler) PostAuthRegister(c *gin.Context) {
 	handler.onboarding.PostAuthRegister(c)
 }
