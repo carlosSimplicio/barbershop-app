@@ -179,7 +179,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Usar UUIDs aleatórios e não sequenciais para identificadores expostos.
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
-- [ ] Criar persistência para clientes, serviços, profissionais e associações profissional-serviço.
+- [ ] Criar persistência para clientes.
+- [ ] Criar persistência para serviços.
+- [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries base de criação e listagem; os fluxos da API permanecem pendentes.
+- [ ] Criar persistência para associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
 - [ ] Criar persistência para planos, preços, trials, assinaturas, períodos e futuros adicionais.

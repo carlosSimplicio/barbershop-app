@@ -50,6 +50,7 @@
 
 - Escreva SQL nos arquivos de entrada do `sqlc` e regenere o código Go após alterações.
 - Não introduza ORM ou outro driver PostgreSQL em paralelo.
+- A migration `00005_professionals.sql` cria `professionals` como perfil do usuário profissional. `user_id` é a identidade única; a chave estrangeira composta `(user_id, establishment_id)` impede associar o perfil a outro estabelecimento. As queries para inserir usuário, credencial e perfil e para listar por estabelecimento com paginação já existem. Endpoints e regras de cadastro ainda dependem das próximas tarefas.
 - Modele a oferta de serviços como uma associação explícita entre profissional e serviço, limitada ao mesmo estabelecimento.
 - Mantenha preço e duração no serviço, não na associação com o profissional; somente a comissão pode possuir uma regra específica para esse par.
 - Persista snapshots de preço e duração no agendamento; alterações posteriores no catálogo não recalculam agendamentos existentes.
