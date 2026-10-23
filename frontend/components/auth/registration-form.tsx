@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
-import { EMAIL_MAX_LENGTH, validateEmail } from "@/lib/auth/email-validation";
+import {
+  EMAIL_MAX_LENGTH,
+  INVALID_EMAIL_MESSAGE,
+  validateEmail,
+} from "@/lib/auth/email-validation";
+import {
+  INVALID_PASSWORD_MESSAGE,
+  validatePassword,
+} from "@/lib/auth/password-validation";
 import {
   registerOwner,
   type RegisterRequest,
@@ -29,8 +37,8 @@ const serverMessages: Record<string, string> = {
   invalid_slug: "Use de 3 a 63 letras minúsculas, números ou hífens.",
   reserved_slug: "Este endereço está reservado. Escolha outro.",
   invalid_time_zone: "Informe um fuso horário IANA válido.",
-  invalid_email: "Digite um e-mail válido.",
-  invalid_password: "Use de 8 a 32 caracteres, sem espaços.",
+  invalid_email: INVALID_EMAIL_MESSAGE,
+  invalid_password: INVALID_PASSWORD_MESSAGE,
   email_unavailable: "Este e-mail já está cadastrado.",
   slug_unavailable: "Este endereço não está disponível.",
 };
@@ -306,14 +314,6 @@ function validate(values: RegisterRequest): FieldErrors {
     errors.time_zone = "Informe um fuso horário IANA válido.";
   }
   errors.email = validateEmail(values.email);
-  if (!values.password) {
-    errors.password = "Crie uma senha.";
-  } else if (
-    [...values.password].length < 8 ||
-    [...values.password].length > 32 ||
-    /\s/.test(values.password)
-  ) {
-    errors.password = "Use de 8 a 32 caracteres, sem espaços.";
-  }
+  errors.password = validatePassword(values.password, "Crie uma senha.");
   return errors;
 }

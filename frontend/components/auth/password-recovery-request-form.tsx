@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button, Feedback, TextField } from "@/components/ui";
-import { EMAIL_MAX_LENGTH, validateEmail } from "@/lib/auth/email-validation";
+import {
+  EMAIL_MAX_LENGTH,
+  INVALID_EMAIL_MESSAGE,
+  validateEmail,
+} from "@/lib/auth/email-validation";
 import { requestPasswordRecovery } from "@/lib/auth/password-recovery-api";
 
 import styles from "./password-recovery-request-form.module.css";
@@ -51,7 +55,7 @@ export function PasswordRecoveryRequestForm() {
           (issue) => issue.field === "email" && issue.code === "invalid_email",
         )
       ) {
-        setError("Digite um e-mail válido.");
+        setError(INVALID_EMAIL_MESSAGE);
         emailRef.current?.focus();
       } else {
         setFeedback("error");

@@ -55,6 +55,7 @@
 - Com `make dev` em execução e as migrations aplicadas, abra `https://localhost:8443` e siga da home para `/cadastro`.
 - Use um e-mail fictício exclusivo, confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva a `/testes`.
 - Em `/testes`, consulte novamente a sessão por `GET /auth/me` e o estabelecimento, saia e entre outra vez por `/login`, sem chamada de refresh. Inspecione os dois cookies e confirme `Secure`, `SameSite=Strict`, `Max-Age` de 15 dias e os caminhos documentados em `docs/architecture.md`; somente o access é `HttpOnly`, e somente o CSRF é legível pelo JavaScript.
+- Para recuperação, mantenha uma segunda sessão de teste aberta para verificar a revogação, saia da sessão usada para o fluxo e use “Esqueci minha senha” em `/login` com o e-mail confirmado do proprietário. Abra o link mais recente no Mailpit e confira que `/redefinir-senha` remove fragmento e query antes de mostrar o formulário; defina uma senha diferente da atual, volte ao login e entre com a nova senha. Confira que o link usado não pode ser reutilizado e que a segunda sessão anterior retorna `401`. Não copie token ou senha para logs, URL query ou capturas públicas.
 - A criação de profissional com senha temporária ainda não possui fluxo entregue. A validação manual desse papel requer uma conta de teste preparada separadamente; não use uma conta real nem exponha sua senha em comandos ou logs.
 
 ### Validação local do onboarding pela API

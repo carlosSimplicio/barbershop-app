@@ -62,6 +62,14 @@ estabelecimento, trocar a senha temporária quando exigido e
 sair. Depois, `/login` permite entrar novamente. O cadastro de profissionais e
 a definição de uma senha temporária ainda não estão disponíveis na interface.
 
+Para validar a recuperação do proprietário, saia da sessão e, em `/login`, abra
+“Esqueci minha senha”. Informe o e-mail confirmado, confira a mensagem mais
+recente no Mailpit e abra seu link `/redefinir-senha#token=...` no navegador. A
+página remove o token do endereço antes de apresentar o formulário. Defina uma
+senha diferente da anterior, siga o link de volta ao login e entre com a nova
+senha. O link anterior não pode ser reutilizado e as sessões anteriores deixam
+de funcionar. Use apenas contas e senhas fictícias nesse roteiro.
+
 Login e confirmação emitem apenas os cookies access e CSRF, ambos com
 `Max-Age` de 15 dias. A API valida a sessão identificada no access JWT em cada
 requisição autenticada; não há renovação nem endpoint de refresh. Ao receber

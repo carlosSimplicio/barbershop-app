@@ -7,8 +7,16 @@ import type { FormEvent } from "react";
 
 import { useAuthSession } from "@/components/session/auth-provider";
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
-import { EMAIL_MAX_LENGTH, validateEmail } from "@/lib/auth/email-validation";
+import {
+  EMAIL_MAX_LENGTH,
+  INVALID_EMAIL_MESSAGE,
+  validateEmail,
+} from "@/lib/auth/email-validation";
 import { login, type LoginRequest } from "@/lib/auth/login-api";
+import {
+  INVALID_PASSWORD_MESSAGE,
+  validatePassword,
+} from "@/lib/auth/password-validation";
 
 import { ConfirmationResend } from "./confirmation-resend";
 import styles from "./login-form.module.css";
@@ -64,10 +72,10 @@ export function LoginForm() {
         const fieldErrors: FieldErrors = {};
         for (const issue of result.error.fields ?? []) {
           if (issue.field === "email" && issue.code === "invalid_email") {
-            fieldErrors.email = "Digite um e-mail válido.";
+            fieldErrors.email = INVALID_EMAIL_MESSAGE;
           }
           if (issue.field === "password" && issue.code === "invalid_password") {
-            fieldErrors.password = "Use de 8 a 32 caracteres, sem espaços.";
+            fieldErrors.password = INVALID_PASSWORD_MESSAGE;
           }
         }
         if (fieldErrors.email || fieldErrors.password) {
@@ -168,13 +176,6 @@ export function LoginForm() {
 function validate(values: LoginRequest): FieldErrors {
   const errors: FieldErrors = {};
   errors.email = validateEmail(values.email);
-  if (!values.password) errors.password = "Informe sua senha.";
-  else if (
-    [...values.password].length < 8 ||
-    [...values.password].length > 32 ||
-    /\s/.test(values.password)
-  ) {
-    errors.password = "Use de 8 a 32 caracteres, sem espaços.";
-  }
+  errors.password = validatePassword(values.password, "Informe sua senha.");
   return errors;
 }

@@ -1,4 +1,5 @@
 export const EMAIL_MAX_LENGTH = 254;
+export const INVALID_EMAIL_MESSAGE = "Digite um e-mail válido.";
 
 export function validateEmail(value: string): string | undefined {
   const email = value.trim();
@@ -7,6 +8,6 @@ export function validateEmail(value: string): string | undefined {
     email.length > EMAIL_MAX_LENGTH ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   ) {
-    return "Digite um e-mail válido.";
+    return INVALID_EMAIL_MESSAGE;
   }
 }

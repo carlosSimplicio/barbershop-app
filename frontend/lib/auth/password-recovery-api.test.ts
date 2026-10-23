@@ -1,6 +1,9 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-import { requestPasswordRecovery } from "./password-recovery-api";
+import {
+  requestPasswordRecovery,
+  verifyPasswordRecovery,
+} from "./password-recovery-api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -20,6 +23,29 @@ test("solicita recuperação pelo endpoint público somente com o e-mail no corp
   expect(init?.credentials).toBe("include");
   expect(JSON.parse(String(init?.body))).toEqual({
     email: "owner@example.test",
+  });
+  expect(new Headers(init?.headers).has("X-CSRF-Token")).toBe(false);
+});
+
+test("redefine a senha com token apenas no corpo e sem criar sessão", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(new Response(null, { status: 204 }));
+
+  await expect(
+    verifyPasswordRecovery({
+      token: "opaque-sample",
+      new_password: "nova-senha-segura",
+    }),
+  ).resolves.toEqual({ state: "empty", status: 204 });
+
+  expect(fetchMock).toHaveBeenCalledOnce();
+  const [path, init] = fetchMock.mock.calls[0];
+  expect(path).toBe("/api/v1/auth/password/recovery/verify");
+  expect(init?.method).toBe("POST");
+  expect(JSON.parse(String(init?.body))).toEqual({
+    token: "opaque-sample",
+    new_password: "nova-senha-segura",
   });
   expect(new Headers(init?.headers).has("X-CSRF-Token")).toBe(false);
 });
