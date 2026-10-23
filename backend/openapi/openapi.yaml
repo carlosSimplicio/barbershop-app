@@ -242,6 +242,38 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals:
+    post:
+      operationId: postProfessionals
+      summary: Cadastra um profissional no estabelecimento do proprietário
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfessionalRequest"
+      responses:
+        "201":
+          description: Profissional cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -271,6 +303,37 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    CreateProfessionalRequest:
+      type: object
+      additionalProperties: false
+      required: [name, email, temporary_password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        temporary_password:
+          type: string
+          minLength: 8
+          maxLength: 32
+    ProfessionalResponse:
+      type: object
+      required: [id, name, email, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        active:
+          type: boolean
     PasswordRecoveryRequest:
       type: object
       additionalProperties: false

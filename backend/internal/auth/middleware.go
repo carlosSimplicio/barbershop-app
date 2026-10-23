@@ -28,6 +28,12 @@ var publicPaths = map[string]struct{}{
 	"/api/v1/auth/logout":                    {},
 }
 
+var csrfProtectedPaths = map[string]struct{}{
+	"/api/v1/auth/logout":          {},
+	"/api/v1/auth/password/change": {},
+	"/api/v1/professionals":        {},
+}
+
 type AccessTokenVerifier interface {
 	Verify(string, time.Time) (security.AccessClaims, error)
 }
@@ -139,7 +145,8 @@ func requiresCSRF(method, path string) bool {
 	if !isUnsafeMethod(method) {
 		return false
 	}
-	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change"
+	_, protected := csrfProtectedPaths[path]
+	return protected
 }
 
 func requiresAccessToken(method, path string) bool {

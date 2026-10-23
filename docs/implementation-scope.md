@@ -242,7 +242,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Oferecer entrada pelo login e tela de solicitação de recuperação com resposta genérica.
 - [x] Entregar a tela de redefinição e concluir o retorno ao login após sucesso.
 - [x] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
-- [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.
+- [x] Permitir que o proprietário cadastre profissional pela API com senha temporária e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
@@ -261,6 +261,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Impedir profissional de acessar despesas, resultado geral ou dados financeiros de colegas.
 - [ ] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado.
 - [x] Criar componente reutilizável que decide o direito de escrita a partir do trial persistido, incluindo o início e excluindo o fim.
+- [x] Exigir esse direito de escrita na API de cadastro de profissionais.
 - [ ] Estender a decisão de escrita aos períodos de assinatura e aplicá-la aos endpoints de mutação autenticados e públicos.
 - [ ] Com acesso expirado, permitir autenticação, leitura e assinatura/renovação, bloqueando demais mutações.
 - [ ] Cobrir a matriz de autorização e isolamento com testes unitários.
@@ -294,8 +295,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 9. Administração de profissionais
 
-- [ ] Criar, listar, consultar, editar, ativar e desativar profissionais do estabelecimento.
-- [ ] Cadastrar profissional com e-mail globalmente único e senha temporária.
+- [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
+- [ ] Listar, consultar, editar, ativar e desativar profissionais do estabelecimento.
+- [ ] Oferecer o cadastro pela página do painel.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
 - [ ] Permitir comissão específica por associação profissional-serviço sem alterar preço ou duração do serviço.
@@ -491,6 +493,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Aplicar rate limiting à solicitação de recuperação.
 - [ ] Aplicar rate limiting aos futuros fluxos públicos suscetíveis a abuso quando implementados.
 - [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
+- [x] Derivar o tenant do `Principal` e validar papel de proprietário no cadastro autenticado de profissionais.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.

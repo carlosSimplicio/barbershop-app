@@ -152,6 +152,7 @@
 - Tokens de confirmação e recuperação são aleatórios, expiram, são de uso único e não ficam armazenados de forma utilizável após vazamento do banco.
 - Respostas de recuperação não revelam se o e-mail existe; aplique rate limiting.
 - Profissional não possui recuperação autônoma. O proprietário define uma senha temporária e a troca é obrigatória no próximo login.
+- `POST /professionals` exige sessão de proprietário, `Origin` confiável, CSRF válido e direito de escrita do trial. O estabelecimento vem apenas do principal autenticado. O backend valida nome, e-mail e senha temporária, cria usuário `professional` ativo, credencial Argon2id e perfil na mesma transação, e responde `201` somente com identificador, nome, e-mail e estado ativo. E-mail duplicado em qualquer estabelecimento gera conflito no campo `email`; a senha não aparece em resposta nem logs. A página do painel e a leitura da lista ainda serão entregues.
 - Ao reativar um profissional, o proprietário deve definir uma nova senha temporária; nunca restaure a validade da senha ou das sessões anteriores.
 - Até a troca, o profissional só pode consultar ou manter a sessão, definir uma nova senha ou encerrar a sessão; recursos de domínio permanecem bloqueados.
 - A senha temporária nunca é recuperável ou armazenada em texto puro.
@@ -191,7 +192,7 @@
 - A renovação mockada é manual e idempotente. Período ativo é estendido a partir do fim atual; assinatura expirada cria novo período a partir da reativação.
 - Modele cancelamento ao fim do período separadamente de expiração imediata; direitos permanecem ativos até `current_period_end`.
 - Centralize a política de acesso por assinatura: trial ou período ativo concede escrita; expiração preserva leitura e bloqueia mutações, exceto autenticação e assinatura/renovação.
-- O componente `backend/internal/entitlements` já consulta o trial persistido por estabelecimento e concede escrita somente do instante inicial inclusivo ao final exclusivo. Sem trial ou depois do término, retorna recusa de escrita; erro de consulta não concede acesso. Ainda não há períodos de assinatura nem endpoints de domínio ligados a esse componente. A integração com o cadastro de profissionais ocorrerá na próxima etapa.
+- O componente `backend/internal/entitlements` consulta o trial persistido por estabelecimento e concede escrita somente do instante inicial inclusivo ao final exclusivo. Sem trial ou depois do término, retorna recusa de escrita; erro de consulta não concede acesso. `POST /professionals` já usa essa decisão. Ainda não há períodos de assinatura; os demais endpoints de domínio serão ligados ao componente quando forem entregues.
 - Aplique a política no backend e não apenas na interface. Todos os endpoints públicos de mutação da agenda devem respeitar o direito de acesso do estabelecimento.
 - Expiração não altera estados nem remove agendamentos; apenas bloqueia suas mutações até a reativação.
 - Estados, webhooks, idempotência e acesso por plano devem ser definidos antes de implementar a integração de cobrança.

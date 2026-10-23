@@ -26,6 +26,7 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/httpapi"
@@ -33,6 +34,7 @@ import (
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
 	"barbershop-app/backend/internal/platform/ratelimit"
+	"barbershop-app/backend/internal/professionals"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -166,6 +168,8 @@ func newTestApplication(t *testing.T) *testApplication {
 			onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions),
 		),
 		establishment.NewHandler(establishment.NewService(establishment.NewPostgresStore(integrationPool))),
+		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
+			entitlements.NewService(entitlements.NewPostgresStore(integrationPool)))),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -259,7 +263,7 @@ func (application *testApplication) request(t *testing.T, method, path string, b
 }
 
 func requiresTestCSRF(path string) bool {
-	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change"
+	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/professionals"
 }
 
 func (application *testApplication) cookie(t *testing.T, name string) *http.Cookie {

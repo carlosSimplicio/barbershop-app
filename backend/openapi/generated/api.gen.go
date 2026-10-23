@@ -75,6 +75,13 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+// CreateProfessionalRequest defines model for CreateProfessionalRequest.
+type CreateProfessionalRequest struct {
+	Email             openapi_types.Email `json:"email"`
+	Name              string              `json:"name"`
+	TemporaryPassword string              `json:"temporary_password"`
+}
+
 // EmailConfirmationRequest defines model for EmailConfirmationRequest.
 type EmailConfirmationRequest struct {
 	Email openapi_types.Email `json:"email"`
@@ -141,6 +148,14 @@ type PasswordRecoveryVerifyRequest struct {
 	Token       string `json:"token"`
 }
 
+// ProfessionalResponse defines model for ProfessionalResponse.
+type ProfessionalResponse struct {
+	Active bool                `json:"active"`
+	Email  openapi_types.Email `json:"email"`
+	Id     openapi_types.UUID  `json:"id"`
+	Name   string              `json:"name"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -198,6 +213,9 @@ type PostAuthPasswordRecoveryVerifyJSONRequestBody = PasswordRecoveryVerifyReque
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
 
+// PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
+type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
@@ -233,6 +251,9 @@ type ServerInterface interface {
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
+	// PostProfessionals Cadastra um profissional no estabelecimento do proprietário
+	// (POST /professionals)
+	PostProfessionals(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -387,6 +408,19 @@ func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 	siw.Handler.GetHealth(c)
 }
 
+// PostProfessionals operation middleware
+func (siw *ServerInterfaceWrapper) PostProfessionals(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostProfessionals(c)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -424,5 +458,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
+	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }
