@@ -10,6 +10,7 @@ import {
   Feedback,
   IconButton,
   PasswordField,
+  RecordList,
   SelectField,
   TextField,
 } from "@/components/ui";
@@ -17,6 +18,11 @@ import {
 import styles from "./showcase.module.css";
 
 type Theme = "light" | "dark";
+
+const sampleRecords = [
+  { id: "ana-lima", name: "Ana Lima", detail: "ana@example.test" },
+  { id: "bia-souza", name: "Beatriz Souza", detail: "bia@example.test" },
+];
 
 const swatches = [
   ["Azul principal", "--color-primary", "primary"],
@@ -249,6 +255,30 @@ export function DesignSystemShowcase() {
             >
               Confira sua conexão e repita a solicitação.
             </Feedback>
+          </div>
+        </Showcase>
+        <Showcase title="Lista de registros e estado vazio">
+          <div className={styles.fieldGrid}>
+            <RecordList
+              emptyMessage="Nenhum profissional cadastrado."
+              getKey={(record) => record.id}
+              items={sampleRecords}
+              label="Profissionais cadastrados"
+              renderItem={(record) => (
+                <>
+                  <strong>{record.name}</strong>
+                  <br />
+                  {record.detail}
+                </>
+              )}
+            />
+            <RecordList
+              emptyMessage="Nenhum profissional cadastrado."
+              getKey={(record) => record.id}
+              items={[] as typeof sampleRecords}
+              label="Profissionais cadastrados"
+              renderItem={(record) => record.name}
+            />
           </div>
         </Showcase>
       </section>

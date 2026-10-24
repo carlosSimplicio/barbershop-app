@@ -206,7 +206,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Criar padrões compartilhados para tabelas.
 - [ ] Criar padrões compartilhados para modais.
 - [x] Criar padrões compartilhados de feedback.
-- [ ] Criar padrões compartilhados para estados vazios.
+- [x] Criar padrões compartilhados para estados vazios com lista semântica e anúncio acessível.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.

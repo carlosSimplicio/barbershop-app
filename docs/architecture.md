@@ -216,6 +216,7 @@
 - Sirva a tipografia Montserrat a partir de `frontend/public/fonts/montserrat`, junto de sua licença OFL, sem depender de download de fonte durante build ou execução.
 - Reutilize componentes, variáveis e estilos existentes antes de criar novos padrões. Não crie variações locais ou componentes isolados que dupliquem uma solução já coberta pelo design system.
 - Quando o produto realmente precisar de um componente, variante ou estado ainda inexistente, adicione-o ao design system no mesmo trabalho que o introduzir no frontend. A documentação deve incluir os temas claro e escuro, estados interativos, comportamento responsivo e requisitos de acessibilidade aplicáveis.
+- `RecordList` apresenta itens de dados como uma lista semântica e anuncia uma mensagem de estado vazio sem criar itens fictícios. Usa os tokens de superfície, contorno, texto e espaçamento existentes, com quebra de conteúdo em telas estreitas.
 - Alterações visuais em componentes existentes devem atualizar simultaneamente o design system e todos os usos afetados, sem divergência conhecida entre documentação e implementação.
 
 ### Renderização e API
