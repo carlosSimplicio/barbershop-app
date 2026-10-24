@@ -84,6 +84,25 @@ func TestOwnerCreatesProfessionalAndProfessionalMustChangePassword(t *testing.T)
 	assertStatus(t, response, http.StatusForbidden)
 }
 
+func TestOwnerListsEmptyProfessionals(t *testing.T) {
+	application := newTestApplication(t)
+	registerAndConfirmOwner(t, application, defaultOwnerRegistration())
+	response := application.request(t, http.MethodGet, "/api/v1/professionals", nil)
+	assertStatus(t, response, http.StatusOK)
+	var result struct {
+		Items   []json.RawMessage `json:"items"`
+		Limit   int               `json:"limit"`
+		Offset  int               `json:"offset"`
+		HasMore bool              `json:"has_more"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Items == nil || len(result.Items) != 0 || result.Limit != 20 || result.Offset != 0 || result.HasMore {
+		t.Fatalf("empty list = %#v", result)
+	}
+}
+
 func TestProfessionalRegistrationRejectsInvalidFields(t *testing.T) {
 	application := newTestApplication(t)
 	registerAndConfirmOwner(t, application, defaultOwnerRegistration())

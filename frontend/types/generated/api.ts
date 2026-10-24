@@ -184,7 +184,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Lista profissionais do estabelecimento do proprietário */
+        get: operations["getProfessionals"];
         put?: never;
         /** Cadastra um profissional no estabelecimento do proprietário */
         post: operations["postProfessionals"];
@@ -228,6 +229,12 @@ export interface components {
             /** Format: email */
             email: string;
             active: boolean;
+        };
+        ProfessionalListResponse: {
+            items: components["schemas"]["ProfessionalResponse"][];
+            limit: number;
+            offset: number;
+            has_more: boolean;
         };
         PasswordRecoveryRequest: {
             /** Format: email */
@@ -628,6 +635,33 @@ export interface operations {
                     "application/json": components["schemas"]["EstablishmentResponse"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getProfessionals: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de profissionais do estabelecimento */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalServerError"];

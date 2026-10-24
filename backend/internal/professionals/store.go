@@ -61,3 +61,23 @@ func (store *PostgresStore) Create(ctx context.Context, creation Creation) (stri
 	}
 	return uuid.UUID(userID.Bytes).String(), nil
 }
+
+func (store *PostgresStore) List(ctx context.Context, establishmentID string, limit, offset int32) ([]Professional, error) {
+	parsedID, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return nil, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	rows, err := db.New(store.pool).ListProfessionalsByEstablishment(ctx, db.ListProfessionalsByEstablishmentParams{
+		EstablishmentID: pgtype.UUID{Bytes: parsedID, Valid: true}, Limit: limit, Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query professionals: %w", err)
+	}
+	items := make([]Professional, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, Professional{
+			ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active,
+		})
+	}
+	return items, nil
+}

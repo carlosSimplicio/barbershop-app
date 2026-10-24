@@ -3,6 +3,7 @@ package professionals
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -12,9 +13,11 @@ import (
 )
 
 var (
-	ErrForbidden        = errors.New("professional registration forbidden")
+	ErrForbidden        = errors.New("professional operation forbidden")
 	ErrInvalidName      = errors.New("invalid professional name")
 	ErrEmailUnavailable = errors.New("professional email unavailable")
+	ErrInvalidLimit     = errors.New("invalid professional list limit")
+	ErrInvalidOffset    = errors.New("invalid professional list offset")
 )
 
 type CreateInput struct {
@@ -30,6 +33,13 @@ type Professional struct {
 	Active bool
 }
 
+type ListResult struct {
+	Items   []Professional
+	Limit   int32
+	Offset  int32
+	HasMore bool
+}
+
 type Creation struct {
 	EstablishmentID string
 	Name            string
@@ -41,6 +51,7 @@ type Creation struct {
 
 type Store interface {
 	Create(context.Context, Creation) (string, error)
+	List(context.Context, string, int32, int32) ([]Professional, error)
 }
 
 type PasswordHasher interface {
@@ -93,4 +104,28 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 		return Professional{}, err
 	}
 	return Professional{ID: id, Name: name, Email: email, Active: true}, nil
+}
+
+func (service *Service) List(ctx context.Context, principal auth.Principal, limit, offset int32) (ListResult, error) {
+	if principal.Role != "owner" {
+		return ListResult{}, ErrForbidden
+	}
+	if limit < 1 || limit > 100 {
+		return ListResult{}, ErrInvalidLimit
+	}
+	if offset < 0 {
+		return ListResult{}, ErrInvalidOffset
+	}
+	items, err := service.store.List(ctx, principal.EstablishmentID, limit+1, offset)
+	if err != nil {
+		return ListResult{}, fmt.Errorf("list professionals: %w", err)
+	}
+	hasMore := len(items) > int(limit)
+	if hasMore {
+		items = items[:limit]
+	}
+	if items == nil {
+		items = []Professional{}
+	}
+	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore}, nil
 }

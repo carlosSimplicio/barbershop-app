@@ -243,6 +243,44 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
   /professionals:
+    get:
+      operationId: getProfessionals
+      summary: Lista profissionais do estabelecimento do proprietário
+      tags: [professionals]
+      security:
+        - accessCookie: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
+      responses:
+        "200":
+          description: Página de profissionais do estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     post:
       operationId: postProfessionals
       summary: Cadastra um profissional no estabelecimento do proprietário
@@ -333,6 +371,23 @@ components:
           type: string
           format: email
         active:
+          type: boolean
+    ProfessionalListResponse:
+      type: object
+      required: [items, limit, offset, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfessionalResponse"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        has_more:
           type: boolean
     PasswordRecoveryRequest:
       type: object

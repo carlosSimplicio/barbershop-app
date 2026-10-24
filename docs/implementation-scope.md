@@ -296,7 +296,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 9. Administração de profissionais
 
 - [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
-- [ ] Listar, consultar, editar, ativar e desativar profissionais do estabelecimento.
+- [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação e leitura após expiração do trial.
+- [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
 - [ ] Oferecer o cadastro pela página do painel.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
@@ -494,6 +495,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Aplicar rate limiting aos futuros fluxos públicos suscetíveis a abuso quando implementados.
 - [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário no cadastro autenticado de profissionais.
+- [x] Derivar o tenant do `Principal` e validar papel de proprietário na listagem autenticada de profissionais.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.

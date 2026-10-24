@@ -251,7 +251,7 @@ func (application *testApplication) request(t *testing.T, method, path string, b
 	if method != http.MethodGet && method != http.MethodHead {
 		request.Header.Set("Origin", trustedOrigin)
 	}
-	if requiresTestCSRF(path) {
+	if requiresTestCSRF(method, path) {
 		request.Header.Set("X-CSRF-Token", application.cookie(t, csrfCookieName).Value)
 	}
 	response, err := application.client.Do(request)
@@ -262,7 +262,10 @@ func (application *testApplication) request(t *testing.T, method, path string, b
 	return response
 }
 
-func requiresTestCSRF(path string) bool {
+func requiresTestCSRF(method, path string) bool {
+	if method == http.MethodGet || method == http.MethodHead {
+		return false
+	}
 	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/professionals"
 }
 

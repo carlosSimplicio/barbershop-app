@@ -50,7 +50,7 @@
 
 - Escreva SQL nos arquivos de entrada do `sqlc` e regenere o código Go após alterações.
 - Não introduza ORM ou outro driver PostgreSQL em paralelo.
-- A migration `00005_professionals.sql` cria `professionals` como perfil do usuário profissional. `user_id` é a identidade única; a chave estrangeira composta `(user_id, establishment_id)` impede associar o perfil a outro estabelecimento. As queries para inserir usuário, credencial e perfil e para listar por estabelecimento com paginação já existem. Endpoints e regras de cadastro ainda dependem das próximas tarefas.
+- A migration `00005_professionals.sql` cria `professionals` como perfil do usuário profissional. `user_id` é a identidade única; a chave estrangeira composta `(user_id, establishment_id)` impede associar o perfil a outro estabelecimento. As queries para inserir usuário, credencial e perfil e para listar por estabelecimento com paginação já existem; cadastro e listagem estão disponíveis pela API, enquanto a interface do painel ainda depende das próximas tarefas.
 - Modele a oferta de serviços como uma associação explícita entre profissional e serviço, limitada ao mesmo estabelecimento.
 - Mantenha preço e duração no serviço, não na associação com o profissional; somente a comissão pode possuir uma regra específica para esse par.
 - Persista snapshots de preço e duração no agendamento; alterações posteriores no catálogo não recalculam agendamentos existentes.
@@ -152,7 +152,8 @@
 - Tokens de confirmação e recuperação são aleatórios, expiram, são de uso único e não ficam armazenados de forma utilizável após vazamento do banco.
 - Respostas de recuperação não revelam se o e-mail existe; aplique rate limiting.
 - Profissional não possui recuperação autônoma. O proprietário define uma senha temporária e a troca é obrigatória no próximo login.
-- `POST /professionals` exige sessão de proprietário, `Origin` confiável, CSRF válido e direito de escrita do trial. O estabelecimento vem apenas do principal autenticado. O backend valida nome, e-mail e senha temporária, cria usuário `professional` ativo, credencial Argon2id e perfil na mesma transação, e responde `201` somente com identificador, nome, e-mail e estado ativo. E-mail duplicado em qualquer estabelecimento gera conflito no campo `email`; a senha não aparece em resposta nem logs. A página do painel e a leitura da lista ainda serão entregues.
+- `POST /professionals` exige sessão de proprietário, `Origin` confiável, CSRF válido e direito de escrita do trial. O estabelecimento vem apenas do principal autenticado. O backend valida nome, e-mail e senha temporária, cria usuário `professional` ativo, credencial Argon2id e perfil na mesma transação, e responde `201` somente com identificador, nome, e-mail e estado ativo. E-mail duplicado em qualquer estabelecimento gera conflito no campo `email`; a senha não aparece em resposta nem logs.
+- `GET /professionals` exige sessão de proprietário e deriva o estabelecimento do principal. A query filtra pelo tenant, ordena por criação decrescente com desempate pelo ID e consulta no máximo 101 registros para entregar até 100 por página e indicar `has_more`; `limit` padrão é 20 e `offset` padrão é 0. A resposta contém apenas identificador, nome, e-mail e estado ativo; lista vazia é `[]`, e a leitura permanece disponível após expiração do trial. A lista visual no painel ainda não foi entregue.
 - Ao reativar um profissional, o proprietário deve definir uma nova senha temporária; nunca restaure a validade da senha ou das sessões anteriores.
 - Até a troca, o profissional só pode consultar ou manter a sessão, definir uma nova senha ou encerrar a sessão; recursos de domínio permanecem bloqueados.
 - A senha temporária nunca é recuperável ou armazenada em texto puro.
@@ -193,6 +194,7 @@
 - Modele cancelamento ao fim do período separadamente de expiração imediata; direitos permanecem ativos até `current_period_end`.
 - Centralize a política de acesso por assinatura: trial ou período ativo concede escrita; expiração preserva leitura e bloqueia mutações, exceto autenticação e assinatura/renovação.
 - O componente `backend/internal/entitlements` consulta o trial persistido por estabelecimento e concede escrita somente do instante inicial inclusivo ao final exclusivo. Sem trial ou depois do término, retorna recusa de escrita; erro de consulta não concede acesso. `POST /professionals` já usa essa decisão. Ainda não há períodos de assinatura; os demais endpoints de domínio serão ligados ao componente quando forem entregues.
+- `GET /professionals` é uma leitura autenticada e não consulta o direito de escrita, portanto continua disponível após o fim do trial.
 - Aplique a política no backend e não apenas na interface. Todos os endpoints públicos de mutação da agenda devem respeitar o direito de acesso do estabelecimento.
 - Expiração não altera estados nem remove agendamentos; apenas bloqueia suas mutações até a reativação.
 - Estados, webhooks, idempotência e acesso por plano devem ser definidos antes de implementar a integração de cobrança.

@@ -103,6 +103,10 @@ func (stub *createStoreStub) Create(_ context.Context, creation Creation) (strin
 	return stub.id, nil
 }
 
+func (stub *createStoreStub) List(context.Context, string, int32, int32) ([]Professional, error) {
+	return nil, nil
+}
+
 type passwordHasherStub struct{ password string }
 
 func (stub *passwordHasherStub) Hash(password string) (string, error) {

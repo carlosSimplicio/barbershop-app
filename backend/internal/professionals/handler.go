@@ -19,12 +19,13 @@ import (
 	openapiTypes "github.com/oapi-codegen/runtime/types"
 )
 
-type Creator interface {
+type Registry interface {
 	Create(context.Context, auth.Principal, CreateInput) (Professional, error)
+	List(context.Context, auth.Principal, int32, int32) (ListResult, error)
 }
 
 type Handler struct {
-	creator Creator
+	registry Registry
 }
 
 type createRequest struct {
@@ -33,8 +34,62 @@ type createRequest struct {
 	TemporaryPassword string `json:"temporary_password"`
 }
 
-func NewHandler(creator Creator) *Handler {
-	return &Handler{creator: creator}
+func NewHandler(registry Registry) *Handler {
+	return &Handler{registry: registry}
+}
+
+func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessionalsParams) {
+	principal, ok := auth.PrincipalFromContext(c)
+	if !ok {
+		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	limit, offset := int32(20), int32(0)
+	if params.Limit != nil {
+		if *params.Limit < 1 || *params.Limit > 100 {
+			writeFieldError(c, http.StatusBadRequest, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+			return
+		}
+		limit = int32(*params.Limit)
+	}
+	if params.Offset != nil {
+		if *params.Offset < 0 || int64(*params.Offset) > 2147483647 {
+			writeFieldError(c, http.StatusBadRequest, "offset", "invalid_offset", "Informe um deslocamento válido.")
+			return
+		}
+		offset = int32(*params.Offset)
+	}
+
+	result, err := handler.registry.List(c.Request.Context(), principal, limit, offset)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrForbidden):
+			writeError(c, http.StatusForbidden, "forbidden", "Você não pode consultar profissionais.")
+		case errors.Is(err, ErrInvalidLimit):
+			writeFieldError(c, http.StatusBadRequest, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+		case errors.Is(err, ErrInvalidOffset):
+			writeFieldError(c, http.StatusBadRequest, "offset", "invalid_offset", "Informe um deslocamento válido.")
+		default:
+			slog.Error("professionals_query_failed", "request_id", httpserver.RequestID(c))
+			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar os profissionais.")
+		}
+		return
+	}
+	items := make([]api.ProfessionalResponse, 0, len(result.Items))
+	for _, professional := range result.Items {
+		id, err := uuid.Parse(professional.ID)
+		if err != nil {
+			slog.Error("professional_list_response_invalid", "request_id", httpserver.RequestID(c))
+			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar os profissionais.")
+			return
+		}
+		items = append(items, api.ProfessionalResponse{
+			Id: id, Name: professional.Name, Email: openapiTypes.Email(professional.Email), Active: professional.Active,
+		})
+	}
+	c.JSON(http.StatusOK, api.ProfessionalListResponse{
+		Items: items, Limit: int(result.Limit), Offset: int(result.Offset), HasMore: result.HasMore,
+	})
 }
 
 func (handler *Handler) PostProfessionals(c *gin.Context) {
@@ -50,7 +105,7 @@ func (handler *Handler) PostProfessionals(c *gin.Context) {
 		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
-	professional, err := handler.creator.Create(c.Request.Context(), principal, CreateInput{
+	professional, err := handler.registry.Create(c.Request.Context(), principal, CreateInput{
 		Name: request.Name, Email: request.Email, TemporaryPassword: request.TemporaryPassword,
 	})
 	if err != nil {

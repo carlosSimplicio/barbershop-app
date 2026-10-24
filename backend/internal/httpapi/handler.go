@@ -6,6 +6,7 @@ import (
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/onboarding"
 	"barbershop-app/backend/internal/professionals"
+	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
 )
 
@@ -67,4 +68,8 @@ func (handler *Handler) GetEstablishment(c *gin.Context) {
 
 func (handler *Handler) PostProfessionals(c *gin.Context) {
 	handler.professionals.PostProfessionals(c)
+}
+
+func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessionalsParams) {
+	handler.professionals.GetProfessionals(c, params)
 }
