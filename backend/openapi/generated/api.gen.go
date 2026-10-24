@@ -4,9 +4,12 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -75,6 +78,13 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+// CreateProfessionalRequest defines model for CreateProfessionalRequest.
+type CreateProfessionalRequest struct {
+	Email             openapi_types.Email `json:"email"`
+	Name              string              `json:"name"`
+	TemporaryPassword string              `json:"temporary_password"`
+}
+
 // EmailConfirmationRequest defines model for EmailConfirmationRequest.
 type EmailConfirmationRequest struct {
 	Email openapi_types.Email `json:"email"`
@@ -141,6 +151,22 @@ type PasswordRecoveryVerifyRequest struct {
 	Token       string `json:"token"`
 }
 
+// ProfessionalListResponse defines model for ProfessionalListResponse.
+type ProfessionalListResponse struct {
+	HasMore bool                   `json:"has_more"`
+	Items   []ProfessionalResponse `json:"items"`
+	Limit   int                    `json:"limit"`
+	Offset  int                    `json:"offset"`
+}
+
+// ProfessionalResponse defines model for ProfessionalResponse.
+type ProfessionalResponse struct {
+	Active bool                `json:"active"`
+	Email  openapi_types.Email `json:"email"`
+	Id     openapi_types.UUID  `json:"id"`
+	Name   string              `json:"name"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -177,6 +203,12 @@ type TooManyRequests = ErrorResponse
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorResponse
 
+// GetProfessionalsParams defines parameters for GetProfessionals.
+type GetProfessionalsParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
 type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
 
@@ -197,6 +229,9 @@ type PostAuthPasswordRecoveryVerifyJSONRequestBody = PasswordRecoveryVerifyReque
 
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
+
+// PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
+type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -233,6 +268,12 @@ type ServerInterface interface {
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
+	// GetProfessionals Lista profissionais do estabelecimento do proprietário
+	// (GET /professionals)
+	GetProfessionals(c *gin.Context, params GetProfessionalsParams)
+	// PostProfessionals Cadastra um profissional no estabelecimento do proprietário
+	// (POST /professionals)
+	PostProfessionals(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -387,6 +428,54 @@ func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 	siw.Handler.GetHealth(c)
 }
 
+// GetProfessionals operation middleware
+func (siw *ServerInterfaceWrapper) GetProfessionals(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetProfessionalsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetProfessionals(c, params)
+}
+
+// PostProfessionals operation middleware
+func (siw *ServerInterfaceWrapper) PostProfessionals(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostProfessionals(c)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -424,5 +513,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
+	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
+	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

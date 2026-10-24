@@ -179,7 +179,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Usar UUIDs aleatórios e não sequenciais para identificadores expostos.
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
-- [ ] Criar persistência para clientes, serviços, profissionais e associações profissional-serviço.
+- [ ] Criar persistência para clientes.
+- [ ] Criar persistência para serviços.
+- [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries base de criação e listagem; os fluxos da API permanecem pendentes.
+- [ ] Criar persistência para associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
 - [ ] Criar persistência para planos, preços, trials, assinaturas, períodos e futuros adicionais.
@@ -203,7 +206,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Criar padrões compartilhados para tabelas.
 - [ ] Criar padrões compartilhados para modais.
 - [x] Criar padrões compartilhados de feedback.
-- [ ] Criar padrões compartilhados para estados vazios.
+- [x] Criar padrões compartilhados para estados vazios com lista semântica e anúncio acessível.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
@@ -217,7 +220,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
 - [x] Oferecer formulário público de cadastro com validação de conveniência, conflitos específicos por campo e estado de confirmação pendente após `202`, sem iniciar o trial na interface.
 - [x] Permitir solicitar novo link no estado pós-cadastro e no login após confirmação obrigatória, sempre com resposta genérica.
-- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar para `/testes` após sucesso.
+- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar o proprietário para `/painel/profissionais` após sucesso.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
@@ -230,6 +233,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
 - [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas de login, confirmação, troca de senha e logout.
 - [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
+- [x] Direcionar proprietários após login e confirmação a uma casca de painel protegida por papel, manter profissionais em `/testes` e oferecer no painel navegação por teclado para Profissionais e para `/testes`.
 - [ ] Definir janelas de retenção de sessões, confirmações de e-mail, tokens de recuperação de senha e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail, tokens de recuperação de senha e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
@@ -239,7 +243,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Oferecer entrada pelo login e tela de solicitação de recuperação com resposta genérica.
 - [x] Entregar a tela de redefinição e concluir o retorno ao login após sucesso.
 - [x] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
-- [ ] Permitir que o proprietário defina senha temporária para profissional e exigir troca no primeiro login.
+- [x] Permitir que o proprietário cadastre profissional pela API com senha temporária e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
@@ -257,7 +261,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.
 - [ ] Impedir profissional de acessar despesas, resultado geral ou dados financeiros de colegas.
 - [ ] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado.
-- [ ] Centralizar a política de escrita baseada em trial ou assinatura e aplicá-la também aos endpoints públicos.
+- [x] Criar componente reutilizável que decide o direito de escrita a partir do trial persistido, incluindo o início e excluindo o fim.
+- [x] Exigir esse direito de escrita na API de cadastro de profissionais.
+- [ ] Estender a decisão de escrita aos períodos de assinatura e aplicá-la aos endpoints de mutação autenticados e públicos.
 - [ ] Com acesso expirado, permitir autenticação, leitura e assinatura/renovação, bloqueando demais mutações.
 - [ ] Cobrir a matriz de autorização e isolamento com testes unitários.
 
@@ -290,8 +296,11 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 9. Administração de profissionais
 
-- [ ] Criar, listar, consultar, editar, ativar e desativar profissionais do estabelecimento.
-- [ ] Cadastrar profissional com e-mail globalmente único e senha temporária.
+- [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
+- [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação e leitura após expiração do trial.
+- [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
+- [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
+- [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
 - [ ] Permitir comissão específica por associação profissional-serviço sem alterar preço ou duração do serviço.
@@ -448,7 +457,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Modelar catálogo com planos, opções de preço e período, sem assumir plano único no schema ou domínio.
 - [ ] Preservar versão, preço e termos contratados no histórico da assinatura.
 - [ ] Preparar adicionais como itens independentes com preço e direitos próprios, sem implementar adicional real no MVP.
-- [ ] Centralizar resolução de direitos e evitar condicionais espalhadas por nome de plano.
+- [x] Centralizar a decisão de escrita durante o trial, sem condicionar endpoints diretamente às datas do benefício.
+- [ ] Estender a resolução de direitos aos planos, períodos e adicionais futuros sem condicionais espalhadas por nome de plano.
 - [ ] Criar interface de gateway de cobrança desacoplada.
 - [ ] Implementar gateway mockado, explicitamente configurado e identificado, sem dados ou dinheiro reais.
 - [ ] Permitir assinatura mockada mensal de `BRL 20,00`, aprovada imediatamente e de forma idempotente.
@@ -486,6 +496,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Aplicar rate limiting à solicitação de recuperação.
 - [ ] Aplicar rate limiting aos futuros fluxos públicos suscetíveis a abuso quando implementados.
 - [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
+- [x] Derivar o tenant do `Principal` e validar papel de proprietário no cadastro autenticado de profissionais.
+- [x] Derivar o tenant do `Principal` e validar papel de proprietário na listagem autenticada de profissionais.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.

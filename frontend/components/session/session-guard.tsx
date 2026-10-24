@@ -13,16 +13,26 @@ export function SessionGuard({
   require,
 }: {
   children: ReactNode;
-  require: "authenticated" | "anonymous";
+  require: "authenticated" | "anonymous" | "owner";
 }) {
   const { state, reload } = useAuthSession();
   const router = useRouter();
-  const allowed = state.status === require;
+  const allowed =
+    require === "anonymous"
+      ? state.status === "anonymous"
+      : state.status === "authenticated" &&
+        (require === "authenticated" || state.principal.role === "owner");
 
   useEffect(() => {
-    if (state.status === "authenticated" && !allowed) router.replace("/testes");
+    if (state.status === "authenticated" && !allowed) {
+      router.replace(
+        require === "anonymous" && state.principal.role === "owner"
+          ? "/painel/profissionais"
+          : "/testes",
+      );
+    }
     if (state.status === "anonymous" && !allowed) router.replace("/login");
-  }, [allowed, router, state.status]);
+  }, [allowed, require, router, state]);
 
   if (state.status === "unavailable") {
     return (

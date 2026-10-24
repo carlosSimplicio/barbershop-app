@@ -17,7 +17,15 @@ func New(address string, logger *slog.Logger, handler api.ServerInterface, trust
 	}
 	router.Use(RequestContext(), AccessLog(logger), Recovery(logger))
 	router.Use(middleware...)
-	api.RegisterHandlersWithOptions(router, handler, api.GinServerOptions{BaseURL: "/api/v1"})
+	api.RegisterHandlersWithOptions(router, handler, api.GinServerOptions{
+		BaseURL: "/api/v1",
+		ErrorHandler: func(c *gin.Context, _ error, status int) {
+			fields := []api.FieldError{{Field: "query", Code: "invalid_query", Message: "Verifique os parâmetros informados."}}
+			c.JSON(status, api.ErrorResponse{
+				Code: "validation_failed", Message: "Verifique os parâmetros informados.", RequestId: RequestID(c), Fields: &fields,
+			})
+		},
+	})
 
 	return &http.Server{
 		Addr:              address,

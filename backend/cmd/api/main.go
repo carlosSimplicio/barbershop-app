@@ -15,6 +15,7 @@ import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/config"
+	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/httpapi"
@@ -23,6 +24,7 @@ import (
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
 	"barbershop-app/backend/internal/platform/ratelimit"
+	"barbershop-app/backend/internal/professionals"
 
 	"github.com/gin-gonic/gin"
 )
@@ -96,6 +98,7 @@ func run() error {
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	confirmationVerification := onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions)
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
+	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, entitlements.NewService(entitlements.NewPostgresStore(pool)))
 	passwordRecovery := auth.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
 	passwordRecoveryVerification := auth.NewPasswordRecoveryVerificationService(authStore, passwords)
 	handler := httpapi.NewHandler(
@@ -103,6 +106,7 @@ func run() error {
 		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
 		establishment.NewHandler(establishments),
+		professionals.NewHandler(professionalService),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())

@@ -5,6 +5,8 @@ import (
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/onboarding"
+	"barbershop-app/backend/internal/professionals"
+	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,10 +15,11 @@ type Handler struct {
 	authentication *auth.Handler
 	onboarding     *onboarding.Handler
 	establishment  *establishment.Handler
+	professionals  *professionals.Handler
 }
 
-func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler) *Handler {
-	return &Handler{health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler}
+func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler) *Handler {
+	return &Handler{health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
 }
 
 func (handler *Handler) GetHealth(c *gin.Context) {
@@ -61,4 +64,12 @@ func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
 
 func (handler *Handler) GetEstablishment(c *gin.Context) {
 	handler.establishment.GetEstablishment(c)
+}
+
+func (handler *Handler) PostProfessionals(c *gin.Context) {
+	handler.professionals.PostProfessionals(c)
+}
+
+func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessionalsParams) {
+	handler.professionals.GetProfessionals(c, params)
 }
