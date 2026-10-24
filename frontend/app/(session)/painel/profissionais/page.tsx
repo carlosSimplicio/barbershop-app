@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { SessionGuard } from "@/components/session/session-guard";
 import { OwnerPanelShell } from "@/components/session/owner-panel-shell";
-import { ProfessionalsListPanel } from "@/components/professionals/professionals-list-panel";
+import { ProfessionalsWorkspace } from "@/components/professionals/professionals-workspace";
 
 import styles from "./page.module.css";
 
@@ -19,7 +19,7 @@ export default function ProfessionalsPage() {
           <span className={styles.eyebrow}>Painel do estabelecimento</span>
           <h1>Profissionais</h1>
         </section>
-        <ProfessionalsListPanel />
+        <ProfessionalsWorkspace />
       </OwnerPanelShell>
     </SessionGuard>
   );

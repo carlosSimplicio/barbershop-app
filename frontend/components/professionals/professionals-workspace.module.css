@@ -1,0 +1,5 @@
+.workspace {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-6);
+}

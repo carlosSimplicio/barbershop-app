@@ -300,7 +300,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação e leitura após expiração do trial.
 - [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
 - [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
-- [ ] Oferecer o cadastro pela página do painel.
+- [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
 - [ ] Permitir comissão específica por associação profissional-serviço sem alterar preço ou duração do serviço.
