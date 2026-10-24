@@ -7,6 +7,9 @@ import ProfessionalsPage from "./page";
 
 const replace = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
+vi.mock("@/components/professionals/professionals-list-panel", () => ({
+  ProfessionalsListPanel: () => <div>Lista de profissionais</div>,
+}));
 
 test("mostra a casca do painel somente para proprietário", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(sessionResponse("owner"));

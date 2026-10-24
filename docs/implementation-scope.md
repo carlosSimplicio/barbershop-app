@@ -298,6 +298,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
 - [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação e leitura após expiração do trial.
+- [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
 - [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
 - [ ] Oferecer o cadastro pela página do painel.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
