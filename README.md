@@ -57,10 +57,12 @@ permanecem nas redes internas do Compose.
 Com o ambiente local ativo e as migrations aplicadas, abra
 <https://localhost:8443>, siga para `/cadastro`, use um e-mail fictício
 exclusivo, confira o link no Mailpit e abra-o no navegador. A confirmação
-inicia a sessão e leva a `/testes`, onde é possível consultar a sessão e o
-estabelecimento, trocar a senha temporária quando exigido e
-sair. Depois, `/login` permite entrar novamente. O cadastro de profissionais e
-a definição de uma senha temporária ainda não estão disponíveis na interface.
+inicia a sessão e leva o proprietário a `/painel/profissionais`. Use o link
+“Área de testes” para abrir `/testes`, consultar a sessão e o estabelecimento,
+trocar a senha temporária quando exigido e sair. Depois, `/login` leva o
+proprietário de volta ao painel; o profissional com senha temporária entra em
+`/testes` e precisa trocá-la antes de acessar recursos de domínio. O cadastro de
+profissionais ainda não está disponível na interface.
 
 Para validar a recuperação do proprietário, saia da sessão e, em `/login`, abra
 “Esqueci minha senha”. Informe o e-mail confirmado, confira a mensagem mais

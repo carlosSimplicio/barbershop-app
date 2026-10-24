@@ -43,7 +43,9 @@ export function EmailVerification({ token }: { token: string | null }) {
         if (!active) return;
         if (result.status === 200 && result.state === "success") {
           setStatus("success");
-          router.replace("/testes");
+          router.replace(
+            result.data.role === "owner" ? "/painel/profissionais" : "/testes",
+          );
         } else if (
           result.state === "error" &&
           result.error.code === "invalid_email_confirmation"
@@ -73,7 +75,7 @@ export function EmailVerification({ token }: { token: string | null }) {
   if (status === "success") {
     return (
       <Feedback title="E-mail confirmado" variant="success">
-        Sua conta está ativa. Estamos abrindo sua área de testes.
+        Sua conta está ativa. Estamos abrindo seu painel.
       </Feedback>
     );
   }

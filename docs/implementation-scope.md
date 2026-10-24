@@ -220,7 +220,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
 - [x] Oferecer formulário público de cadastro com validação de conveniência, conflitos específicos por campo e estado de confirmação pendente após `202`, sem iniciar o trial na interface.
 - [x] Permitir solicitar novo link no estado pós-cadastro e no login após confirmação obrigatória, sempre com resposta genérica.
-- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar para `/testes` após sucesso.
+- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar o proprietário para `/painel/profissionais` após sucesso.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
@@ -233,6 +233,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
 - [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas de login, confirmação, troca de senha e logout.
 - [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
+- [x] Direcionar proprietários após login e confirmação a uma casca de painel protegida por papel, manter profissionais em `/testes` e oferecer no painel navegação por teclado para Profissionais e para `/testes`.
 - [ ] Definir janelas de retenção de sessões, confirmações de e-mail, tokens de recuperação de senha e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail, tokens de recuperação de senha e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.

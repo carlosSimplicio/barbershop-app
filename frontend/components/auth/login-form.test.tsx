@@ -44,7 +44,7 @@ test.each([
   ["owner", false],
   ["professional", true],
 ] as const)(
-  "entra como %s, sincroniza a sessão e substitui a rota",
+  "entra como %s, sincroniza a sessão e substitui a rota apropriada",
   async (role, password_change_required) => {
     vi.mocked(login).mockResolvedValue({
       state: "success",
@@ -80,7 +80,11 @@ test.each([
       expect.any(Function),
       "authenticated",
     );
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/testes"));
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(
+        role === "owner" ? "/painel/profissionais" : "/testes",
+      ),
+    );
   },
 );
 
@@ -224,7 +228,9 @@ test("impede dois envios enquanto o login está pendente", async () => {
       password_change_required: false,
     },
   });
-  await waitFor(() => expect(replace).toHaveBeenCalledWith("/testes"));
+  await waitFor(() =>
+    expect(replace).toHaveBeenCalledWith("/painel/profissionais"),
+  );
 });
 
 function fillForm() {
