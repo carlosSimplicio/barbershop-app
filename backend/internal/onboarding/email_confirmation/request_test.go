@@ -1,6 +1,7 @@
-package onboarding
+package emailconfirmation
 
 import (
+	"barbershop-app/backend/internal/onboarding"
 	"context"
 	"errors"
 	"testing"
@@ -12,12 +13,12 @@ import (
 )
 
 func TestEmailConfirmationRequestReplacesAndSendsForPendingOwner(t *testing.T) {
-	accounts := &confirmationAccountStoreStub{account: ConfirmationAccount{UserID: "user-1", Email: "Owner@Example.COM"}, found: true}
+	accounts := &confirmationAccountStoreStub{account: onboarding.ConfirmationAccount{UserID: "user-1", Email: "Owner@Example.COM"}, found: true}
 	confirmations := &confirmationRequesterStub{}
 	rates := newConfirmationRateStoreStub()
 	service := newTestEmailConfirmationRequestService(accounts, confirmations, rates)
 
-	result, err := service.Request(context.Background(), EmailConfirmationRequestInput{Email: " Owner@Example.COM ", IP: "192.0.2.20"})
+	result, err := service.Request(context.Background(), onboarding.EmailConfirmationRequestInput{Email: " Owner@Example.COM ", IP: "192.0.2.20"})
 	if err != nil || result.DeliveryFailed {
 		t.Fatalf("result = %#v, error = %v", result, err)
 	}
@@ -35,7 +36,7 @@ func TestEmailConfirmationRequestIsIndistinguishableForMissingAndIneligibleAccou
 			accounts := &confirmationAccountStoreStub{found: false}
 			confirmations := &confirmationRequesterStub{}
 			result, err := newTestEmailConfirmationRequestService(accounts, confirmations, newConfirmationRateStoreStub()).Request(
-				context.Background(), EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
+				context.Background(), onboarding.EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
 			)
 			if err != nil || result.DeliveryFailed || confirmations.called {
 				t.Fatalf("result = %#v, error = %v, confirmation called = %t", result, err, confirmations.called)
@@ -45,11 +46,11 @@ func TestEmailConfirmationRequestIsIndistinguishableForMissingAndIneligibleAccou
 }
 
 func TestEmailConfirmationRequestTreatsDeliveryFailureAsAcceptedAfterReplacement(t *testing.T) {
-	accounts := &confirmationAccountStoreStub{account: ConfirmationAccount{UserID: "user-1", Email: "owner@example.com"}, found: true}
+	accounts := &confirmationAccountStoreStub{account: onboarding.ConfirmationAccount{UserID: "user-1", Email: "owner@example.com"}, found: true}
 	confirmations := &confirmationRequesterStub{err: mailer.ErrDeliveryFailed}
 
 	result, err := newTestEmailConfirmationRequestService(accounts, confirmations, newConfirmationRateStoreStub()).Request(
-		context.Background(), EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
+		context.Background(), onboarding.EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
 	)
 	if err != nil || !result.DeliveryFailed {
 		t.Fatalf("result = %#v, error = %v", result, err)
@@ -61,16 +62,16 @@ func TestEmailConfirmationRequestPropagatesPersistenceFailures(t *testing.T) {
 	t.Run("account lookup", func(t *testing.T) {
 		accounts := &confirmationAccountStoreStub{err: persistenceError}
 		_, err := newTestEmailConfirmationRequestService(accounts, &confirmationRequesterStub{}, newConfirmationRateStoreStub()).Request(
-			context.Background(), EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
+			context.Background(), onboarding.EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
 		)
 		if !errors.Is(err, persistenceError) {
 			t.Fatalf("error = %v", err)
 		}
 	})
 	t.Run("confirmation replacement", func(t *testing.T) {
-		accounts := &confirmationAccountStoreStub{account: ConfirmationAccount{UserID: "user-1", Email: "owner@example.com"}, found: true}
+		accounts := &confirmationAccountStoreStub{account: onboarding.ConfirmationAccount{UserID: "user-1", Email: "owner@example.com"}, found: true}
 		_, err := newTestEmailConfirmationRequestService(accounts, &confirmationRequesterStub{err: persistenceError}, newConfirmationRateStoreStub()).Request(
-			context.Background(), EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
+			context.Background(), onboarding.EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
 		)
 		if !errors.Is(err, persistenceError) {
 			t.Fatalf("error = %v", err)
@@ -81,7 +82,7 @@ func TestEmailConfirmationRequestPropagatesPersistenceFailures(t *testing.T) {
 func TestEmailConfirmationRequestRejectsInvalidEmailWithoutAccountLookup(t *testing.T) {
 	accounts := &confirmationAccountStoreStub{}
 	_, err := newTestEmailConfirmationRequestService(accounts, &confirmationRequesterStub{}, newConfirmationRateStoreStub()).Request(
-		context.Background(), EmailConfirmationRequestInput{Email: "owner", IP: "192.0.2.20"},
+		context.Background(), onboarding.EmailConfirmationRequestInput{Email: "owner", IP: "192.0.2.20"},
 	)
 	if !errors.Is(err, auth.ErrInvalidEmail) || accounts.called {
 		t.Fatalf("error = %v, account lookup called = %t", err, accounts.called)
@@ -96,7 +97,7 @@ func TestEmailConfirmationRequestHonorsRateLimitBeforeAccountLookup(t *testing.T
 		registrationTestNow.Add(-4 * time.Minute), registrationTestNow.Add(-5 * time.Minute),
 	}
 	_, err := newTestEmailConfirmationRequestService(accounts, &confirmationRequesterStub{}, rates).Request(
-		context.Background(), EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
+		context.Background(), onboarding.EmailConfirmationRequestInput{Email: "owner@example.com", IP: "192.0.2.20"},
 	)
 	var rateError ratelimit.Error
 	if !errors.As(err, &rateError) || accounts.called {
@@ -104,21 +105,21 @@ func TestEmailConfirmationRequestHonorsRateLimitBeforeAccountLookup(t *testing.T
 	}
 }
 
-func newTestEmailConfirmationRequestService(accounts ConfirmationAccountStore, confirmations ConfirmationRequester, rates *confirmationRateStoreStub) *EmailConfirmationRequestService {
-	service := NewEmailConfirmationRequestService(accounts, confirmations, rates, registrationRateKeyStub{})
+func newTestEmailConfirmationRequestService(accounts onboarding.ConfirmationAccountStore, confirmations onboarding.ConfirmationRequester, rates *confirmationRateStoreStub) *EmailConfirmationRequestService {
+	service := NewEmailConfirmationRequestService(accounts, confirmations, rates, confirmationRateKeyStub{})
 	service.now = func() time.Time { return registrationTestNow }
 	return service
 }
 
 type confirmationAccountStoreStub struct {
-	account         ConfirmationAccount
+	account         onboarding.ConfirmationAccount
 	found           bool
 	err             error
 	called          bool
 	normalizedEmail string
 }
 
-func (stub *confirmationAccountStoreStub) FindUnconfirmedOwnerByNormalizedEmail(_ context.Context, normalizedEmail string) (ConfirmationAccount, bool, error) {
+func (stub *confirmationAccountStoreStub) FindUnconfirmedOwnerByNormalizedEmail(_ context.Context, normalizedEmail string) (onboarding.ConfirmationAccount, bool, error) {
 	stub.called = true
 	stub.normalizedEmail = normalizedEmail
 	return stub.account, stub.found, stub.err
@@ -159,3 +160,9 @@ func (stub *confirmationRateStoreStub) ReserveRateLimitEvents(_ context.Context,
 }
 
 func (*confirmationRateStoreStub) ReleaseRateLimitEvents(context.Context, []int64) error { return nil }
+
+type confirmationRateKeyStub struct{}
+
+func (confirmationRateKeyStub) Key(dimension, value string) []byte {
+	return []byte(dimension + ":" + value)
+}

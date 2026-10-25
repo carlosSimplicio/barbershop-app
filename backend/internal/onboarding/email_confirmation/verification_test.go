@@ -1,6 +1,7 @@
-package onboarding
+package emailconfirmation
 
 import (
+	"barbershop-app/backend/internal/onboarding"
 	"context"
 	"errors"
 	"testing"
@@ -44,18 +45,18 @@ func TestVerifyEmailConfirmationRejectsMalformedTokenWithoutStorage(t *testing.T
 	service := NewEmailConfirmationVerificationService(store, &verificationIssuerStub{})
 
 	_, err := service.Verify(context.Background(), "malformed")
-	if !errors.Is(err, ErrInvalidEmailConfirmation) || store.called {
+	if !errors.Is(err, onboarding.ErrInvalidEmailConfirmation) || store.called {
 		t.Fatalf("error = %v, store called = %t", err, store.called)
 	}
 }
 
 func TestVerifyEmailConfirmationPreservesUniformInvalidError(t *testing.T) {
 	token, _ := security.NewOpaqueToken()
-	store := &verificationStoreStub{err: ErrInvalidEmailConfirmation}
+	store := &verificationStoreStub{err: onboarding.ErrInvalidEmailConfirmation}
 	service := NewEmailConfirmationVerificationService(store, &verificationIssuerStub{})
 
 	_, err := service.Verify(context.Background(), token)
-	if !errors.Is(err, ErrInvalidEmailConfirmation) {
+	if !errors.Is(err, onboarding.ErrInvalidEmailConfirmation) {
 		t.Fatalf("error = %v", err)
 	}
 }

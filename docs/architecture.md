@@ -30,6 +30,7 @@
 
 - Use Go, Gin, PostgreSQL, `pgx/v5`, `sqlc` e Goose.
 - Organize por Vertical Slice Architecture, agrupando cada capacidade ou caso de uso.
+- Quando um domínio reunir fluxos independentes com lógica própria, organize-os em subpacotes por fluxo, como `auth/password_recovery`, `onboarding/registration` e `onboarding/email_confirmation`. Mantenha contratos, handlers e adaptadores compartilhados no pacote raiz quando dependerem de tipos ou estado internos comuns.
 - Um slice pode conter handler, entrada/saída, validação, caso de uso e persistência necessários ao fluxo.
 - Evite grandes diretórios horizontais globais de handlers, services e repositories.
 - Mantenha regras testáveis sem Gin, `pgx`, rede ou banco reais.

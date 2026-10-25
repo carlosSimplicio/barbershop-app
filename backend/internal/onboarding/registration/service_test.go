@@ -1,6 +1,7 @@
-package onboarding
+package registration
 
 import (
+	"barbershop-app/backend/internal/onboarding"
 	"context"
 	"errors"
 	"strings"
@@ -19,7 +20,7 @@ func TestRegistrationCreatesTenantOwnerCredentialAndConfirmationBeforeSending(t 
 	mailer := &registrationMailerStub{}
 	service := newTestRegistrationService(store, mailer)
 
-	result, err := service.Register(context.Background(), RegistrationInput{
+	result, err := service.Register(context.Background(), onboarding.RegistrationInput{
 		EstablishmentName: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo",
 		Email: " Owner@Example.COM ", Password: "senha-segura", IP: "192.0.2.10",
 	})
@@ -60,15 +61,15 @@ func TestRegistrationReturnsSuccessWhenDeliveryFailsAfterPersistence(t *testing.
 func TestRegistrationRejectsInvalidFieldsBeforePersistence(t *testing.T) {
 	tests := []struct {
 		name  string
-		input RegistrationInput
+		input onboarding.RegistrationInput
 		want  error
 	}{
-		{name: "name", input: withRegistrationInput(func(input *RegistrationInput) { input.EstablishmentName = strings.Repeat("a", 121) }), want: ErrInvalidName},
-		{name: "slug", input: withRegistrationInput(func(input *RegistrationInput) { input.Slug = "Admin" }), want: ErrInvalidSlug},
-		{name: "reserved slug", input: withRegistrationInput(func(input *RegistrationInput) { input.Slug = "admin" }), want: ErrReservedSlug},
-		{name: "time zone", input: withRegistrationInput(func(input *RegistrationInput) { input.TimeZone = "Mars/Olympus" }), want: ErrInvalidTimeZone},
-		{name: "email", input: withRegistrationInput(func(input *RegistrationInput) { input.Email = "owner" }), want: auth.ErrInvalidEmail},
-		{name: "password", input: withRegistrationInput(func(input *RegistrationInput) { input.Password = "short" }), want: security.ErrInvalidPassword},
+		{name: "name", input: withRegistrationInput(func(input *onboarding.RegistrationInput) { input.EstablishmentName = strings.Repeat("a", 121) }), want: onboarding.ErrInvalidName},
+		{name: "slug", input: withRegistrationInput(func(input *onboarding.RegistrationInput) { input.Slug = "Admin" }), want: onboarding.ErrInvalidSlug},
+		{name: "reserved slug", input: withRegistrationInput(func(input *onboarding.RegistrationInput) { input.Slug = "admin" }), want: onboarding.ErrReservedSlug},
+		{name: "time zone", input: withRegistrationInput(func(input *onboarding.RegistrationInput) { input.TimeZone = "Mars/Olympus" }), want: onboarding.ErrInvalidTimeZone},
+		{name: "email", input: withRegistrationInput(func(input *onboarding.RegistrationInput) { input.Email = "owner" }), want: auth.ErrInvalidEmail},
+		{name: "password", input: withRegistrationInput(func(input *onboarding.RegistrationInput) { input.Password = "short" }), want: security.ErrInvalidPassword},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -82,7 +83,7 @@ func TestRegistrationRejectsInvalidFieldsBeforePersistence(t *testing.T) {
 }
 
 func TestRegistrationReturnsFieldConflictsWithoutSending(t *testing.T) {
-	for _, conflict := range []error{ErrEmailUnavailable, ErrSlugUnavailable} {
+	for _, conflict := range []error{onboarding.ErrEmailUnavailable, onboarding.ErrSlugUnavailable} {
 		store := newRegistrationStoreStub()
 		store.createErr = conflict
 		mailer := &registrationMailerStub{}
@@ -110,11 +111,11 @@ func TestRegistrationHonorsRateLimitBeforeHashingOrPersistence(t *testing.T) {
 	}
 }
 
-func validRegistrationInput() RegistrationInput {
-	return RegistrationInput{EstablishmentName: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo", Email: "owner@example.com", Password: "senha-segura", IP: "192.0.2.10"}
+func validRegistrationInput() onboarding.RegistrationInput {
+	return onboarding.RegistrationInput{EstablishmentName: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo", Email: "owner@example.com", Password: "senha-segura", IP: "192.0.2.10"}
 }
 
-func withRegistrationInput(change func(*RegistrationInput)) RegistrationInput {
+func withRegistrationInput(change func(*onboarding.RegistrationInput)) onboarding.RegistrationInput {
 	input := validRegistrationInput()
 	change(&input)
 	return input
@@ -129,7 +130,7 @@ func newTestRegistrationService(store *registrationStoreStub, mailer *registrati
 
 type registrationStoreStub struct {
 	events            map[string][]time.Time
-	registration      Registration
+	registration      onboarding.Registration
 	createErr         error
 	created           bool
 	mailer            *registrationMailerStub
@@ -143,7 +144,7 @@ func newRegistrationStoreStub() *registrationStoreStub {
 	return &registrationStoreStub{events: make(map[string][]time.Time)}
 }
 
-func (stub *registrationStoreStub) CreateRegistration(_ context.Context, registration Registration) error {
+func (stub *registrationStoreStub) CreateRegistration(_ context.Context, registration onboarding.Registration) error {
 	stub.registration = registration
 	stub.created = true
 	stub.createdBeforeSend = stub.mailer == nil || stub.mailer.token == ""

@@ -25,12 +25,15 @@ import (
 	"time"
 
 	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/auth/password_recovery"
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/httpapi"
 	"barbershop-app/backend/internal/onboarding"
+	"barbershop-app/backend/internal/onboarding/email_confirmation"
+	"barbershop-app/backend/internal/onboarding/registration"
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
 	"barbershop-app/backend/internal/platform/ratelimit"
@@ -155,17 +158,17 @@ func newTestApplication(t *testing.T) *testApplication {
 	onboardingStore := onboarding.NewStore(integrationPool)
 	rateLimitStore := ratelimit.NewPostgresStore(integrationPool)
 	messages := &messageCapture{}
-	confirmationMailer := onboarding.NewConfirmationMailer(messages, trustedOrigin)
+	confirmationMailer := emailconfirmation.NewConfirmationMailer(messages, trustedOrigin)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
-			auth.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, messages, trustedOrigin),
-			auth.NewPasswordRecoveryVerificationService(authStore, passwords)),
+			passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, messages, trustedOrigin),
+			passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)),
 		onboarding.NewHandler(
-			onboarding.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys),
-			onboarding.NewEmailConfirmationRequestService(onboardingStore, onboarding.NewConfirmationService(onboardingStore, confirmationMailer), rateLimitStore, rateKeys),
-			onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions),
+			registration.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys),
+			emailconfirmation.NewEmailConfirmationRequestService(onboardingStore, emailconfirmation.NewConfirmationService(onboardingStore, confirmationMailer), rateLimitStore, rateKeys),
+			emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions),
 		),
 		establishment.NewHandler(establishment.NewService(establishment.NewPostgresStore(integrationPool))),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,

@@ -1,6 +1,7 @@
-package auth
+package passwordrecovery
 
 import (
+	"barbershop-app/backend/internal/auth"
 	"bytes"
 	"context"
 	"errors"
@@ -50,7 +51,7 @@ func TestPasswordRecoveryVerificationHandlerRejectsUnknownFields(t *testing.T) {
 	}
 }
 
-func performRecoveryVerification(t *testing.T, verifier PasswordRecoveryVerifier, body string) *httptest.ResponseRecorder {
+func performRecoveryVerification(t *testing.T, verifier auth.PasswordRecoveryVerifier, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()
@@ -58,7 +59,7 @@ func performRecoveryVerification(t *testing.T, verifier PasswordRecoveryVerifier
 	context.Request = httptest.NewRequest(http.MethodPost, recoveryVerifyPathForTest, strings.NewReader(body))
 	context.Request.Header.Set("Content-Type", "application/json")
 	context.Set("request_id", "request-123")
-	NewHandler(nil, nil, nil, verifier).PostAuthPasswordRecoveryVerify(context)
+	auth.NewHandler(nil, nil, nil, verifier).PostAuthPasswordRecoveryVerify(context)
 	return recorder
 }
 

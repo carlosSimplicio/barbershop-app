@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/auth/password_recovery"
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/config"
 	"barbershop-app/backend/internal/entitlements"
@@ -20,6 +21,8 @@ import (
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/httpapi"
 	"barbershop-app/backend/internal/onboarding"
+	"barbershop-app/backend/internal/onboarding/email_confirmation"
+	"barbershop-app/backend/internal/onboarding/registration"
 	"barbershop-app/backend/internal/platform/database"
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
@@ -90,17 +93,17 @@ func run() error {
 			return err
 		}
 	}
-	confirmationMailer := onboarding.NewConfirmationMailer(emailSender, configuration.PublicAppURL)
-	confirmationService := onboarding.NewConfirmationService(onboardingStore, confirmationMailer)
-	confirmationRequests := onboarding.NewEmailConfirmationRequestService(onboardingStore, confirmationService, rateLimitStore, rateKeys)
-	registrations := onboarding.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys)
+	confirmationMailer := emailconfirmation.NewConfirmationMailer(emailSender, configuration.PublicAppURL)
+	confirmationService := emailconfirmation.NewConfirmationService(onboardingStore, confirmationMailer)
+	confirmationRequests := emailconfirmation.NewEmailConfirmationRequestService(onboardingStore, confirmationService, rateLimitStore, rateKeys)
+	registrations := registration.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys)
 	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
-	confirmationVerification := onboarding.NewEmailConfirmationVerificationService(onboardingStore, sessions)
+	confirmationVerification := emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions)
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
 	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, entitlements.NewService(entitlements.NewPostgresStore(pool)))
-	passwordRecovery := auth.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
-	passwordRecoveryVerification := auth.NewPasswordRecoveryVerificationService(authStore, passwords)
+	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
+	passwordRecoveryVerification := passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)
 	handler := httpapi.NewHandler(
 		health.NewHandler(pool),
 		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),

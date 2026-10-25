@@ -7,9 +7,22 @@ import (
 	"time"
 
 	db "barbershop-app/backend/db/generated"
+	"barbershop-app/backend/internal/auth/security"
 
 	"github.com/jackc/pgx/v5"
 )
+
+const passwordRecoveryLifetime = time.Hour
+
+func newPasswordRecoveryToken(now time.Time) (PasswordRecoveryToken, error) {
+	token, err := security.NewOpaqueToken()
+	if err != nil {
+		return PasswordRecoveryToken{}, err
+	}
+	return PasswordRecoveryToken{
+		Token: token, TokenHash: security.HashOpaqueToken(token), ExpiresAt: now.UTC().Add(passwordRecoveryLifetime),
+	}, nil
+}
 
 func (store *Store) FindEligibleOwnerForPasswordRecovery(ctx context.Context, normalizedEmail string) (PasswordRecoveryAccount, bool, error) {
 	row, err := store.queries.FindEligibleOwnerForPasswordRecovery(ctx, normalizedEmail)

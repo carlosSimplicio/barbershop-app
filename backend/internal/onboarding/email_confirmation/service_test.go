@@ -1,6 +1,7 @@
-package onboarding
+package emailconfirmation
 
 import (
+	"barbershop-app/backend/internal/onboarding"
 	"bytes"
 	"context"
 	"errors"
@@ -15,9 +16,9 @@ import (
 func TestNewEmailConfirmationCreatesOpaqueTokenValidForExactly24Hours(t *testing.T) {
 	now := time.Date(2026, time.October, 18, 12, 0, 0, 0, time.FixedZone("test", -3*60*60))
 
-	confirmation, err := NewEmailConfirmation(now)
+	confirmation, err := onboarding.NewEmailConfirmation(now)
 	if err != nil {
-		t.Fatalf("NewEmailConfirmation: %v", err)
+		t.Fatalf("onboarding.NewEmailConfirmation: %v", err)
 	}
 	if len(confirmation.Token) != 43 {
 		t.Fatalf("token length = %d, want 43 base64url characters", len(confirmation.Token))
@@ -102,9 +103,9 @@ type confirmationStoreStub struct {
 	replaced bool
 }
 
-func (stub *confirmationStoreStub) ReplaceEmailConfirmation(_ context.Context, userID string) (EmailConfirmation, bool, error) {
+func (stub *confirmationStoreStub) ReplaceEmailConfirmation(_ context.Context, userID string) (onboarding.EmailConfirmation, bool, error) {
 	stub.userID = userID
-	return EmailConfirmation{Token: "stored-token"}, stub.replaced, nil
+	return onboarding.EmailConfirmation{Token: "stored-token"}, stub.replaced, nil
 }
 
 type senderStub struct {

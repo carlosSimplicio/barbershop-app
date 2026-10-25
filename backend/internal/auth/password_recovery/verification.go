@@ -1,30 +1,24 @@
-package auth
+package passwordrecovery
 
 import (
 	"context"
-	"errors"
 
+	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
 )
 
-var ErrInvalidPasswordRecovery = errors.New("invalid password recovery token")
-
-type PasswordRecoveryVerificationStore interface {
-	ResetOwnerPassword(context.Context, []byte, string, PasswordManager) error
-}
-
 type PasswordRecoveryVerificationService struct {
-	store     PasswordRecoveryVerificationStore
-	passwords PasswordManager
+	store     auth.PasswordRecoveryVerificationStore
+	passwords auth.PasswordManager
 }
 
-func NewPasswordRecoveryVerificationService(store PasswordRecoveryVerificationStore, passwords PasswordManager) *PasswordRecoveryVerificationService {
+func NewPasswordRecoveryVerificationService(store auth.PasswordRecoveryVerificationStore, passwords auth.PasswordManager) *PasswordRecoveryVerificationService {
 	return &PasswordRecoveryVerificationService{store: store, passwords: passwords}
 }
 
 func (service *PasswordRecoveryVerificationService) Verify(ctx context.Context, token, newPassword string) error {
 	if !security.ValidateOpaqueToken(token) {
-		return ErrInvalidPasswordRecovery
+		return auth.ErrInvalidPasswordRecovery
 	}
 	if err := security.ValidatePassword(newPassword); err != nil {
 		return err

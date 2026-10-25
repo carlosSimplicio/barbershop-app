@@ -1,6 +1,7 @@
-package auth
+package passwordrecovery
 
 import (
+	"barbershop-app/backend/internal/auth"
 	"bytes"
 	"context"
 	"errors"
@@ -13,20 +14,20 @@ import (
 )
 
 type recoveryStoreStub struct {
-	account     PasswordRecoveryAccount
+	account     auth.PasswordRecoveryAccount
 	found       bool
-	token       PasswordRecoveryToken
+	token       auth.PasswordRecoveryToken
 	replaced    bool
 	lookedUp    bool
 	replacedFor string
 }
 
-func (stub *recoveryStoreStub) FindEligibleOwnerForPasswordRecovery(_ context.Context, _ string) (PasswordRecoveryAccount, bool, error) {
+func (stub *recoveryStoreStub) FindEligibleOwnerForPasswordRecovery(_ context.Context, _ string) (auth.PasswordRecoveryAccount, bool, error) {
 	stub.lookedUp = true
 	return stub.account, stub.found, nil
 }
 
-func (stub *recoveryStoreStub) ReplacePasswordRecoveryToken(_ context.Context, userID string) (PasswordRecoveryToken, bool, error) {
+func (stub *recoveryStoreStub) ReplacePasswordRecoveryToken(_ context.Context, userID string) (auth.PasswordRecoveryToken, bool, error) {
 	stub.replacedFor = userID
 	return stub.token, stub.replaced, nil
 }
@@ -90,7 +91,7 @@ func TestPasswordRecoveryRequestUsesSeparateIPAndNormalizedEmailRateKeys(t *test
 func TestPasswordRecoveryRequestRejectsInvalidEmailBeforeLookup(t *testing.T) {
 	store := &recoveryStoreStub{}
 	_, err := newTestRecoveryService(t, store, &recoverySenderStub{}).Request(context.Background(), "invalid", "192.0.2.1")
-	if !errors.Is(err, ErrInvalidEmail) || store.lookedUp {
+	if !errors.Is(err, auth.ErrInvalidEmail) || store.lookedUp {
 		t.Fatalf("error = %v, lookup = %t", err, store.lookedUp)
 	}
 }
@@ -107,8 +108,8 @@ func TestPasswordRecoveryRequestOnlySendsAfterEligibleReplacement(t *testing.T) 
 		{"eligible", true, true, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			store := &recoveryStoreStub{account: PasswordRecoveryAccount{UserID: "user-1", Email: "owner@example.test"}, found: test.found,
-				token: PasswordRecoveryToken{Token: "opaque-token"}, replaced: test.replaced}
+			store := &recoveryStoreStub{account: auth.PasswordRecoveryAccount{UserID: "user-1", Email: "owner@example.test"}, found: test.found,
+				token: auth.PasswordRecoveryToken{Token: "opaque-token"}, replaced: test.replaced}
 			sender := &recoverySenderStub{}
 			result, err := newTestRecoveryService(t, store, sender).Request(context.Background(), "OWNER@example.test", "192.0.2.1")
 			if err != nil || result.DeliveryFailed || (sender.message.To != "") != test.wantMail {
@@ -122,8 +123,8 @@ func TestPasswordRecoveryRequestOnlySendsAfterEligibleReplacement(t *testing.T) 
 }
 
 func TestPasswordRecoveryRequestMasksMailTransportFailure(t *testing.T) {
-	store := &recoveryStoreStub{account: PasswordRecoveryAccount{UserID: "user-1", Email: "owner@example.test"}, found: true,
-		token: PasswordRecoveryToken{Token: "opaque-token"}, replaced: true}
+	store := &recoveryStoreStub{account: auth.PasswordRecoveryAccount{UserID: "user-1", Email: "owner@example.test"}, found: true,
+		token: auth.PasswordRecoveryToken{Token: "opaque-token"}, replaced: true}
 	sender := &recoverySenderStub{err: errors.New("transport credentials and recipient")}
 	result, err := newTestRecoveryService(t, store, sender).Request(context.Background(), "owner@example.test", "192.0.2.1")
 	if err != nil || !result.DeliveryFailed {

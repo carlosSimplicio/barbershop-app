@@ -1,39 +1,29 @@
-package onboarding
+package emailconfirmation
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/onboarding"
 
 	"github.com/google/uuid"
 )
 
-var ErrInvalidEmailConfirmation = errors.New("invalid email confirmation")
-
-type EmailConfirmationVerificationStore interface {
-	ConfirmEmailAndCreateSession(context.Context, []byte, string, time.Time, time.Time, func(auth.User) error) error
-}
-
-type AuthenticationIssuer interface {
-	Issue(auth.User, string, time.Time) (auth.LoginResult, error)
-}
-
 type EmailConfirmationVerificationService struct {
-	store  EmailConfirmationVerificationStore
-	issuer AuthenticationIssuer
+	store  onboarding.EmailConfirmationVerificationStore
+	issuer onboarding.AuthenticationIssuer
 	now    func() time.Time
 }
 
-func NewEmailConfirmationVerificationService(store EmailConfirmationVerificationStore, issuer AuthenticationIssuer) *EmailConfirmationVerificationService {
+func NewEmailConfirmationVerificationService(store onboarding.EmailConfirmationVerificationStore, issuer onboarding.AuthenticationIssuer) *EmailConfirmationVerificationService {
 	return &EmailConfirmationVerificationService{store: store, issuer: issuer, now: time.Now}
 }
 
 func (service *EmailConfirmationVerificationService) Verify(ctx context.Context, token string) (auth.LoginResult, error) {
 	if !security.ValidateOpaqueToken(token) {
-		return auth.LoginResult{}, ErrInvalidEmailConfirmation
+		return auth.LoginResult{}, onboarding.ErrInvalidEmailConfirmation
 	}
 	sessionID := uuid.NewString()
 	now := service.now().UTC()

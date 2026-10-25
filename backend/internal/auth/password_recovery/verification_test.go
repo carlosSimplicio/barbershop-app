@@ -1,6 +1,7 @@
-package auth
+package passwordrecovery
 
 import (
+	"barbershop-app/backend/internal/auth"
 	"bytes"
 	"context"
 	"errors"
@@ -16,7 +17,7 @@ type recoveryVerificationStoreStub struct {
 	err      error
 }
 
-func (stub *recoveryVerificationStoreStub) ResetOwnerPassword(_ context.Context, hash []byte, password string, _ PasswordManager) error {
+func (stub *recoveryVerificationStoreStub) ResetOwnerPassword(_ context.Context, hash []byte, password string, _ auth.PasswordManager) error {
 	stub.called, stub.hash, stub.password = true, hash, password
 	return stub.err
 }
@@ -25,7 +26,7 @@ func TestPasswordRecoveryVerificationRejectsMalformedTokenBeforeStore(t *testing
 	store := &recoveryVerificationStoreStub{}
 	service := NewPasswordRecoveryVerificationService(store, nil)
 	err := service.Verify(context.Background(), "invalid-token", "nova-senha-segura")
-	if !errors.Is(err, ErrInvalidPasswordRecovery) || store.called {
+	if !errors.Is(err, auth.ErrInvalidPasswordRecovery) || store.called {
 		t.Fatalf("error = %v, store called = %t", err, store.called)
 	}
 }
