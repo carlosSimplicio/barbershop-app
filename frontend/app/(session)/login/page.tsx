@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { LoginForm } from "@/components/auth/login-form";
-import { SessionGuard } from "@/components/session/session-guard";
+import { LoginForm } from "@/components/auth/login-form/login-form";
+import { SessionGuard } from "@/components/session/session-guard/session-guard";
 
 import styles from "./page.module.css";
 

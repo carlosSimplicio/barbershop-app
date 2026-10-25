@@ -1,13 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
-import { AuthProvider } from "@/components/session/auth-provider";
+import { AuthProvider } from "@/components/session/auth-provider/auth-provider";
 
 import ProfessionalsPage from "./page";
 
 const replace = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
-vi.mock("@/components/professionals/professionals-list-panel", () => ({
+vi.mock("@/components/professionals/professionals-list-panel/professionals-list-panel", () => ({
   ProfessionalsListPanel: () => <div>Lista de profissionais</div>,
 }));
 

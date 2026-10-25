@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PasswordRecoveryBoundary } from "@/components/auth/password-recovery-boundary";
+import { PasswordRecoveryBoundary } from "@/components/auth/password-recovery-boundary/password-recovery-boundary";
 
 import styles from "../(session)/login/page.module.css";
 

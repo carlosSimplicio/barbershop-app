@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { EmailConfirmationBoundary } from "@/components/auth/email-confirmation-boundary";
+import { EmailConfirmationBoundary } from "@/components/auth/email-confirmation-boundary/email-confirmation-boundary";
 
 import styles from "./page.module.css";
 

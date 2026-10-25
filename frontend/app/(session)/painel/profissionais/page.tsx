@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import { SessionGuard } from "@/components/session/session-guard";
-import { OwnerPanelShell } from "@/components/session/owner-panel-shell";
-import { ProfessionalsWorkspace } from "@/components/professionals/professionals-workspace";
+import { SessionGuard } from "@/components/session/session-guard/session-guard";
+import { OwnerPanelShell } from "@/components/session/owner-panel-shell/owner-panel-shell";
+import { ProfessionalsWorkspace } from "@/components/professionals/professionals-workspace/professionals-workspace";
 
 import styles from "./page.module.css";
 

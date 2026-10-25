@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
-import { SessionGuard } from "@/components/session/session-guard";
-import { EstablishmentPanel } from "@/components/testing/establishment-panel";
-import { LogoutPanel } from "@/components/testing/logout-panel";
-import { PasswordChangePanel } from "@/components/testing/password-change-panel";
-import { SessionPanel } from "@/components/testing/session-panel";
+import { SessionGuard } from "@/components/session/session-guard/session-guard";
+import { EstablishmentPanel } from "@/components/testing/establishment-panel/establishment-panel";
+import { LogoutPanel } from "@/components/testing/logout-panel/logout-panel";
+import { PasswordChangePanel } from "@/components/testing/password-change-panel/password-change-panel";
+import { SessionPanel } from "@/components/testing/session-panel/session-panel";
 
 import styles from "./page.module.css";
 

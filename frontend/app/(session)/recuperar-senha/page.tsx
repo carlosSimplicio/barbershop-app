@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PasswordRecoveryRequestForm } from "@/components/auth/password-recovery-request-form";
-import { SessionGuard } from "@/components/session/session-guard";
+import { PasswordRecoveryRequestForm } from "@/components/auth/password-recovery-request-form/password-recovery-request-form";
+import { SessionGuard } from "@/components/session/session-guard/session-guard";
 
 import styles from "../login/page.module.css";
 

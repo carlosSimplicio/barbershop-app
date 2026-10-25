@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { AuthProvider } from "@/components/session/auth-provider";
+import { AuthProvider } from "@/components/session/auth-provider/auth-provider";
 import { configureApiSessionObserver } from "@/lib/api/client";
 
 import TestingPage from "./page";
