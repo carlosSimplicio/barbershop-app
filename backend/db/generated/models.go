@@ -62,6 +62,14 @@ type PasswordRecoveryToken struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
+type Professional struct {
+	UserID          pgtype.UUID        `json:"user_id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	Name            string             `json:"name"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type User struct {
 	ID                     pgtype.UUID        `json:"id"`
 	EstablishmentID        pgtype.UUID        `json:"establishment_id"`

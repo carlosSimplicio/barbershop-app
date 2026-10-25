@@ -242,6 +242,76 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals:
+    get:
+      operationId: getProfessionals
+      summary: Lista profissionais do estabelecimento do proprietário
+      tags: [professionals]
+      security:
+        - accessCookie: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
+      responses:
+        "200":
+          description: Página de profissionais do estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      operationId: postProfessionals
+      summary: Cadastra um profissional no estabelecimento do proprietário
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfessionalRequest"
+      responses:
+        "201":
+          description: Profissional cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -271,6 +341,54 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    CreateProfessionalRequest:
+      type: object
+      additionalProperties: false
+      required: [name, email, temporary_password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        temporary_password:
+          type: string
+          minLength: 8
+          maxLength: 32
+    ProfessionalResponse:
+      type: object
+      required: [id, name, email, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        active:
+          type: boolean
+    ProfessionalListResponse:
+      type: object
+      required: [items, limit, offset, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfessionalResponse"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        has_more:
+          type: boolean
     PasswordRecoveryRequest:
       type: object
       additionalProperties: false

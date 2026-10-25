@@ -12,6 +12,7 @@ export {
   PasswordField,
   type PasswordFieldProps,
 } from "./password-field/password-field";
+export { RecordList, type RecordListProps } from "./record-list/record-list";
 export { Select, type SelectProps } from "./select/select";
 export {
   SelectField,
