@@ -90,6 +90,7 @@
 - Para mudanças destrutivas, use etapas expansivas e contrativas em releases separadas.
 - A migration `00002_owner_onboarding.sql` exige que `establishments` esteja vazia, pois os registros mínimos anteriores não possuem nome, slug ou fuso que possam ser preenchidos sem inventar dados. Se a precondição falhar, interrompa o deploy e trate explicitamente os registros antes de reaplicar; não os apague nem atribua valores fictícios.
 - A migration `00003_access_only_sessions.sql` remove `refresh_tokens` e seus hashes. A aplicação existe somente em ambiente local nesta mudança; pare o backend antigo antes de aplicar a migration. O `Down` recria a tabela vazia e não recupera os hashes descartados. Antes de qualquer release em produção, reavalie a estratégia de migração e a ausência de backup.
+- A migration `00006_establishment_settings.sql` preserva os estabelecimentos existentes e cria os novos campos como opcionais. Seu `Down` recusa rollback enquanto houver dados de configuração, para evitar apagá-los silenciosamente.
 
 ## Persistência
 

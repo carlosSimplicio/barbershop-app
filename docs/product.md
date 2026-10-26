@@ -120,9 +120,9 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 
 O proprietário pode configurar por estabelecimento:
 
-- Antecedência mínima para o cliente agendar.
+- Antecedência mínima em minutos para o cliente agendar.
 - Quantos dias no futuro o cliente pode agendar.
-- Prazo mínimo para o cliente cancelar ou reagendar.
+- Prazo mínimo, em minutos, para o cliente cancelar ou reagendar.
 
 As três configurações são opcionais; valor ausente/`NULL` significa sem restrição. Não use zero quando ele for ambíguo. Elas se aplicam apenas ao cliente. Proprietários e profissionais podem ajustar a agenda a qualquer momento, respeitando jornada, bloqueios e conflitos.
 
@@ -238,7 +238,8 @@ As três configurações são opcionais; valor ausente/`NULL` significa sem rest
 
 - A home deslogada da plataforma apresenta sua proposta de valor em português e oferece caminhos para cadastro e login. O formulário de cadastro, o estado de confirmação pendente, o login, a solicitação de recuperação e a redefinição de senha por link estão disponíveis. Depois da confirmação ou login, o proprietário chega a `/painel/profissionais`; o profissional, inclusive com senha temporária pendente de troca, chega a `/testes`. O painel permite cadastrar profissionais com nome, e-mail e senha temporária e mostra a lista paginada do estabelecimento com carregamento, estado vazio e erro. Quando o cadastro é bem-sucedido, a lista é atualizada e a senha é removida do formulário; quando o trial expirou, a interface explica que a lista permanece consultável e novos cadastros são bloqueados. A navegação do painel mantém `/testes` acessível ao proprietário para diagnóstico de sessão e estabelecimento, troca de senha temporária quando exigida e encerramento da sessão.
 - A página pública sempre exibe nome e logo do estabelecimento; ambos são obrigatórios.
-- Descrição curta, endereço, telefone de contato e links de redes sociais são opcionais e aparecem somente quando preenchidos.
+- Descrição de até 500 caracteres, endereço de até 500 caracteres, telefone de contato brasileiro normalizado e até cinco links de redes sociais são opcionais e aparecem somente quando preenchidos.
+- Cada link de rede social contém rótulo de até 60 caracteres e URL HTTPS de até 2.048 caracteres, sem credenciais na URL.
 - Não renderize seções vazias ou placeholders para informações públicas opcionais ausentes.
 - Use o nome do estabelecimento como base para o texto alternativo do logo quando não houver descrição mais adequada.
 - Página pública e agenda operacional são mobile-first.

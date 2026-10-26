@@ -102,3 +102,39 @@ SELECT e.id, e.name, e.slug, e.time_zone, t.starts_at, t.ends_at
 FROM establishments AS e
 LEFT JOIN establishment_trials AS t ON t.establishment_id = e.id
 WHERE e.id = $1;
+
+-- name: GetEstablishmentPublicSettings :one
+SELECT
+    id,
+    description,
+    address,
+    contact_phone,
+    minimum_booking_notice_minutes,
+    booking_horizon_days,
+    customer_change_deadline_minutes
+FROM establishments
+WHERE id = $1;
+
+-- name: ListEstablishmentSocialLinks :many
+SELECT establishment_id, position, label, url
+FROM establishment_social_links
+WHERE establishment_id = $1
+ORDER BY position;
+
+-- name: UpdateEstablishmentPublicSettings :execrows
+UPDATE establishments
+SET description = sqlc.narg('description'),
+    address = sqlc.narg('address'),
+    contact_phone = sqlc.narg('contact_phone'),
+    minimum_booking_notice_minutes = sqlc.narg('minimum_booking_notice_minutes'),
+    booking_horizon_days = sqlc.narg('booking_horizon_days'),
+    customer_change_deadline_minutes = sqlc.narg('customer_change_deadline_minutes')
+WHERE id = sqlc.arg('establishment_id');
+
+-- name: DeleteEstablishmentSocialLinks :exec
+DELETE FROM establishment_social_links
+WHERE establishment_id = $1;
+
+-- name: CreateEstablishmentSocialLink :exec
+INSERT INTO establishment_social_links (establishment_id, position, label, url)
+VALUES ($1, $2, $3, $4);

@@ -36,11 +36,24 @@ type EmailConfirmation struct {
 }
 
 type Establishment struct {
-	ID        pgtype.UUID        `json:"id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	Name      string             `json:"name"`
-	Slug      string             `json:"slug"`
-	TimeZone  string             `json:"time_zone"`
+	ID                            pgtype.UUID        `json:"id"`
+	CreatedAt                     pgtype.Timestamptz `json:"created_at"`
+	Name                          string             `json:"name"`
+	Slug                          string             `json:"slug"`
+	TimeZone                      string             `json:"time_zone"`
+	Description                   pgtype.Text        `json:"description"`
+	Address                       pgtype.Text        `json:"address"`
+	ContactPhone                  pgtype.Text        `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4        `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4        `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4        `json:"customer_change_deadline_minutes"`
+}
+
+type EstablishmentSocialLink struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Position        int32       `json:"position"`
+	Label           string      `json:"label"`
+	Url             string      `json:"url"`
 }
 
 type EstablishmentTrial struct {

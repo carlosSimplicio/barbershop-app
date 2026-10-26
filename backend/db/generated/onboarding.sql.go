@@ -86,6 +86,28 @@ func (q *Queries) CreateEmailConfirmation(ctx context.Context, arg CreateEmailCo
 	return i, err
 }
 
+const createEstablishmentSocialLink = `-- name: CreateEstablishmentSocialLink :exec
+INSERT INTO establishment_social_links (establishment_id, position, label, url)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateEstablishmentSocialLinkParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Position        int32       `json:"position"`
+	Label           string      `json:"label"`
+	Url             string      `json:"url"`
+}
+
+func (q *Queries) CreateEstablishmentSocialLink(ctx context.Context, arg CreateEstablishmentSocialLinkParams) error {
+	_, err := q.db.Exec(ctx, createEstablishmentSocialLink,
+		arg.EstablishmentID,
+		arg.Position,
+		arg.Label,
+		arg.Url,
+	)
+	return err
+}
+
 const createEstablishmentTrial = `-- name: CreateEstablishmentTrial :one
 INSERT INTO establishment_trials (owner_user_id, establishment_id, starts_at, ends_at, created_at)
 SELECT
@@ -220,6 +242,16 @@ func (q *Queries) CreateRegistrationOwner(ctx context.Context, arg CreateRegistr
 	return id, err
 }
 
+const deleteEstablishmentSocialLinks = `-- name: DeleteEstablishmentSocialLinks :exec
+DELETE FROM establishment_social_links
+WHERE establishment_id = $1
+`
+
+func (q *Queries) DeleteEstablishmentSocialLinks(ctx context.Context, establishmentID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEstablishmentSocialLinks, establishmentID)
+	return err
+}
+
 const findUnconfirmedOwnerByNormalizedEmail = `-- name: FindUnconfirmedOwnerByNormalizedEmail :one
 SELECT id, email
 FROM users
@@ -302,6 +334,44 @@ func (q *Queries) GetEmailConfirmationForUpdate(ctx context.Context, tokenHash [
 	return i, err
 }
 
+const getEstablishmentPublicSettings = `-- name: GetEstablishmentPublicSettings :one
+SELECT
+    id,
+    description,
+    address,
+    contact_phone,
+    minimum_booking_notice_minutes,
+    booking_horizon_days,
+    customer_change_deadline_minutes
+FROM establishments
+WHERE id = $1
+`
+
+type GetEstablishmentPublicSettingsRow struct {
+	ID                            pgtype.UUID `json:"id"`
+	Description                   pgtype.Text `json:"description"`
+	Address                       pgtype.Text `json:"address"`
+	ContactPhone                  pgtype.Text `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4 `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4 `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4 `json:"customer_change_deadline_minutes"`
+}
+
+func (q *Queries) GetEstablishmentPublicSettings(ctx context.Context, id pgtype.UUID) (GetEstablishmentPublicSettingsRow, error) {
+	row := q.db.QueryRow(ctx, getEstablishmentPublicSettings, id)
+	var i GetEstablishmentPublicSettingsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Description,
+		&i.Address,
+		&i.ContactPhone,
+		&i.MinimumBookingNoticeMinutes,
+		&i.BookingHorizonDays,
+		&i.CustomerChangeDeadlineMinutes,
+	)
+	return i, err
+}
+
 const getEstablishmentWithTrial = `-- name: GetEstablishmentWithTrial :one
 SELECT e.id, e.name, e.slug, e.time_zone, t.starts_at, t.ends_at
 FROM establishments AS e
@@ -350,6 +420,38 @@ func (q *Queries) InvalidateActiveEmailConfirmations(ctx context.Context, arg In
 	return err
 }
 
+const listEstablishmentSocialLinks = `-- name: ListEstablishmentSocialLinks :many
+SELECT establishment_id, position, label, url
+FROM establishment_social_links
+WHERE establishment_id = $1
+ORDER BY position
+`
+
+func (q *Queries) ListEstablishmentSocialLinks(ctx context.Context, establishmentID pgtype.UUID) ([]EstablishmentSocialLink, error) {
+	rows, err := q.db.Query(ctx, listEstablishmentSocialLinks, establishmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EstablishmentSocialLink{}
+	for rows.Next() {
+		var i EstablishmentSocialLink
+		if err := rows.Scan(
+			&i.EstablishmentID,
+			&i.Position,
+			&i.Label,
+			&i.Url,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockUserForEmailConfirmation = `-- name: LockUserForEmailConfirmation :one
 SELECT id
 FROM users
@@ -365,4 +467,41 @@ func (q *Queries) LockUserForEmailConfirmation(ctx context.Context, id pgtype.UU
 	var id_2 pgtype.UUID
 	err := row.Scan(&id_2)
 	return id_2, err
+}
+
+const updateEstablishmentPublicSettings = `-- name: UpdateEstablishmentPublicSettings :execrows
+UPDATE establishments
+SET description = $1,
+    address = $2,
+    contact_phone = $3,
+    minimum_booking_notice_minutes = $4,
+    booking_horizon_days = $5,
+    customer_change_deadline_minutes = $6
+WHERE id = $7
+`
+
+type UpdateEstablishmentPublicSettingsParams struct {
+	Description                   pgtype.Text `json:"description"`
+	Address                       pgtype.Text `json:"address"`
+	ContactPhone                  pgtype.Text `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4 `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4 `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4 `json:"customer_change_deadline_minutes"`
+	EstablishmentID               pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) UpdateEstablishmentPublicSettings(ctx context.Context, arg UpdateEstablishmentPublicSettingsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateEstablishmentPublicSettings,
+		arg.Description,
+		arg.Address,
+		arg.ContactPhone,
+		arg.MinimumBookingNoticeMinutes,
+		arg.BookingHorizonDays,
+		arg.CustomerChangeDeadlineMinutes,
+		arg.EstablishmentID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

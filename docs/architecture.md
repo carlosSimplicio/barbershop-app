@@ -52,6 +52,7 @@
 - Escreva SQL nos arquivos de entrada do `sqlc` e regenere o código Go após alterações.
 - Não introduza ORM ou outro driver PostgreSQL em paralelo.
 - A migration `00005_professionals.sql` cria `professionals` como perfil do usuário profissional. `user_id` é a identidade única; a chave estrangeira composta `(user_id, establishment_id)` impede associar o perfil a outro estabelecimento. As queries para inserir usuário, credencial e perfil e para listar por estabelecimento com paginação já existem; cadastro e listagem estão disponíveis pela API e pela página do painel.
+- A migration `00006_establishment_settings.sql` adiciona descrição, endereço, telefone de contato e limites opcionais ao estabelecimento, além de `establishment_social_links`, ordenada por `position` e pertencente ao tenant. Os limites são inteiros; campo ausente significa sem restrição. Os fluxos de leitura e alteração pela API permanecem pendentes. Valide no backend os limites de texto, links, URLs e valores dos limites; não os replique como regras de negócio em `CHECK` constraints.
 - Modele a oferta de serviços como uma associação explícita entre profissional e serviço, limitada ao mesmo estabelecimento.
 - Mantenha preço e duração no serviço, não na associação com o profissional; somente a comissão pode possuir uma regra específica para esse par.
 - Persista snapshots de preço e duração no agendamento; alterações posteriores no catálogo não recalculam agendamentos existentes.
