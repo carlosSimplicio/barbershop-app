@@ -452,6 +452,25 @@ func (q *Queries) ListEstablishmentSocialLinks(ctx context.Context, establishmen
 	return items, nil
 }
 
+const lockEstablishmentOperationalWrite = `-- name: LockEstablishmentOperationalWrite :one
+SELECT time_zone, operational_data_started_at
+FROM establishments
+WHERE id = $1
+FOR UPDATE
+`
+
+type LockEstablishmentOperationalWriteRow struct {
+	TimeZone                 string             `json:"time_zone"`
+	OperationalDataStartedAt pgtype.Timestamptz `json:"operational_data_started_at"`
+}
+
+func (q *Queries) LockEstablishmentOperationalWrite(ctx context.Context, id pgtype.UUID) (LockEstablishmentOperationalWriteRow, error) {
+	row := q.db.QueryRow(ctx, lockEstablishmentOperationalWrite, id)
+	var i LockEstablishmentOperationalWriteRow
+	err := row.Scan(&i.TimeZone, &i.OperationalDataStartedAt)
+	return i, err
+}
+
 const lockUserForEmailConfirmation = `-- name: LockUserForEmailConfirmation :one
 SELECT id
 FROM users
@@ -467,6 +486,25 @@ func (q *Queries) LockUserForEmailConfirmation(ctx context.Context, id pgtype.UU
 	var id_2 pgtype.UUID
 	err := row.Scan(&id_2)
 	return id_2, err
+}
+
+const markEstablishmentOperationalDataStarted = `-- name: MarkEstablishmentOperationalDataStarted :execrows
+UPDATE establishments
+SET operational_data_started_at = COALESCE(operational_data_started_at, $2, statement_timestamp())
+WHERE id = $1
+`
+
+type MarkEstablishmentOperationalDataStartedParams struct {
+	ID                       pgtype.UUID        `json:"id"`
+	OperationalDataStartedAt pgtype.Timestamptz `json:"operational_data_started_at"`
+}
+
+func (q *Queries) MarkEstablishmentOperationalDataStarted(ctx context.Context, arg MarkEstablishmentOperationalDataStartedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markEstablishmentOperationalDataStarted, arg.ID, arg.OperationalDataStartedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateEstablishmentPublicSettings = `-- name: UpdateEstablishmentPublicSettings :execrows

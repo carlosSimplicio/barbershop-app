@@ -47,6 +47,7 @@ type Establishment struct {
 	MinimumBookingNoticeMinutes   pgtype.Int4        `json:"minimum_booking_notice_minutes"`
 	BookingHorizonDays            pgtype.Int4        `json:"booking_horizon_days"`
 	CustomerChangeDeadlineMinutes pgtype.Int4        `json:"customer_change_deadline_minutes"`
+	OperationalDataStartedAt      pgtype.Timestamptz `json:"operational_data_started_at"`
 }
 
 type EstablishmentSocialLink struct {

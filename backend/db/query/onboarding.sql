@@ -115,6 +115,17 @@ SELECT
 FROM establishments
 WHERE id = $1;
 
+-- name: LockEstablishmentOperationalWrite :one
+SELECT time_zone, operational_data_started_at
+FROM establishments
+WHERE id = $1
+FOR UPDATE;
+
+-- name: MarkEstablishmentOperationalDataStarted :execrows
+UPDATE establishments
+SET operational_data_started_at = COALESCE(operational_data_started_at, $2, statement_timestamp())
+WHERE id = $1;
+
 -- name: ListEstablishmentSocialLinks :many
 SELECT establishment_id, position, label, url
 FROM establishment_social_links
