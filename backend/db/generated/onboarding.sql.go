@@ -86,6 +86,52 @@ func (q *Queries) CreateEmailConfirmation(ctx context.Context, arg CreateEmailCo
 	return i, err
 }
 
+const createEstablishmentLogo = `-- name: CreateEstablishmentLogo :one
+INSERT INTO establishment_logos (
+    establishment_id, object_key, content_type, byte_size, width, height, content_sha256
+)
+VALUES (
+    $1, $2, $3,
+    $4, $5, $6, $7
+)
+RETURNING id, establishment_id, object_key, content_type, byte_size, width, height, content_sha256, created_at
+`
+
+type CreateEstablishmentLogoParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	ObjectKey       string      `json:"object_key"`
+	ContentType     string      `json:"content_type"`
+	ByteSize        int64       `json:"byte_size"`
+	Width           int32       `json:"width"`
+	Height          int32       `json:"height"`
+	ContentSha256   []byte      `json:"content_sha256"`
+}
+
+func (q *Queries) CreateEstablishmentLogo(ctx context.Context, arg CreateEstablishmentLogoParams) (EstablishmentLogo, error) {
+	row := q.db.QueryRow(ctx, createEstablishmentLogo,
+		arg.EstablishmentID,
+		arg.ObjectKey,
+		arg.ContentType,
+		arg.ByteSize,
+		arg.Width,
+		arg.Height,
+		arg.ContentSha256,
+	)
+	var i EstablishmentLogo
+	err := row.Scan(
+		&i.ID,
+		&i.EstablishmentID,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.ByteSize,
+		&i.Width,
+		&i.Height,
+		&i.ContentSha256,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createEstablishmentSocialLink = `-- name: CreateEstablishmentSocialLink :exec
 INSERT INTO establishment_social_links (establishment_id, position, label, url)
 VALUES ($1, $2, $3, $4)
@@ -270,6 +316,33 @@ func (q *Queries) FindUnconfirmedOwnerByNormalizedEmail(ctx context.Context, nor
 	row := q.db.QueryRow(ctx, findUnconfirmedOwnerByNormalizedEmail, normalizedEmail)
 	var i FindUnconfirmedOwnerByNormalizedEmailRow
 	err := row.Scan(&i.ID, &i.Email)
+	return i, err
+}
+
+const getCurrentEstablishmentLogo = `-- name: GetCurrentEstablishmentLogo :one
+SELECT
+    l.id, l.establishment_id, l.object_key, l.content_type, l.byte_size,
+    l.width, l.height, l.content_sha256, l.created_at
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1
+`
+
+func (q *Queries) GetCurrentEstablishmentLogo(ctx context.Context, id pgtype.UUID) (EstablishmentLogo, error) {
+	row := q.db.QueryRow(ctx, getCurrentEstablishmentLogo, id)
+	var i EstablishmentLogo
+	err := row.Scan(
+		&i.ID,
+		&i.EstablishmentID,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.ByteSize,
+		&i.Width,
+		&i.Height,
+		&i.ContentSha256,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -501,6 +574,26 @@ type MarkEstablishmentOperationalDataStartedParams struct {
 
 func (q *Queries) MarkEstablishmentOperationalDataStarted(ctx context.Context, arg MarkEstablishmentOperationalDataStartedParams) (int64, error) {
 	result, err := q.db.Exec(ctx, markEstablishmentOperationalDataStarted, arg.ID, arg.OperationalDataStartedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setCurrentEstablishmentLogo = `-- name: SetCurrentEstablishmentLogo :execrows
+UPDATE establishments
+SET logo_id = $1
+WHERE id = $2
+  AND $1::uuid IS NOT NULL
+`
+
+type SetCurrentEstablishmentLogoParams struct {
+	LogoID          pgtype.UUID `json:"logo_id"`
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) SetCurrentEstablishmentLogo(ctx context.Context, arg SetCurrentEstablishmentLogoParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setCurrentEstablishmentLogo, arg.LogoID, arg.EstablishmentID)
 	if err != nil {
 		return 0, err
 	}

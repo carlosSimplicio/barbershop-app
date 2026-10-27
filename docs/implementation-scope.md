@@ -292,7 +292,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Aceitar somente PNG, JPEG e WebP com até 2 MB; rejeitar SVG.
 - [ ] Validar assinatura e decodificação do arquivo, não apenas extensão ou `Content-Type`.
 - [ ] Gerar nome interno não previsível e impedir que entrada do cliente determine caminhos.
-- [ ] Persistir metadados e referência relativa no PostgreSQL.
+- [x] Persistir metadados e chave lógica estável no PostgreSQL, com associação do logo atual estruturalmente limitada ao mesmo estabelecimento.
 - [ ] Armazenar arquivos em volume local persistente próprio, preservado em deploys.
 - [ ] Servir o logo de modo seguro e com cache apropriado, sem expor o caminho interno.
 

@@ -48,6 +48,19 @@ type Establishment struct {
 	BookingHorizonDays            pgtype.Int4        `json:"booking_horizon_days"`
 	CustomerChangeDeadlineMinutes pgtype.Int4        `json:"customer_change_deadline_minutes"`
 	OperationalDataStartedAt      pgtype.Timestamptz `json:"operational_data_started_at"`
+	LogoID                        pgtype.UUID        `json:"logo_id"`
+}
+
+type EstablishmentLogo struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	ObjectKey       string             `json:"object_key"`
+	ContentType     string             `json:"content_type"`
+	ByteSize        int64              `json:"byte_size"`
+	Width           int32              `json:"width"`
+	Height          int32              `json:"height"`
+	ContentSha256   []byte             `json:"content_sha256"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type EstablishmentSocialLink struct {

@@ -149,3 +149,28 @@ WHERE establishment_id = $1;
 -- name: CreateEstablishmentSocialLink :exec
 INSERT INTO establishment_social_links (establishment_id, position, label, url)
 VALUES ($1, $2, $3, $4);
+
+-- name: CreateEstablishmentLogo :one
+INSERT INTO establishment_logos (
+    establishment_id, object_key, content_type, byte_size, width, height, content_sha256
+)
+VALUES (
+    sqlc.arg('establishment_id'), sqlc.arg('object_key'), sqlc.arg('content_type'),
+    sqlc.arg('byte_size'), sqlc.arg('width'), sqlc.arg('height'), sqlc.arg('content_sha256')
+)
+RETURNING id, establishment_id, object_key, content_type, byte_size, width, height, content_sha256, created_at;
+
+-- name: SetCurrentEstablishmentLogo :execrows
+UPDATE establishments
+SET logo_id = sqlc.arg('logo_id')
+WHERE id = sqlc.arg('establishment_id')
+  AND sqlc.arg('logo_id')::uuid IS NOT NULL;
+
+-- name: GetCurrentEstablishmentLogo :one
+SELECT
+    l.id, l.establishment_id, l.object_key, l.content_type, l.byte_size,
+    l.width, l.height, l.content_sha256, l.created_at
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1;

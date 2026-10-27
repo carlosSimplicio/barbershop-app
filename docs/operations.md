@@ -92,6 +92,7 @@
 - A migration `00003_access_only_sessions.sql` remove `refresh_tokens` e seus hashes. A aplicação existe somente em ambiente local nesta mudança; pare o backend antigo antes de aplicar a migration. O `Down` recria a tabela vazia e não recupera os hashes descartados. Antes de qualquer release em produção, reavalie a estratégia de migração e a ausência de backup.
 - A migration `00006_establishment_settings.sql` preserva os estabelecimentos existentes e cria os novos campos como opcionais. Seu `Down` recusa rollback enquanto houver dados de configuração, para evitar apagá-los silenciosamente.
 - A migration `00007_establishment_operational_lock.sql` preserva estabelecimentos existentes e inicia o marcador como nulo. Seu `Down` recusa rollback enquanto houver marcador, para não reabilitar alteração de fuso após a criação de dados operacionais.
+- A migration `00008_establishment_logos.sql` preserva estabelecimentos existentes e inicia `logo_id` como nulo. Seu `Down` recusa rollback quando existe metadado de logo, pois o volume local não possui backup no escopo inicial e apagar as referências do banco poderia deixar arquivos órfãos.
 
 ## Persistência
 
