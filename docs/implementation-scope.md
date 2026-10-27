@@ -289,8 +289,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 8. Logos e arquivos públicos
 
 - [ ] Implementar upload de logo controlado pelo backend.
-- [ ] Aceitar somente PNG, JPEG e WebP com até 2 MB; rejeitar SVG.
-- [ ] Validar assinatura e decodificação do arquivo, não apenas extensão ou `Content-Type`.
+- [x] Validar conteúdo PNG, JPEG ou WebP, com até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels; rejeitar SVG e conteúdo truncado ou incompatível.
+- [x] Derivar tipo, tamanho, dimensões e hash do conteúdo decodificado, sem confiar em extensão ou `Content-Type` informado pelo cliente.
 - [ ] Gerar nome interno não previsível e impedir que entrada do cliente determine caminhos.
 - [x] Persistir metadados e chave lógica estável no PostgreSQL, com associação do logo atual estruturalmente limitada ao mesmo estabelecimento.
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.

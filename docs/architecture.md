@@ -70,8 +70,9 @@
 
 - Armazene logos em um volume persistente local da VPS no MVP, montado em `LOGO_STORAGE_DIR` (`/var/lib/barbershop/logos` no Compose).
 - O backend controla upload, validação e associação do arquivo ao estabelecimento.
-- Aceite somente PNG, JPEG e WebP com tamanho máximo de 2 MB; rejeite SVG no MVP.
-- Verifique assinatura e decodificação do conteúdo real do arquivo, não apenas extensão ou `Content-Type` informado pelo cliente.
+- Aceite somente PNG, JPEG e WebP com tamanho máximo de 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels; rejeite SVG no MVP.
+- `establishment.ValidateLogo` limita a leitura a 2.097.153 bytes para detectar excesso, identifica o formato pelo conteúdo, inspeciona as dimensões antes da decodificação completa e recusa conteúdo truncado ou incompatível. Tamanho, tipo MIME, dimensões e SHA-256 retornados são derivados dos bytes validados; nome original e `Content-Type` do cliente não determinam os metadados.
+- O decoder WebP usa `golang.org/x/image/webp` na versão fixa `v0.47.0`, pois o pacote padrão de imagens do Go não fornece decoder WebP. PNG e JPEG usam os decoders da biblioteca padrão. A dependência é somente de decodificação e tem licença BSD-3-Clause.
 - Gere nomes internos não previsíveis; nunca use diretamente o nome enviado pelo usuário como caminho.
 - Armazene no PostgreSQL somente metadados e uma chave lógica estável gerada pela aplicação. No storage local ela identifica o objeto relativamente à raiz configurada; em S3 poderá ser usada como object key. Não persista caminhos absolutos da VPS, nome de bucket nem URLs de provedor ou URLs assinadas.
 - Não permita que caminhos fornecidos pelo cliente determinem onde um arquivo será lido ou gravado.
