@@ -6,7 +6,9 @@ import { registerOwner } from "@/lib/auth/registration-api/registration-api";
 
 import { RegistrationForm } from "./registration-form";
 
-vi.mock("@/lib/auth/registration-api/registration-api", () => ({ registerOwner: vi.fn() }));
+vi.mock("@/lib/auth/registration-api/registration-api", () => ({
+  registerOwner: vi.fn(),
+}));
 
 beforeEach(() => vi.mocked(registerOwner).mockReset());
 afterEach(() => vi.restoreAllMocks());

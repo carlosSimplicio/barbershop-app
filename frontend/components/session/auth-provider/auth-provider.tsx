@@ -11,7 +11,10 @@ import {
 import type { ReactNode } from "react";
 
 import { configureApiSessionObserver, type ApiResult } from "@/lib/api/client";
-import { getCurrentSession, type AuthPrincipal } from "@/lib/auth/session-api/session-api";
+import {
+  getCurrentSession,
+  type AuthPrincipal,
+} from "@/lib/auth/session-api/session-api";
 
 export type AuthState =
   | { status: "loading" | "anonymous" | "unavailable" }
