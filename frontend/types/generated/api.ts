@@ -195,6 +195,23 @@ export interface paths {
         patch: operations["patchEstablishmentSettings"];
         trace?: never;
     };
+    "/establishment/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Envia ou substitui o logo do estabelecimento */
+        put: operations["putEstablishmentLogo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals": {
         parameters: {
             query?: never;
@@ -350,6 +367,13 @@ export interface components {
             booking_horizon_days?: number | null;
             /** Format: int32 */
             customer_change_deadline_minutes?: number | null;
+        };
+        EstablishmentLogoUploadRequest: {
+            /**
+             * Format: binary
+             * @description Imagem PNG, JPEG ou WebP de até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels.
+             */
+            file: string;
         };
         EstablishmentSocialLinkInput: {
             label: string;
@@ -764,6 +788,42 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    putEstablishmentLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description O corpo multipart aceita no máximo 2.162.688 bytes, incluindo até 65.536 bytes de envelope além do arquivo. */
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["EstablishmentLogoUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Logo associado ao estabelecimento */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Arquivo ou corpo multipart acima do limite */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             500: components["responses"]["InternalServerError"];
         };
     };

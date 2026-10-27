@@ -245,6 +245,7 @@ O proprietário pode atualizar esses limites e os dados opcionais do perfil por 
 - Cada link de rede social contém rótulo de até 60 caracteres e URL HTTPS de até 2.048 caracteres, sem credenciais na URL.
 - Descrição, endereço e rótulos de links são apresentados como texto simples; a interface não interpreta HTML fornecido pelo proprietário.
 - O nome do estabelecimento é obrigatório e tem até 120 caracteres; descrição e endereço aceitam texto simples de até 500 caracteres. O telefone de contato brasileiro é normalizado pelo backend para incluir o código do país e os dígitos informados.
+- O proprietário envia ou substitui o logo por `PUT /api/v1/establishment/logo`. O envio só conclui o preenchimento obrigatório quando nome e slug utilizável já estão presentes; um logo associado não pode ser removido pelas configurações.
 - O fuso horário usa um identificador IANA. O proprietário pode alterá-lo enquanto não houver dado operacional registrado; slug e marcador operacional não são editáveis pelas configurações.
 - Não renderize seções vazias ou placeholders para informações públicas opcionais ausentes.
 - Use o nome do estabelecimento como base para o texto alternativo do logo quando não houver descrição mais adequada.

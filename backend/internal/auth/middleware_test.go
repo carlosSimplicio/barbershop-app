@@ -106,6 +106,15 @@ func TestMiddlewareRequiresMatchingSignedCSRFTokenForEstablishmentSettingsPatch(
 	}
 }
 
+func TestMiddlewareRequiresMatchingSignedCSRFTokenForEstablishmentLogoUpload(t *testing.T) {
+	middleware := testMiddleware(t, validSessionUser(), security.AccessClaims{})
+	headers := map[string]string{"Origin": "https://localhost:8443", "X-CSRF-Token": "different"}
+	status := runMiddlewareRequest(t, middleware, http.MethodPut, "/api/v1/establishment/logo", []*http.Cookie{{Name: csrfCookieName, Value: "cookie"}}, headers)
+	if status != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", status)
+	}
+}
+
 func TestMiddlewareDerivesTenantAndRoleFromCurrentUser(t *testing.T) {
 	user := validSessionUser()
 	claims := security.AccessClaims{

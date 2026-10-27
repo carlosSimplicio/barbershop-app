@@ -291,10 +291,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 8. Logos e arquivos públicos
 
-- [ ] Implementar upload de logo controlado pelo backend.
+- [x] Implementar upload e substituição de logo controlados pelo backend por `PUT /api/v1/establishment/logo`, com tenant da sessão, CSRF, entitlement de escrita, limite multipart e associação transacional; upload concluído pode completar os obrigatórios sem permitir remoção.
 - [x] Validar conteúdo PNG, JPEG ou WebP, com até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels; rejeitar SVG e conteúdo truncado ou incompatível.
 - [x] Derivar tipo, tamanho, dimensões e hash do conteúdo decodificado, sem confiar em extensão ou `Content-Type` informado pelo cliente.
-- [ ] Gerar nome interno não previsível e impedir que entrada do cliente determine caminhos.
+- [x] Gerar nome interno UUID v4 não previsível e impedir que nome, extensão e cabeçalhos do cliente determinem chave ou caminho.
 - [x] Persistir metadados e chave lógica estável no PostgreSQL, com associação do logo atual estruturalmente limitada ao mesmo estabelecimento.
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
 - [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.

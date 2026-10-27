@@ -287,6 +287,39 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /establishment/logo:
+    put:
+      operationId: putEstablishmentLogo
+      summary: Envia ou substitui o logo do estabelecimento
+      tags: [establishment]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        description: O corpo multipart aceita no máximo 2.162.688 bytes, incluindo até 65.536 bytes de envelope além do arquivo.
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/EstablishmentLogoUploadRequest"
+      responses:
+        "204":
+          description: Logo associado ao estabelecimento
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          description: Arquivo ou corpo multipart acima do limite
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals:
     get:
       operationId: getProfessionals
@@ -658,6 +691,15 @@ components:
           type: [integer, "null"]
           format: int32
           minimum: 0
+    EstablishmentLogoUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Imagem PNG, JPEG ou WebP de até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels.
     EstablishmentSocialLinkInput:
       type: object
       additionalProperties: false

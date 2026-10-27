@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"mime"
+	"mime/multipart"
 	"net/http"
 
 	"barbershop-app/backend/internal/auth"
@@ -36,12 +38,103 @@ type SettingsManager interface {
 }
 
 type Handler struct {
-	finder   Finder
-	settings SettingsManager
+	finder       Finder
+	settings     SettingsManager
+	logoUploader LogoUploader
 }
 
-func NewHandler(finder Finder, settings SettingsManager) *Handler {
-	return &Handler{finder: finder, settings: settings}
+func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUploader) *Handler {
+	return &Handler{finder: finder, settings: settings, logoUploader: logoUploader}
+}
+
+const maxLogoMultipartBodyBytes = MaxLogoBytes + 64*1024
+
+func (handler *Handler) PutEstablishmentLogo(c *gin.Context) {
+	principal, ok := auth.PrincipalFromContext(c)
+	if !ok {
+		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	if handler.logoUploader == nil {
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível enviar o logo.")
+		return
+	}
+	if err := handler.logoUploader.CheckLogoUploadAccess(c.Request.Context(), principal); err != nil {
+		writeLogoUploadError(c, err)
+		return
+	}
+	logo, err := readLogoMultipart(c)
+	if err != nil {
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) || errors.Is(err, ErrLogoTooLarge) {
+			writeError(c, http.StatusRequestEntityTooLarge, "request_too_large", "O arquivo excede o limite de tamanho permitido.")
+			return
+		}
+		writeFieldError(c, http.StatusBadRequest, "file", "invalid_logo", "Envie uma imagem PNG, JPEG ou WebP válida.")
+		return
+	}
+	if err := handler.logoUploader.UploadLogo(c.Request.Context(), principal, logo); err != nil {
+		writeLogoUploadError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func writeLogoUploadError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrLogoUploadForbidden):
+		writeError(c, http.StatusForbidden, "forbidden", "Somente o proprietário pode enviar o logo.")
+	case errors.Is(err, ErrInvalidLogo), errors.Is(err, ErrLogoDimensions):
+		writeFieldError(c, http.StatusBadRequest, "file", "invalid_logo", "Envie uma imagem PNG, JPEG ou WebP válida.")
+	case errors.Is(err, ErrLogoTooLarge):
+		writeError(c, http.StatusRequestEntityTooLarge, "request_too_large", "O arquivo excede o limite de tamanho permitido.")
+	case errors.Is(err, entitlements.ErrReadOnly):
+		writeError(c, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
+	default:
+		slog.Error("establishment_logo_upload_failed", "request_id", httpserver.RequestID(c))
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível enviar o logo.")
+	}
+}
+
+func readLogoMultipart(c *gin.Context) (ValidatedLogo, error) {
+	mediaType, parameters, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
+	if err != nil || mediaType != "multipart/form-data" || parameters["boundary"] == "" {
+		return ValidatedLogo{}, ErrInvalidLogo
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxLogoMultipartBodyBytes)
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return ValidatedLogo{}, err
+	}
+	reader := multipart.NewReader(bytes.NewReader(body), parameters["boundary"])
+	part, err := reader.NextPart()
+	if err != nil {
+		return ValidatedLogo{}, err
+	}
+	if part.FormName() != "file" || part.FileName() == "" {
+		_ = part.Close()
+		return ValidatedLogo{}, ErrInvalidLogo
+	}
+	content, readErr := io.ReadAll(io.LimitReader(part, MaxLogoBytes+1))
+	closeErr := part.Close()
+	if readErr != nil {
+		return ValidatedLogo{}, readErr
+	}
+	if closeErr != nil {
+		return ValidatedLogo{}, closeErr
+	}
+	if len(content) > MaxLogoBytes {
+		return ValidatedLogo{}, ErrLogoTooLarge
+	}
+	extra, err := reader.NextPart()
+	if err != io.EOF {
+		if err != nil {
+			return ValidatedLogo{}, err
+		}
+		_ = extra.Close()
+		return ValidatedLogo{}, ErrInvalidLogo
+	}
+	return ValidateLogo(bytes.NewReader(content))
 }
 
 func (handler *Handler) GetEstablishment(c *gin.Context) {

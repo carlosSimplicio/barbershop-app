@@ -113,6 +113,7 @@ func run() error {
 	writeEntitlements := entitlements.NewService(entitlements.NewPostgresStore(pool))
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
 	establishmentSettings := establishment.NewSettingsService(establishment.NewPostgresSettingsStore(pool), writeEntitlements)
+	establishmentLogoUploads := establishment.NewLogoUploadService(establishment.NewPostgresLogoUploadStore(pool), logoStorage, writeEntitlements)
 	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
 	passwordRecoveryVerification := passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)
@@ -120,7 +121,7 @@ func run() error {
 		health.NewHandler(pool),
 		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
-		establishment.NewHandler(establishments, establishmentSettings),
+		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads),
 		professionals.NewHandler(professionalService),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)

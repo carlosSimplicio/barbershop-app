@@ -74,6 +74,10 @@ func (handler *Handler) PatchEstablishmentSettings(c *gin.Context) {
 	handler.establishment.PatchEstablishmentSettings(c)
 }
 
+func (handler *Handler) PutEstablishmentLogo(c *gin.Context) {
+	handler.establishment.PutEstablishmentLogo(c)
+}
+
 func (handler *Handler) PostProfessionals(c *gin.Context) {
 	handler.professionals.PostProfessionals(c)
 }

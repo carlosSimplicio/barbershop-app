@@ -136,6 +136,12 @@ type EstablishmentLogoMetadata struct {
 // EstablishmentLogoMetadataContentType defines model for EstablishmentLogoMetadata.ContentType.
 type EstablishmentLogoMetadataContentType string
 
+// EstablishmentLogoUploadRequest defines model for EstablishmentLogoUploadRequest.
+type EstablishmentLogoUploadRequest struct {
+	// File Imagem PNG, JPEG ou WebP de até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels.
+	File openapi_types.File `json:"file"`
+}
+
 // EstablishmentResponse defines model for EstablishmentResponse.
 type EstablishmentResponse struct {
 	Id       openapi_types.UUID  `json:"id"`
@@ -309,6 +315,9 @@ type PostAuthPasswordRecoveryVerifyJSONRequestBody = PasswordRecoveryVerifyReque
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
 
+// PutEstablishmentLogoMultipartRequestBody defines body for PutEstablishmentLogo for multipart/form-data ContentType.
+type PutEstablishmentLogoMultipartRequestBody = EstablishmentLogoUploadRequest
+
 // PatchEstablishmentSettingsJSONRequestBody defines body for PatchEstablishmentSettings for application/json ContentType.
 type PatchEstablishmentSettingsJSONRequestBody = EstablishmentSettingsPatchRequest
 
@@ -347,6 +356,9 @@ type ServerInterface interface {
 	// GetEstablishment Consulta o estabelecimento da sessão atual
 	// (GET /establishment)
 	GetEstablishment(c *gin.Context)
+	// PutEstablishmentLogo Envia ou substitui o logo do estabelecimento
+	// (PUT /establishment/logo)
+	PutEstablishmentLogo(c *gin.Context)
 	// GetEstablishmentSettings Consulta as configurações do estabelecimento do proprietário
 	// (GET /establishment/settings)
 	GetEstablishmentSettings(c *gin.Context)
@@ -503,6 +515,19 @@ func (siw *ServerInterfaceWrapper) GetEstablishment(c *gin.Context) {
 	siw.Handler.GetEstablishment(c)
 }
 
+// PutEstablishmentLogo operation middleware
+func (siw *ServerInterfaceWrapper) PutEstablishmentLogo(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PutEstablishmentLogo(c)
+}
+
 // GetEstablishmentSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetEstablishmentSettings(c *gin.Context) {
 
@@ -629,6 +654,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
 	router.GET(options.BaseURL+"/establishment/settings", wrapper.GetEstablishmentSettings)
 	router.PATCH(options.BaseURL+"/establishment/settings", wrapper.PatchEstablishmentSettings)
+	router.PUT(options.BaseURL+"/establishment/logo", wrapper.PutEstablishmentLogo)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
