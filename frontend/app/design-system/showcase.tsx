@@ -12,6 +12,7 @@ import {
   PasswordField,
   RecordList,
   SelectField,
+  TextareaField,
   TextField,
 } from "@/components/ui";
 
@@ -183,6 +184,12 @@ export function DesignSystemShowcase() {
               label="E-mail"
               type="email"
             />
+            <TextareaField
+              defaultValue="Cortes, barba e cuidado em um só lugar."
+              hint="Até 500 caracteres, apresentados como texto simples."
+              label="Descrição"
+              maxLength={500}
+            />
             <Field
               hint="O prefixo contextualiza sem fazer parte do valor."
               hintId="showcase-slug-hint"
@@ -229,6 +236,13 @@ export function DesignSystemShowcase() {
               label="Erro"
               type="email"
             />
+            <TextareaField
+              defaultValue="Descrição muito longa"
+              error="Use até 500 caracteres."
+              hint="A ajuda permanece associada durante a correção."
+              label="Descrição com erro"
+              maxLength={500}
+            />
             <TextField
               defaultValue="Não editável"
               disabled
@@ -238,6 +252,12 @@ export function DesignSystemShowcase() {
             <SelectField disabled label="Seleção desabilitada">
               <option>Não editável</option>
             </SelectField>
+            <TextareaField
+              defaultValue="Não editável"
+              disabled
+              hint="Trial expirado: leitura disponível, edição bloqueada."
+              label="Descrição desabilitada"
+            />
           </div>
         </Showcase>
         <Showcase title="Feedback assíncrono">

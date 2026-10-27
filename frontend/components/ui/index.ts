@@ -19,3 +19,8 @@ export {
   type SelectFieldProps,
 } from "./select-field/select-field";
 export { TextField, type TextFieldProps } from "./text-field/text-field";
+export { Textarea, type TextareaProps } from "./textarea/textarea";
+export {
+  TextareaField,
+  type TextareaFieldProps,
+} from "./textarea-field/textarea-field";

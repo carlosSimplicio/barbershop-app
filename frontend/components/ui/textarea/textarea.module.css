@@ -1,0 +1,8 @@
+.control {
+  composes: control from "../_shared/form-control.module.css";
+  height: auto;
+  min-height: 8rem;
+  padding: 0.75rem 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+}

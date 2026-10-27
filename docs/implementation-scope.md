@@ -204,7 +204,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
 - [x] Centralizar cores, tipografia, espaçamento, raios, sombras e temas claro e escuro em tokens visuais compartilhados.
 - [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado.
-- [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis.
+- [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis, incluindo `Textarea` e `TextareaField` para conteúdo multilinha.
 - [ ] Criar padrões compartilhados para tabelas.
 - [ ] Criar padrões compartilhados para modais.
 - [x] Criar padrões compartilhados de feedback.
