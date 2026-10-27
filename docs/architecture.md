@@ -84,7 +84,8 @@
 - Aceite somente letras minúsculas ASCII, números e hífens, com 3 a 63 caracteres e sem hífen no início ou no fim.
 - Valide o valor informado em vez de transformá-lo silenciosamente; o frontend deve explicar o formato antes do envio.
 - Trate o slug como imutável no MVP e não ofereça endpoint ou ação de interface para alterá-lo.
-- Reserve ao menos `admin`, `api`, `login` e `assets`.
+- Reserve os segmentos de rota da plataforma `admin`, `api`, `assets`, `cadastro`, `confirmar-email`, `design-system`, `login`, `painel`, `recuperar-senha`, `redefinir-senha` e `testes`. `api` cobre o prefixo `/api/v1`; `painel` protege sua árvore de páginas. O alfabeto válido do slug já exclui caminhos técnicos como `/_next`.
+- Centralize a lista em `establishment.IsPublicSlugReserved` para o cadastro e para futuras decisões de elegibilidade. Preserve slugs legados em conflito: a futura consulta de configurações deve sinalizar o conflito e o resolvedor público deve recusar a publicação naquele caminho até resolução operacional explícita. Não renomeie slugs automaticamente.
 - Centralize a resolução do estabelecimento; domínio e consultas não dependem diretamente do formato da URL.
 - Prepare o resolvedor para futuramente aceitar `{establishment_slug}.barbershop-app.com`.
 - Não publique caminho e subdomínio simultaneamente como canônicos. Em migração futura, redirecione permanentemente os caminhos antigos.

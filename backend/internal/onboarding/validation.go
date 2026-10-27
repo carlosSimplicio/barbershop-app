@@ -7,6 +7,8 @@ import (
 	"time"
 	_ "time/tzdata"
 	"unicode/utf8"
+
+	"barbershop-app/backend/internal/establishment"
 )
 
 var (
@@ -15,10 +17,7 @@ var (
 	ErrInvalidTimeZone = errors.New("invalid establishment time zone")
 	ErrInvalidName     = errors.New("invalid establishment name")
 
-	validSlug     = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`)
-	reservedSlugs = map[string]struct{}{
-		"admin": {}, "api": {}, "login": {}, "assets": {},
-	}
+	validSlug = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`)
 )
 
 func ValidateEstablishmentName(name string) error {
@@ -33,7 +32,7 @@ func ValidateSlug(slug string) error {
 	if !validSlug.MatchString(slug) {
 		return ErrInvalidSlug
 	}
-	if _, reserved := reservedSlugs[slug]; reserved {
+	if establishment.IsPublicSlugReserved(slug) {
 		return ErrReservedSlug
 	}
 	return nil

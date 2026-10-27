@@ -29,11 +29,21 @@ func TestValidateSlugAcceptsCanonicalPublicSlugs(t *testing.T) {
 func TestValidateSlugRejectsInvalidAndReservedValues(t *testing.T) {
 	values := []string{
 		"ab", "a234567890123456789012345678901234567890123456789012345678901234",
-		"Barbearia", "barbearia_central", "-barbearia", "barbearia-", "admin", "api", "login", "assets",
+		"Barbearia", "barbearia_central", "-barbearia", "barbearia-", "admin", "api", "assets",
+		"cadastro", "login", "confirmar-email", "recuperar-senha", "redefinir-senha",
+		"painel", "testes", "design-system",
 	}
 	for _, slug := range values {
 		if err := ValidateSlug(slug); err == nil {
 			t.Errorf("ValidateSlug(%q) = nil, want error", slug)
+		}
+	}
+}
+
+func TestValidateSlugDoesNotReserveNonConflictingRouteNamesByPrefix(t *testing.T) {
+	for _, slug := range []string{"api-v1", "assets-barbershop", "painel-central"} {
+		if err := ValidateSlug(slug); err != nil {
+			t.Errorf("ValidateSlug(%q) = %v, want nil", slug, err)
 		}
 	}
 }

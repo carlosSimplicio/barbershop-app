@@ -94,6 +94,23 @@
 - A migration `00007_establishment_operational_lock.sql` preserva estabelecimentos existentes e inicia o marcador como nulo. Seu `Down` recusa rollback enquanto houver marcador, para não reabilitar alteração de fuso após a criação de dados operacionais.
 - A migration `00008_establishment_logos.sql` preserva estabelecimentos existentes e inicia `logo_id` como nulo. Seu `Down` recusa rollback quando existe metadado de logo, pois o volume local não possui backup no escopo inicial e apagar as referências do banco poderia deixar arquivos órfãos.
 
+### Diagnóstico de slugs legados em conflito
+
+Antes de habilitar a resolução ou publicação de páginas públicas, execute a consulta somente de leitura abaixo no PostgreSQL para identificar slugs legados que coincidem com rotas da plataforma:
+
+```sql
+SELECT slug
+FROM establishments
+WHERE slug = ANY (ARRAY[
+    'admin', 'api', 'assets', 'cadastro', 'confirmar-email',
+    'design-system', 'login', 'painel', 'recuperar-senha',
+    'redefinir-senha', 'testes'
+]::text[])
+ORDER BY slug;
+```
+
+A consulta retorna somente os slugs conflitantes. Não registre seus resultados em logs ou tickets nem altere os cadastros automaticamente. Preserve os slugs existentes e exija resolução operacional explícita antes de qualquer mudança ou publicação.
+
 ## Persistência
 
 - Não existe rotina de backup do PostgreSQL no escopo inicial.

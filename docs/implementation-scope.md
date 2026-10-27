@@ -274,7 +274,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
 - [ ] Tornar nome e logo obrigatórios; descrição, endereço, telefone de contato e redes sociais são opcionais.
 - [x] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
-- [x] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
+- [x] Reservar slugs que colidem com rotas da plataforma (`admin`, `api`, `assets`, `cadastro`, `confirmar-email`, `design-system`, `login`, `painel`, `recuperar-senha`, `redefinir-senha` e `testes`); preservar legados em conflito e diagnosticá-los sem renomeação automática.
 - [x] Manter o slug imutável nos endpoints atualmente entregues.
 - [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
