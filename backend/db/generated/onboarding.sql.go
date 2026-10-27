@@ -532,6 +532,8 @@ const getPublicEstablishmentBySlug = `-- name: GetPublicEstablishmentBySlug :one
 SELECT id, name, slug
 FROM establishments
 WHERE slug = $1
+  AND logo_id IS NOT NULL
+  AND btrim(name) <> ''
 `
 
 type GetPublicEstablishmentBySlugRow struct {
@@ -576,6 +578,57 @@ func (q *Queries) GetPublicEstablishmentLogo(ctx context.Context, arg GetPublicE
 		&i.ContentType,
 		&i.ByteSize,
 		&i.ContentSha256,
+	)
+	return i, err
+}
+
+const getPublicEstablishmentProfile = `-- name: GetPublicEstablishmentProfile :one
+SELECT
+    e.name,
+    e.slug,
+    e.description,
+    e.address,
+    e.contact_phone,
+    COALESCE(
+        jsonb_agg(jsonb_build_object('label', links.label, 'url', links.url) ORDER BY links.position)
+            FILTER (WHERE links.position IS NOT NULL),
+        '[]'::jsonb
+    )::text AS social_links
+FROM establishments AS e
+JOIN establishment_logos AS logo
+    ON logo.establishment_id = e.id AND logo.id = e.logo_id
+LEFT JOIN establishment_social_links AS links
+    ON links.establishment_id = e.id
+WHERE e.id = $1
+  AND e.slug = $2
+  AND btrim(e.name) <> ''
+GROUP BY e.id
+`
+
+type GetPublicEstablishmentProfileParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Slug            string      `json:"slug"`
+}
+
+type GetPublicEstablishmentProfileRow struct {
+	Name         string      `json:"name"`
+	Slug         string      `json:"slug"`
+	Description  pgtype.Text `json:"description"`
+	Address      pgtype.Text `json:"address"`
+	ContactPhone pgtype.Text `json:"contact_phone"`
+	SocialLinks  string      `json:"social_links"`
+}
+
+func (q *Queries) GetPublicEstablishmentProfile(ctx context.Context, arg GetPublicEstablishmentProfileParams) (GetPublicEstablishmentProfileRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEstablishmentProfile, arg.EstablishmentID, arg.Slug)
+	var i GetPublicEstablishmentProfileRow
+	err := row.Scan(
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Address,
+		&i.ContactPhone,
+		&i.SocialLinks,
 	)
 	return i, err
 }

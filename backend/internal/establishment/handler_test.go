@@ -24,7 +24,7 @@ func TestHandlerReturnsOnlyAuthenticatedEstablishment(t *testing.T) {
 			EndsAt:   time.Date(2026, time.November, 2, 14, 30, 0, 0, time.UTC),
 		},
 	}}
-	recorder := performEstablishmentRequest(t, NewHandler(finder, nil, nil, nil), &auth.Principal{
+	recorder := performEstablishmentRequest(t, NewHandler(finder, nil, nil, nil, nil), &auth.Principal{
 		UserID: "018f47d2-e886-7f1c-8e8d-8b38eaf16463", EstablishmentID: testEstablishmentID, Role: "owner",
 	}, "?establishment_id="+otherEstablishmentID)
 
@@ -52,7 +52,7 @@ func TestHandlerReturnsOnlyAuthenticatedEstablishment(t *testing.T) {
 func TestHandlerReturnsNullTrialBeforeConfirmation(t *testing.T) {
 	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{establishment: Establishment{
 		ID: testEstablishmentID, Name: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo",
-	}}, nil, nil, nil), &auth.Principal{EstablishmentID: testEstablishmentID}, "")
+	}}, nil, nil, nil, nil), &auth.Principal{EstablishmentID: testEstablishmentID}, "")
 
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"trial":null`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
@@ -60,7 +60,7 @@ func TestHandlerReturnsNullTrialBeforeConfirmation(t *testing.T) {
 }
 
 func TestHandlerRejectsRequestWithoutAuthenticatedPrincipal(t *testing.T) {
-	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{}, nil, nil, nil), nil, "")
+	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{}, nil, nil, nil, nil), nil, "")
 
 	if recorder.Code != http.StatusUnauthorized || !strings.Contains(recorder.Body.String(), `"code":"authentication_required"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
@@ -68,7 +68,7 @@ func TestHandlerRejectsRequestWithoutAuthenticatedPrincipal(t *testing.T) {
 }
 
 func TestHandlerDoesNotExposeInternalFailure(t *testing.T) {
-	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{err: errors.New("database-secret")}, nil, nil, nil), &auth.Principal{
+	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{err: errors.New("database-secret")}, nil, nil, nil, nil), &auth.Principal{
 		EstablishmentID: testEstablishmentID,
 	}, "")
 
@@ -85,7 +85,7 @@ func TestPublicLogoReadFailureReturnsInternalErrorBeforeWritingImage(t *testing.
 	ginContext.Params = gin.Params{{Key: "slug", Value: "example"}}
 	ginContext.Set("request_id", "request-123")
 
-	handler := NewHandler(nil, nil, nil, failingPublicLogoReader{})
+	handler := NewHandler(nil, nil, nil, nil, failingPublicLogoReader{})
 	handler.GetPublicEstablishmentLogo(ginContext, "example")
 
 	if recorder.Code != http.StatusInternalServerError || strings.Contains(recorder.Body.String(), "partial") {
@@ -102,7 +102,7 @@ func TestPublicLogoNotModifiedClosesStorageWithoutReadingBody(t *testing.T) {
 	ginContext.Params = gin.Params{{Key: "slug", Value: "example"}}
 	body := &trackedPublicLogoBody{}
 	reader := trackedPublicLogoReader{body: body}
-	handler := NewHandler(nil, nil, nil, reader)
+	handler := NewHandler(nil, nil, nil, nil, reader)
 
 	handler.GetPublicEstablishmentLogo(ginContext, "example")
 

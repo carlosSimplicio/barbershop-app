@@ -282,6 +282,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Consultar em `/testes` o estabelecimento da sessão sem enviar ID de tenant, exibindo nome, slug, fuso e trial ausente, ativo ou expirado; bloquear a consulta durante troca obrigatória de senha.
 - [x] Consultar `GET /api/v1/establishment/settings` somente como proprietário, derivando o tenant da sessão autenticada e mantendo disponível a leitura em trial expirado.
 - [x] Retornar dados opcionais, links ordenados, limites, metadados públicos do logo e estados de conclusão/publicação; sinalizar slug legado reservado sem expor chave ou caminho interno do arquivo.
+- [x] Consultar sem sessão o perfil informativo de estabelecimento publicável por `GET /api/v1/public/establishments/{slug}`, expondo apenas nome, slug, URL pública do logo e dados opcionais preenchidos; manter a resposta após expiração do trial e recusar estabelecimentos incompletos ou com slug reservado.
 - [x] Informar elegibilidade de escrita pelo componente central de direitos e permitir alteração futura do fuso somente antes do primeiro dado operacional.
 - [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
 - [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.

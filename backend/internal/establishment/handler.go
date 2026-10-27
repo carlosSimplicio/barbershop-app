@@ -43,11 +43,12 @@ type Handler struct {
 	finder       Finder
 	settings     SettingsManager
 	logoUploader LogoUploader
+	public       PublicEstablishmentReader
 	publicLogo   PublicLogoReader
 }
 
-func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUploader, publicLogo PublicLogoReader) *Handler {
-	return &Handler{finder: finder, settings: settings, logoUploader: logoUploader, publicLogo: publicLogo}
+func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUploader, public PublicEstablishmentReader, publicLogo PublicLogoReader) *Handler {
+	return &Handler{finder: finder, settings: settings, logoUploader: logoUploader, public: public, publicLogo: publicLogo}
 }
 
 const maxLogoMultipartBodyBytes = MaxLogoBytes + 64*1024
@@ -208,6 +209,31 @@ func (handler *Handler) GetPublicEstablishmentLogo(c *gin.Context, slug string) 
 	c.Header("Content-Type", logo.ContentType)
 	c.Header("Content-Length", strconv.Itoa(len(body)))
 	c.Data(http.StatusOK, logo.ContentType, body)
+}
+
+func (handler *Handler) GetPublicEstablishment(c *gin.Context, slug string) {
+	profile, err := handler.public.GetPublicEstablishment(c.Request.Context(), slug)
+	if errors.Is(err, ErrPublicEstablishmentNotFound) {
+		writeError(c, http.StatusNotFound, "not_found", "O estabelecimento não foi encontrado.")
+		return
+	}
+	if err != nil {
+		slog.Error("establishment_public_profile_query_failed", "request_id", httpserver.RequestID(c))
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
+		return
+	}
+	response := api.PublicEstablishmentProfileResponse{
+		Name: profile.Name, Slug: profile.Slug, LogoUrl: profile.LogoURL,
+		Description: profile.Description, Address: profile.Address, ContactPhone: profile.ContactPhone,
+	}
+	if len(profile.SocialLinks) > 0 {
+		links := make([]api.EstablishmentSocialLink, 0, len(profile.SocialLinks))
+		for _, link := range profile.SocialLinks {
+			links = append(links, api.EstablishmentSocialLink{Label: link.Label, Url: link.URL})
+		}
+		response.SocialLinks = &links
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 func matchesIfNoneMatch(values []string, etag string) bool {

@@ -115,20 +115,31 @@ func TestMiddlewareRequiresMatchingSignedCSRFTokenForEstablishmentLogoUpload(t *
 	}
 }
 
-func TestMiddlewareAllowsOnlyPublicLogoGETWithoutAuthentication(t *testing.T) {
+func TestMiddlewareAllowsOnlyPublicEstablishmentGETWithoutAuthentication(t *testing.T) {
 	path := "/api/v1/public/establishments/barbearia-central/logo"
 	if requiresAccessToken(http.MethodGet, path) {
 		t.Fatal("public logo GET unexpectedly requires authentication")
+	}
+	profilePath := "/api/v1/public/establishments/barbearia-central"
+	if requiresAccessToken(http.MethodGet, profilePath) {
+		t.Fatal("public profile GET unexpectedly requires authentication")
 	}
 	for _, method := range []string{http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
 		if !requiresAccessToken(method, path) {
 			t.Errorf("%s %s is public; only GET should be exempt", method, path)
 		}
+		if !requiresAccessToken(method, profilePath) {
+			t.Errorf("%s %s is public; only GET should be exempt", method, profilePath)
+		}
 	}
 	for _, path := range []string{
 		"/api/v1/public/establishments/barbearia-central/logo/extra",
-		"/api/v1/public/establishments/barbearia-central",
+		"/api/v1/public/establishments/barbearia-central/extra",
+		"/api/v1/public/establishments/ab",
+		"/api/v1/public/establishments/-barbearia/logo",
+		"/api/v1/public/establishments/barbearia-/logo",
 		"/api/v1/public/establishments//logo",
+		"/api/v1/public/establishments/",
 	} {
 		if !requiresAccessToken(http.MethodGet, path) {
 			t.Errorf("GET %s is outside the public logo route but does not require authentication", path)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,15 +18,29 @@ import (
 
 const principalContextKey = "auth_principal"
 
-var publicPaths = map[string]struct{}{
-	"/api/v1/health":                         {},
-	"/api/v1/auth/register":                  {},
-	"/api/v1/auth/email-confirmation":        {},
-	"/api/v1/auth/email-confirmation/verify": {},
-	"/api/v1/auth/password/recovery":         {},
-	"/api/v1/auth/password/recovery/verify":  {},
-	"/api/v1/auth/login":                     {},
-	"/api/v1/auth/logout":                    {},
+type publicPathRule struct {
+	method  string
+	path    string
+	pattern *regexp.Regexp
+}
+
+var publicPaths = []publicPathRule{
+	{path: "/api/v1/health"},
+	{path: "/api/v1/auth/register"},
+	{path: "/api/v1/auth/email-confirmation"},
+	{path: "/api/v1/auth/email-confirmation/verify"},
+	{path: "/api/v1/auth/password/recovery"},
+	{path: "/api/v1/auth/password/recovery/verify"},
+	{path: "/api/v1/auth/login"},
+	{path: "/api/v1/auth/logout"},
+	{
+		method:  http.MethodGet,
+		pattern: regexp.MustCompile(`^/api/v1/public/establishments/[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`),
+	},
+	{
+		method:  http.MethodGet,
+		pattern: regexp.MustCompile(`^/api/v1/public/establishments/[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])/logo$`),
+	},
 }
 
 var csrfProtectedPaths = map[string]struct{}{
@@ -152,20 +167,20 @@ func requiresCSRF(method, path string) bool {
 }
 
 func requiresAccessToken(method, path string) bool {
-	if _, public := publicPaths[path]; public {
-		return false
-	}
-	if isPublicEstablishmentLogoRead(method, path) {
+	if isPublicPath(method, path) {
 		return false
 	}
 	return strings.HasPrefix(path, "/api/v1/")
 }
 
-func isPublicEstablishmentLogoRead(method, path string) bool {
-	if method != http.MethodGet {
-		return false
+func isPublicPath(method, path string) bool {
+	for _, rule := range publicPaths {
+		if rule.method != "" && rule.method != method {
+			continue
+		}
+		if rule.path == path || rule.pattern != nil && rule.pattern.MatchString(path) {
+			return true
+		}
 	}
-	segments := strings.Split(path, "/")
-	return len(segments) == 7 && segments[1] == "api" && segments[2] == "v1" &&
-		segments[3] == "public" && segments[4] == "establishments" && segments[5] != "" && segments[6] == "logo"
+	return false
 }

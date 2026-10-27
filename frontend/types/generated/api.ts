@@ -229,6 +229,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/establishments/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o perfil informativo de um estabelecimento publicável */
+        get: operations["getPublicEstablishment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals": {
         parameters: {
             query?: never;
@@ -401,6 +418,16 @@ export interface components {
             label: string;
             /** Format: uri */
             url: string;
+        };
+        PublicEstablishmentProfileResponse: {
+            name: string;
+            slug: string;
+            /** Format: uri-reference */
+            logo_url: string;
+            description?: string;
+            address?: string;
+            contact_phone?: string;
+            social_links?: components["schemas"]["EstablishmentSocialLink"][];
         };
         EstablishmentLogoMetadata: {
             /** Format: uri-reference */
@@ -883,6 +910,38 @@ export interface operations {
                 content?: never;
             };
             /** @description Estabelecimento inexistente, não publicável ou sem logo */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getPublicEstablishment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Perfil público informativo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicEstablishmentProfileResponse"];
+                };
+            };
+            /** @description Estabelecimento inexistente, não publicável ou com slug reservado */
             404: {
                 headers: {
                     [name: string]: unknown;

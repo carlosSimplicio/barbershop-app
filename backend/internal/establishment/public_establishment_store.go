@@ -2,6 +2,7 @@ package establishment
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -15,6 +16,7 @@ import (
 
 type publicEstablishmentQueries interface {
 	GetPublicEstablishmentBySlug(context.Context, string) (db.GetPublicEstablishmentBySlugRow, error)
+	GetPublicEstablishmentProfile(context.Context, db.GetPublicEstablishmentProfileParams) (db.GetPublicEstablishmentProfileRow, error)
 }
 
 type PostgresPublicEstablishmentStore struct {
@@ -34,6 +36,37 @@ func (store *PostgresPublicEstablishmentStore) FindPublicEstablishmentBySlug(ctx
 		return PublicEstablishment{}, fmt.Errorf("query public establishment by slug: %w", err)
 	}
 	return PublicEstablishment{ID: uuid.UUID(row.ID.Bytes).String(), Name: row.Name, Slug: row.Slug}, nil
+}
+
+func (store *PostgresPublicEstablishmentStore) FindPublicEstablishmentProfile(ctx context.Context, establishmentID, slug string) (PublicEstablishmentProfile, error) {
+	parsedID, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return PublicEstablishmentProfile{}, fmt.Errorf("parse public establishment ID: %w", err)
+	}
+	row, err := store.queries.GetPublicEstablishmentProfile(ctx, db.GetPublicEstablishmentProfileParams{
+		EstablishmentID: pgtype.UUID{Bytes: parsedID, Valid: true}, Slug: slug,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PublicEstablishmentProfile{}, ErrPublicEstablishmentNotFound
+	}
+	if err != nil {
+		return PublicEstablishmentProfile{}, fmt.Errorf("query public establishment profile: %w", err)
+	}
+	links := make([]SocialLink, 0)
+	if err := json.Unmarshal([]byte(row.SocialLinks), &links); err != nil {
+		return PublicEstablishmentProfile{}, fmt.Errorf("decode public establishment links: %w", err)
+	}
+	profile := PublicEstablishmentProfile{Name: row.Name, Slug: row.Slug, SocialLinks: links}
+	if row.Description.Valid {
+		profile.Description = &row.Description.String
+	}
+	if row.Address.Valid {
+		profile.Address = &row.Address.String
+	}
+	if row.ContactPhone.Valid {
+		profile.ContactPhone = &row.ContactPhone.String
+	}
+	return profile, nil
 }
 
 type publicLogoQueries interface {

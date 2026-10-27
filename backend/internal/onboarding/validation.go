@@ -2,7 +2,6 @@ package onboarding
 
 import (
 	"errors"
-	"regexp"
 	"strings"
 	"time"
 	_ "time/tzdata"
@@ -16,8 +15,6 @@ var (
 	ErrReservedSlug    = errors.New("reserved establishment slug")
 	ErrInvalidTimeZone = errors.New("invalid establishment time zone")
 	ErrInvalidName     = errors.New("invalid establishment name")
-
-	validSlug = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`)
 )
 
 func ValidateEstablishmentName(name string) error {
@@ -29,7 +26,7 @@ func ValidateEstablishmentName(name string) error {
 
 // ValidateSlug validates the immutable public identifier chosen during onboarding.
 func ValidateSlug(slug string) error {
-	if !validSlug.MatchString(slug) {
+	if !establishment.IsPublicSlugFormatValid(slug) {
 		return ErrInvalidSlug
 	}
 	if establishment.IsPublicSlugReserved(slug) {

@@ -201,7 +201,31 @@ WHERE e.id = $1;
 -- name: GetPublicEstablishmentBySlug :one
 SELECT id, name, slug
 FROM establishments
-WHERE slug = $1;
+WHERE slug = $1
+  AND logo_id IS NOT NULL
+  AND btrim(name) <> '';
+
+-- name: GetPublicEstablishmentProfile :one
+SELECT
+    e.name,
+    e.slug,
+    e.description,
+    e.address,
+    e.contact_phone,
+    COALESCE(
+        jsonb_agg(jsonb_build_object('label', links.label, 'url', links.url) ORDER BY links.position)
+            FILTER (WHERE links.position IS NOT NULL),
+        '[]'::jsonb
+    )::text AS social_links
+FROM establishments AS e
+JOIN establishment_logos AS logo
+    ON logo.establishment_id = e.id AND logo.id = e.logo_id
+LEFT JOIN establishment_social_links AS links
+    ON links.establishment_id = e.id
+WHERE e.id = sqlc.arg('establishment_id')
+  AND e.slug = sqlc.arg('slug')
+  AND btrim(e.name) <> ''
+GROUP BY e.id;
 
 -- name: GetPublicEstablishmentLogo :one
 SELECT l.object_key, l.content_type, l.byte_size, l.content_sha256

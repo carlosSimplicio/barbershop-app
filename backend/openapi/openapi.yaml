@@ -386,6 +386,35 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /public/establishments/{slug}:
+    get:
+      operationId: getPublicEstablishment
+      summary: Consulta o perfil informativo de um estabelecimento publicável
+      tags: [public-establishment]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 63
+      responses:
+        "200":
+          description: Perfil público informativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicEstablishmentProfileResponse"
+        "404":
+          description: Estabelecimento inexistente, não publicável ou com slug reservado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals:
     get:
       operationId: getProfessionals
@@ -788,6 +817,30 @@ components:
         url:
           type: string
           format: uri
+    PublicEstablishmentProfileResponse:
+      type: object
+      required: [name, slug, logo_url]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logo_url:
+          type: string
+          format: uri-reference
+        description:
+          type: string
+          maxLength: 500
+        address:
+          type: string
+          maxLength: 500
+        contact_phone:
+          type: string
+        social_links:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/EstablishmentSocialLink"
     EstablishmentLogoMetadata:
       type: object
       required: [url, content_type, byte_size, width, height]

@@ -82,6 +82,10 @@ func (handler *Handler) GetPublicEstablishmentLogo(c *gin.Context, slug string, 
 	handler.establishment.GetPublicEstablishmentLogo(c, slug)
 }
 
+func (handler *Handler) GetPublicEstablishment(c *gin.Context, slug string) {
+	handler.establishment.GetPublicEstablishment(c, slug)
+}
+
 func (handler *Handler) PostProfessionals(c *gin.Context) {
 	handler.professionals.PostProfessionals(c)
 }

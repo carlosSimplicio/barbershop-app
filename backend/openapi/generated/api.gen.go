@@ -252,6 +252,17 @@ type ProfessionalResponse struct {
 	Name   string              `json:"name"`
 }
 
+// PublicEstablishmentProfileResponse defines model for PublicEstablishmentProfileResponse.
+type PublicEstablishmentProfileResponse struct {
+	Address      *string                    `json:"address,omitempty"`
+	ContactPhone *string                    `json:"contact_phone,omitempty"`
+	Description  *string                    `json:"description,omitempty"`
+	LogoUrl      string                     `json:"logo_url"`
+	Name         string                     `json:"name"`
+	Slug         string                     `json:"slug"`
+	SocialLinks  *[]EstablishmentSocialLink `json:"social_links,omitempty"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -380,6 +391,9 @@ type ServerInterface interface {
 	// PostProfessionals Cadastra um profissional no estabelecimento do proprietário
 	// (POST /professionals)
 	PostProfessionals(c *gin.Context)
+	// GetPublicEstablishment Consulta o perfil informativo de um estabelecimento publicável
+	// (GET /public/establishments/{slug})
+	GetPublicEstablishment(c *gin.Context, slug string)
 	// GetPublicEstablishmentLogo Consulta o logo atual de um estabelecimento publicável
 	// (GET /public/establishments/{slug}/logo)
 	GetPublicEstablishmentLogo(c *gin.Context, slug string, params GetPublicEstablishmentLogoParams)
@@ -624,6 +638,31 @@ func (siw *ServerInterfaceWrapper) PostProfessionals(c *gin.Context) {
 	siw.Handler.PostProfessionals(c)
 }
 
+// GetPublicEstablishment operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicEstablishment(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", c.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slug: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicEstablishment(c, slug)
+}
+
 // GetPublicEstablishmentLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicEstablishmentLogo(c *gin.Context) {
 
@@ -714,6 +753,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/establishment/settings", wrapper.PatchEstablishmentSettings)
 	router.PUT(options.BaseURL+"/establishment/logo", wrapper.PutEstablishmentLogo)
 	router.GET(options.BaseURL+"/public/establishments/:slug/logo", wrapper.GetPublicEstablishmentLogo)
+	router.GET(options.BaseURL+"/public/establishments/:slug", wrapper.GetPublicEstablishment)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)

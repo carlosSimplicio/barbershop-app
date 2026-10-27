@@ -168,6 +168,7 @@ func newTestApplication(t *testing.T) *testApplication {
 		t.Fatalf("create test logo storage: %v", err)
 	}
 	t.Cleanup(func() { _ = logoStorage.Close() })
+	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(integrationPool)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
@@ -182,8 +183,10 @@ func newTestApplication(t *testing.T) *testApplication {
 			establishment.NewService(establishment.NewPostgresStore(integrationPool)),
 			establishment.NewSettingsService(establishment.NewPostgresSettingsStore(integrationPool), writeEntitlements),
 			establishment.NewLogoUploadService(establishment.NewPostgresLogoUploadStore(integrationPool), logoStorage, writeEntitlements),
+			establishment.NewPublicEstablishmentService(
+				establishment.NewPublicEstablishmentResolver(publicEstablishmentStore), publicEstablishmentStore),
 			establishment.NewPublicLogoService(
-				establishment.NewPublicEstablishmentResolver(establishment.NewPostgresPublicEstablishmentStore(integrationPool)),
+				establishment.NewPublicEstablishmentResolver(publicEstablishmentStore),
 				establishment.NewPostgresPublicLogoStore(integrationPool), logoStorage),
 		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
