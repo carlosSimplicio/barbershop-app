@@ -38,6 +38,30 @@ services:
       - data
     logging: *default-logging
 
+  logo-storage-init:
+    build:
+      context: ./backend
+      target: runtime
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    environment:
+      LOGO_STORAGE_DIR: ${LOGO_STORAGE_DIR:-/var/lib/barbershop/logos}
+    command:
+      - |
+        case "$$LOGO_STORAGE_DIR" in
+          /*) ;;
+          *) echo 'LOGO_STORAGE_DIR must be absolute' >&2; exit 1 ;;
+        esac
+        case "$$LOGO_STORAGE_DIR" in
+          /|*/../*|*/..|*/./*|*/.) echo 'LOGO_STORAGE_DIR must not escape its configured directory' >&2; exit 1 ;;
+        esac
+        mkdir -p -- "$$LOGO_STORAGE_DIR"
+        chown app:app -- "$$LOGO_STORAGE_DIR"
+        chmod 0700 -- "$$LOGO_STORAGE_DIR"
+    volumes:
+      - logos_data:${LOGO_STORAGE_DIR:-/var/lib/barbershop/logos}
+    logging: *default-logging
+
   backend:
     build:
       context: ./backend
@@ -61,14 +85,17 @@ services:
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS}
       EMAIL_PROVIDER: ${EMAIL_PROVIDER}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
+      LOGO_STORAGE_DIR: ${LOGO_STORAGE_DIR:-/var/lib/barbershop/logos}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_FROM: ${SMTP_FROM}
     depends_on:
       postgres:
         condition: service_healthy
+      logo-storage-init:
+        condition: service_completed_successfully
     volumes:
-      - logos_data:/var/lib/barbershop/logos
+      - logos_data:${LOGO_STORAGE_DIR:-/var/lib/barbershop/logos}
     networks:
       - data
       - proxy

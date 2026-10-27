@@ -35,6 +35,36 @@ func TestLoadAppliesSafeDefaults(t *testing.T) {
 	if config.ShutdownTimeout != 10*time.Second {
 		t.Errorf("ShutdownTimeout = %s, want 10s", config.ShutdownTimeout)
 	}
+	if config.LogoStorageDir != "/var/lib/barbershop/logos" {
+		t.Errorf("LogoStorageDir = %q, want /var/lib/barbershop/logos", config.LogoStorageDir)
+	}
+}
+
+func TestLoadRejectsMissingOrUnsafeLogoStorageDir(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		unset bool
+	}{
+		{name: "missing", unset: true},
+		{name: "empty", value: ""},
+		{name: "relative", value: "var/lib/barbershop/logos"},
+		{name: "parent traversal", value: "/var/lib/barbershop/../etc"},
+		{name: "filesystem root", value: "/"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			values := validValues(t)
+			if test.unset {
+				delete(values, "LOGO_STORAGE_DIR")
+			} else {
+				values["LOGO_STORAGE_DIR"] = test.value
+			}
+			if _, err := load(mapLookup(values)); err == nil {
+				t.Fatalf("unsafe LOGO_STORAGE_DIR %q was accepted", test.value)
+			}
+		})
+	}
 }
 
 func TestLoadRejectsUnknownLogLevel(t *testing.T) {
@@ -160,6 +190,7 @@ func validValues(t *testing.T) map[string]string {
 	encodedKey := base64.RawStdEncoding.EncodeToString(key)
 	return map[string]string{
 		"DATABASE_URL":               "postgres://example",
+		"LOGO_STORAGE_DIR":           "/var/lib/barbershop/logos",
 		"JWT_ACTIVE_KEY_ID":          "test-key",
 		"JWT_PRIVATE_KEY_BASE64":     base64.RawStdEncoding.EncodeToString(seed),
 		"JWT_PUBLIC_KEYS_JSON":       string(publicKeys),

@@ -68,7 +68,7 @@
 
 ## Arquivos públicos
 
-- Armazene logos em um volume persistente local da VPS no MVP.
+- Armazene logos em um volume persistente local da VPS no MVP, montado em `LOGO_STORAGE_DIR` (`/var/lib/barbershop/logos` no Compose).
 - O backend controla upload, validação e associação do arquivo ao estabelecimento.
 - Aceite somente PNG, JPEG e WebP com tamanho máximo de 2 MB; rejeite SVG no MVP.
 - Verifique assinatura e decodificação do conteúdo real do arquivo, não apenas extensão ou `Content-Type` informado pelo cliente.
@@ -76,7 +76,7 @@
 - Armazene no PostgreSQL somente metadados e uma chave lógica estável gerada pela aplicação. No storage local ela identifica o objeto relativamente à raiz configurada; em S3 poderá ser usada como object key. Não persista caminhos absolutos da VPS, nome de bucket nem URLs de provedor ou URLs assinadas.
 - Não permita que caminhos fornecidos pelo cliente determinem onde um arquivo será lido ou gravado.
 - `establishment.ObjectStorage` define escrita e leitura por streams e remoção por chave opaca UUID v4 gerada pela aplicação. Seus erros são independentes do provedor: `ErrInvalidObjectKey`, `ErrObjectNotFound`, `ErrObjectAlreadyExists` e `ErrStorageFailure`; remover objeto ausente é sucesso idempotente. A mensagem de falha não inclui caminho local; a causa fica disponível para inspeção interna.
-- `platform/storage.LocalStore` implementa esse contrato sem expor caminhos aos casos de uso. Converte a chave UUID em um nome dentro de `LOGO_STORAGE_DIR` e usa `os.Root` para impedir que caminhos ou links simbólicos escapem da raiz. A escrita usa temporário restrito ao processo, sincroniza e fecha o conteúdo antes de criar atomicamente o objeto final sem sobrescrita; conteúdo incompleto não pode ser aberto. O adaptador local existe, mas ainda não é configurado nem consumido pelo fluxo de upload.
+- `platform/storage.LocalStore` implementa esse contrato sem expor caminhos aos casos de uso. Converte a chave UUID em um nome dentro de `LOGO_STORAGE_DIR` e usa `os.Root` para impedir que caminhos ou links simbólicos escapem da raiz. A escrita usa temporário restrito ao processo, sincroniza e fecha o conteúdo antes de criar atomicamente o objeto final sem sobrescrita; conteúdo incompleto não pode ser aberto. O backend inicializa o adaptador no startup e verifica acesso de escrita e remoção à raiz; o fluxo de upload ainda não o consome.
 - Casos de uso de upload devem depender apenas de `establishment.ObjectStorage`; filesystem, diretórios e tipos de provedores ficam nos adaptadores. Uma implementação S3 futura deve manter o contrato e reutilizar a chave UUID como object key.
 
 ## Multi-tenancy e página pública

@@ -20,17 +20,38 @@ var _ establishment.ObjectStorage = (*LocalStore)(nil)
 
 func NewLocalStore(rootPath string) (*LocalStore, error) {
 	if err := os.MkdirAll(rootPath, 0o700); err != nil {
-		return nil, err
+		return nil, storageFailure(err)
 	}
 	root, err := os.OpenRoot(rootPath)
 	if err != nil {
+		return nil, storageFailure(err)
+	}
+	store := &LocalStore{root: root}
+	if err := store.verifyWritableRoot(); err != nil {
+		_ = root.Close()
 		return nil, err
 	}
-	return &LocalStore{root: root}, nil
+	return store, nil
 }
 
 func (store *LocalStore) Close() error {
 	return store.root.Close()
+}
+
+func (store *LocalStore) verifyWritableRoot() error {
+	probeName := ".access-" + uuid.NewString()
+	probeFile, err := store.root.OpenFile(probeName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return storageFailure(err)
+	}
+	if err := probeFile.Close(); err != nil {
+		_ = store.root.Remove(probeName)
+		return storageFailure(err)
+	}
+	if err := store.root.Remove(probeName); err != nil {
+		return storageFailure(err)
+	}
+	return nil
 }
 
 func (store *LocalStore) Put(ctx context.Context, key establishment.ObjectKey, content io.Reader) (returnErr error) {

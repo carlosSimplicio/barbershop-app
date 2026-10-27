@@ -294,7 +294,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Gerar nome interno não previsível e impedir que entrada do cliente determine caminhos.
 - [x] Persistir metadados e chave lógica estável no PostgreSQL, com associação do logo atual estruturalmente limitada ao mesmo estabelecimento.
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
-- [ ] Armazenar arquivos em volume local persistente próprio, preservado em deploys.
+- [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.
 - [ ] Servir o logo de modo seguro e com cache apropriado, sem expor o caminho interno.
 
 ## 9. Administração de profissionais

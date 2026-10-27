@@ -19,6 +19,32 @@ func TestLocalStoreSatisfiesObjectStorageContract(t *testing.T) {
 	assertObjectStorageContract(t, store)
 }
 
+func TestNewLocalStoreRejectsUnusableRootAndCleansAccessProbe(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewLocalStore(root)
+	if err != nil {
+		t.Fatalf("create local store: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close local store: %v", err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatalf("list initialized storage directory: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("storage initialization left %d probe files", len(entries))
+	}
+
+	pathToFile := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(pathToFile, []byte("file"), 0o600); err != nil {
+		t.Fatalf("create invalid storage root: %v", err)
+	}
+	if _, err := NewLocalStore(pathToFile); !errors.Is(err, establishment.ErrStorageFailure) {
+		t.Fatalf("initialize file as storage root error = %v, want ErrStorageFailure", err)
+	}
+}
+
 // assertObjectStorageContract is shared by storage adapters so provider implementations
 // exercise the same semantics for writes, reads, missing objects, and removal.
 func assertObjectStorageContract(t *testing.T, store establishment.ObjectStorage) {

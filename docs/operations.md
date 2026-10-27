@@ -3,12 +3,13 @@
 ## Infraestrutura
 
 - Produção roda em uma única VPS com Docker Compose.
-- Serviços: frontend, backend, PostgreSQL e Caddy.
+- Serviços permanentes: frontend, backend, PostgreSQL e Caddy. O Compose executa também `logo-storage-init` como tarefa de inicialização de curta duração antes do backend.
 - O Compose de desenvolvimento inclui também o Mailpit, preferencialmente por arquivo de override ou profile próprio; ele não faz parte do deploy de produção.
 - Exponha a interface web do Mailpit somente no ambiente local e mantenha seu SMTP acessível apenas pela rede interna do Compose.
 - Somente Caddy expõe portas HTTP/HTTPS publicamente. Frontend, backend e PostgreSQL permanecem nas redes internas necessárias.
 - PostgreSQL e dados operacionais do Caddy usam volumes persistentes.
 - Logos enviados pelos estabelecimentos usam um volume persistente local próprio, preservado em deploys e não incorporado às imagens.
+- `logo-storage-init` usa root transitoriamente apenas para preparar a raiz do volume como `app:app` com modo `0700`; a API executa como `app` e falha no startup se não conseguir criar e remover um arquivo de verificação em `LOGO_STORAGE_DIR`.
 - Adicione health checks. `depends_on` não substitui verificação real de prontidão.
 - Considere os recursos da VPS e não introduza serviços gerenciados ou dependências externas sem justificativa e decisão explícita.
 - Mantenha o deploy agnóstico ao provedor da VPS. Não dependa de serviços proprietários do fornecedor sem uma decisão arquitetural explícita.
@@ -43,6 +44,7 @@
 - Versione `.env.example` com todas as chaves, sem valores sensíveis.
 - Ignore arquivos `.env` reais e nunca os copie para imagens ou logs.
 - Cada aplicação valida configuração obrigatória na inicialização e falha claramente se estiver ausente ou inválida.
+- `LOGO_STORAGE_DIR` é um caminho absoluto interno ao container, sem `..` e diferente da raiz do filesystem. No Compose use `/var/lib/barbershop/logos`; não configure um caminho do host nem publique esse diretório pelo Caddy.
 - Segredos nunca usam `NEXT_PUBLIC_*`.
 - Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
 - Configure `JWT_ACTIVE_KEY_ID`, `JWT_PRIVATE_KEY_BASE64`, `JWT_PUBLIC_KEYS_JSON`, `CSRF_SIGNING_KEY_BASE64`, `RATE_LIMIT_HMAC_KEY_BASE64`, `TRUSTED_ORIGINS` e `TRUSTED_PROXY_CIDRS`. A chave JWT privada é um seed Ed25519 em base64 sem padding; o keyring público é um objeto JSON de `kid` para chave pública.
@@ -118,6 +120,9 @@ A consulta retorna somente os slugs conflitantes. Não registre seus resultados 
 - Preserve o volume em deploys e manutenções.
 - A ausência de backup também se aplica ao volume de logos no escopo inicial.
 - Antes de alteração destrutiva, destaque a ausência de backup e prefira alternativa reversível.
+- Preserve `logos_data` em `docker compose down` e deploys; não use `down -v` em ambientes com dados. A tarefa `logo-storage-init` ajusta apenas a raiz do volume e o backend permanece sem privilégios de root. Se o backend não iniciar, confira o estado de saída de `logo-storage-init` e os logs do container, corrija a configuração ou as permissões e recrie os serviços sem apagar o volume.
+- Para investigar resíduos, pare primeiro o backend e liste os nomes no volume. Compare qualquer chave de objeto candidata com `establishment_logos.object_key` no PostgreSQL e remova manualmente somente arquivos sem metadados correspondentes; não faça limpeza recursiva nem automatize exclusões. Temporários `.write-*` só podem ser removidos após confirmar que o backend está parado e que são resíduos de uma interrupção.
+- Para uma futura troca para S3, copie os objetos preservando suas chaves e compare tamanho e SHA-256 com `establishment_logos` antes de apontar a aplicação ao novo adaptador. Mantenha os originais locais até validar leituras no novo storage; sua remoção exige uma decisão operacional posterior, pois não há backup.
 
 ### Manutenção dos dados de autenticação
 

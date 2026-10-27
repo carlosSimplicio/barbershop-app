@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ type Config struct {
 	TrustedProxyCIDRs []string
 	EmailProvider     string
 	PublicAppURL      string
+	LogoStorageDir    string
 	SMTPHost          string
 	SMTPPort          uint16
 	SMTPFrom          string
@@ -59,6 +61,11 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 	}
 	if config.HTTPAddress == "" {
 		return Config{}, errors.New("HTTP_ADDR is required")
+	}
+	config.LogoStorageDir = valueOrDefault(lookup, "LOGO_STORAGE_DIR", "")
+	if config.LogoStorageDir == "" || !filepath.IsAbs(config.LogoStorageDir) ||
+		filepath.Clean(config.LogoStorageDir) != config.LogoStorageDir || config.LogoStorageDir == string(os.PathSeparator) {
+		return Config{}, errors.New("LOGO_STORAGE_DIR must be an absolute clean directory below the filesystem root")
 	}
 
 	switch config.LogLevel {

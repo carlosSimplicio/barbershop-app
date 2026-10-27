@@ -24,6 +24,12 @@ make auth-keys # copie a saída para as variáveis correspondentes do .env
 make dev
 ```
 
+`LOGO_STORAGE_DIR` aponta para `/var/lib/barbershop/logos` dentro do container.
+O Compose inicializa o volume persistente e prepara suas permissões antes de
+iniciar a API; o processo do backend continua executando como usuário não
+privilegiado `app`. Preserve o volume `logos_data` ao recriar ou atualizar os
+containers.
+
 A aplicação fica em <https://localhost:8443> e o Mailpit em
 <http://localhost:8025>. Quando houver migrations de domínio, aplique-as em
 outro terminal:

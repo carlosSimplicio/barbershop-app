@@ -27,6 +27,7 @@ import (
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
 	"barbershop-app/backend/internal/platform/ratelimit"
+	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
 
 	"github.com/gin-gonic/gin"
@@ -47,6 +48,15 @@ func run() error {
 
 	logger := newLogger(configuration)
 	slog.SetDefault(logger)
+	logoStorage, err := storage.NewLocalStore(configuration.LogoStorageDir)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := logoStorage.Close(); err != nil {
+			logger.Error("logo_storage_close_failed")
+		}
+	}()
 	if configuration.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
