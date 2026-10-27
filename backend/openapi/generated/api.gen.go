@@ -145,6 +145,19 @@ type EstablishmentResponse struct {
 	Trial    *EstablishmentTrial `json:"trial"`
 }
 
+// EstablishmentSettingsPatchRequest defines model for EstablishmentSettingsPatchRequest.
+type EstablishmentSettingsPatchRequest struct {
+	Address                       *string                         `json:"address,omitempty"`
+	BookingHorizonDays            *int32                          `json:"booking_horizon_days,omitempty"`
+	ContactPhone                  *string                         `json:"contact_phone,omitempty"`
+	CustomerChangeDeadlineMinutes *int32                          `json:"customer_change_deadline_minutes,omitempty"`
+	Description                   *string                         `json:"description,omitempty"`
+	MinimumBookingNoticeMinutes   *int32                          `json:"minimum_booking_notice_minutes,omitempty"`
+	Name                          *string                         `json:"name,omitempty"`
+	SocialLinks                   *[]EstablishmentSocialLinkInput `json:"social_links,omitempty"`
+	TimeZone                      *string                         `json:"time_zone,omitempty"`
+}
+
 // EstablishmentSettingsResponse defines model for EstablishmentSettingsResponse.
 type EstablishmentSettingsResponse struct {
 	Address                       *string                    `json:"address"`
@@ -168,6 +181,12 @@ type EstablishmentSettingsResponse struct {
 
 // EstablishmentSocialLink defines model for EstablishmentSocialLink.
 type EstablishmentSocialLink struct {
+	Label string `json:"label"`
+	Url   string `json:"url"`
+}
+
+// EstablishmentSocialLinkInput defines model for EstablishmentSocialLinkInput.
+type EstablishmentSocialLinkInput struct {
 	Label string `json:"label"`
 	Url   string `json:"url"`
 }
@@ -290,6 +309,9 @@ type PostAuthPasswordRecoveryVerifyJSONRequestBody = PasswordRecoveryVerifyReque
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
 
+// PatchEstablishmentSettingsJSONRequestBody defines body for PatchEstablishmentSettings for application/json ContentType.
+type PatchEstablishmentSettingsJSONRequestBody = EstablishmentSettingsPatchRequest
+
 // PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
 type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
 
@@ -328,6 +350,9 @@ type ServerInterface interface {
 	// GetEstablishmentSettings Consulta as configurações do estabelecimento do proprietário
 	// (GET /establishment/settings)
 	GetEstablishmentSettings(c *gin.Context)
+	// PatchEstablishmentSettings Atualiza os dados públicos e limites do estabelecimento
+	// (PATCH /establishment/settings)
+	PatchEstablishmentSettings(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -491,6 +516,19 @@ func (siw *ServerInterfaceWrapper) GetEstablishmentSettings(c *gin.Context) {
 	siw.Handler.GetEstablishmentSettings(c)
 }
 
+// PatchEstablishmentSettings operation middleware
+func (siw *ServerInterfaceWrapper) PatchEstablishmentSettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PatchEstablishmentSettings(c)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 
@@ -590,6 +628,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
 	router.GET(options.BaseURL+"/establishment/settings", wrapper.GetEstablishmentSettings)
+	router.PATCH(options.BaseURL+"/establishment/settings", wrapper.PatchEstablishmentSettings)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)

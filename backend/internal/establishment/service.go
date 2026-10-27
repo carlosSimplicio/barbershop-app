@@ -79,6 +79,7 @@ func NewService(store Store) *Service {
 
 type SettingsStore interface {
 	GetSettingsByID(context.Context, string) (EstablishmentSettings, error)
+	UpdateSettings(context.Context, string, SettingsPatch) error
 }
 
 type WriteEntitlements interface {
@@ -118,6 +119,23 @@ func (service *SettingsService) GetSettings(ctx context.Context, principal auth.
 		settings.Logo.URL = &logoURL
 	}
 	return settings, nil
+}
+
+func (service *SettingsService) PatchSettings(ctx context.Context, principal auth.Principal, patch SettingsPatch) error {
+	if principal.Role != "owner" {
+		return ErrSettingsForbidden
+	}
+	validatedPatch, err := validateSettingsPatch(patch)
+	if err != nil {
+		return err
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return err
+	}
+	if err := service.store.UpdateSettings(ctx, principal.EstablishmentID, validatedPatch); err != nil {
+		return fmt.Errorf("update authenticated establishment settings: %w", err)
+	}
+	return nil
 }
 
 func (service *Service) Get(ctx context.Context, principal auth.Principal) (Establishment, error) {

@@ -121,11 +121,13 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 
 O proprietário pode configurar por estabelecimento:
 
-- Antecedência mínima em minutos para o cliente agendar.
-- Quantos dias no futuro o cliente pode agendar.
-- Prazo mínimo, em minutos, para o cliente cancelar ou reagendar.
+- Antecedência mínima, em minutos, para o cliente agendar.
+- Horizonte máximo, em dias, para o cliente agendar.
+- Prazo mínimo, em minutos, antes do atendimento para o cliente cancelar ou reagendar.
 
-As três configurações são opcionais; valor ausente/`NULL` significa sem restrição. Não use zero quando ele for ambíguo. Elas se aplicam apenas ao cliente. Proprietários e profissionais podem ajustar a agenda a qualquer momento, respeitando jornada, bloqueios e conflitos.
+As três configurações são opcionais; valor ausente/`NULL` significa sem restrição. Não use zero quando ele for ambíguo: zero é aceito para os limites em minutos e não representa ausência de limite. Elas se aplicam apenas ao cliente. Proprietários e profissionais podem ajustar a agenda a qualquer momento, respeitando jornada, bloqueios e conflitos.
+
+O proprietário pode atualizar esses limites e os dados opcionais do perfil por `PATCH /api/v1/establishment/settings`; os campos omitidos permanecem inalterados, `null` limpa dados opcionais e uma lista de links vazia remove os links. O backend já persiste as configurações, mas sua aplicação às validações de agendamento, cancelamento e reagendamento permanece pendente.
 
 ## Estado e alteração de agendamentos
 
@@ -241,6 +243,9 @@ As três configurações são opcionais; valor ausente/`NULL` significa sem rest
 - A página pública sempre exibe nome e logo do estabelecimento; ambos são obrigatórios.
 - Descrição de até 500 caracteres, endereço de até 500 caracteres, telefone de contato brasileiro normalizado e até cinco links de redes sociais são opcionais e aparecem somente quando preenchidos.
 - Cada link de rede social contém rótulo de até 60 caracteres e URL HTTPS de até 2.048 caracteres, sem credenciais na URL.
+- Descrição, endereço e rótulos de links são apresentados como texto simples; a interface não interpreta HTML fornecido pelo proprietário.
+- O nome do estabelecimento é obrigatório e tem até 120 caracteres; descrição e endereço aceitam texto simples de até 500 caracteres. O telefone de contato brasileiro é normalizado pelo backend para incluir o código do país e os dígitos informados.
+- O fuso horário usa um identificador IANA. O proprietário pode alterá-lo enquanto não houver dado operacional registrado; slug e marcador operacional não são editáveis pelas configurações.
 - Não renderize seções vazias ou placeholders para informações públicas opcionais ausentes.
 - Use o nome do estabelecimento como base para o texto alternativo do logo quando não houver descrição mais adequada.
 - Página pública e agenda operacional são mobile-first.

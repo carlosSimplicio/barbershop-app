@@ -262,6 +262,31 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+    patch:
+      operationId: patchEstablishmentSettings
+      summary: Atualiza os dados públicos e limites do estabelecimento
+      tags: [establishment]
+      security:
+        - accessCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstablishmentSettingsPatchRequest"
+      responses:
+        "204":
+          description: Configurações atualizadas
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals:
     get:
       operationId: getProfessionals
@@ -594,6 +619,58 @@ components:
           type: boolean
         is_publishable:
           type: boolean
+    EstablishmentSettingsPatchRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        time_zone:
+          type: string
+          minLength: 1
+        description:
+          type: [string, "null"]
+          maxLength: 500
+        address:
+          type: [string, "null"]
+          maxLength: 500
+        contact_phone:
+          type: [string, "null"]
+        social_links:
+          oneOf:
+            - type: array
+              maxItems: 5
+              items:
+                $ref: "#/components/schemas/EstablishmentSocialLinkInput"
+            - type: "null"
+        minimum_booking_notice_minutes:
+          type: [integer, "null"]
+          format: int32
+          minimum: 0
+        booking_horizon_days:
+          type: [integer, "null"]
+          format: int32
+          minimum: 1
+        customer_change_deadline_minutes:
+          type: [integer, "null"]
+          format: int32
+          minimum: 0
+    EstablishmentSocialLinkInput:
+      type: object
+      additionalProperties: false
+      required: [label, url]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
     EstablishmentSocialLink:
       type: object
       required: [label, url]
@@ -673,7 +750,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     Conflict:
-      description: E-mail ou slug indisponível
+      description: Conflito com o estado atual do recurso
       content:
         application/json:
           schema:

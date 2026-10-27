@@ -153,6 +153,18 @@ SET description = sqlc.narg('description'),
     customer_change_deadline_minutes = sqlc.narg('customer_change_deadline_minutes')
 WHERE id = sqlc.arg('establishment_id');
 
+-- name: PatchEstablishmentSettings :execrows
+UPDATE establishments
+SET name = CASE WHEN sqlc.arg('name_set')::boolean THEN sqlc.arg('name')::text ELSE name END,
+    time_zone = CASE WHEN sqlc.arg('time_zone_set')::boolean THEN sqlc.arg('time_zone')::text ELSE time_zone END,
+    description = CASE WHEN sqlc.arg('description_set')::boolean THEN sqlc.narg('description')::text ELSE description END,
+    address = CASE WHEN sqlc.arg('address_set')::boolean THEN sqlc.narg('address')::text ELSE address END,
+    contact_phone = CASE WHEN sqlc.arg('contact_phone_set')::boolean THEN sqlc.narg('contact_phone')::text ELSE contact_phone END,
+    minimum_booking_notice_minutes = CASE WHEN sqlc.arg('minimum_booking_notice_minutes_set')::boolean THEN sqlc.narg('minimum_booking_notice_minutes')::integer ELSE minimum_booking_notice_minutes END,
+    booking_horizon_days = CASE WHEN sqlc.arg('booking_horizon_days_set')::boolean THEN sqlc.narg('booking_horizon_days')::integer ELSE booking_horizon_days END,
+    customer_change_deadline_minutes = CASE WHEN sqlc.arg('customer_change_deadline_minutes_set')::boolean THEN sqlc.narg('customer_change_deadline_minutes')::integer ELSE customer_change_deadline_minutes END
+WHERE id = sqlc.arg('establishment_id');
+
 -- name: DeleteEstablishmentSocialLinks :exec
 DELETE FROM establishment_social_links
 WHERE establishment_id = $1;

@@ -273,7 +273,7 @@ func requiresTestCSRF(method, path string) bool {
 	if method == http.MethodGet || method == http.MethodHead {
 		return false
 	}
-	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/professionals"
+	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/establishment/settings" || path == "/api/v1/professionals"
 }
 
 func (application *testApplication) cookie(t *testing.T, name string) *http.Cookie {

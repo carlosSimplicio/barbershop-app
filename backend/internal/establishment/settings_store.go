@@ -18,10 +18,68 @@ type establishmentSettingsQueries interface {
 
 type PostgresSettingsStore struct {
 	queries establishmentSettingsQueries
+	pool    *pgxpool.Pool
 }
 
 func NewPostgresSettingsStore(pool *pgxpool.Pool) *PostgresSettingsStore {
-	return &PostgresSettingsStore{queries: db.New(pool)}
+	return &PostgresSettingsStore{queries: db.New(pool), pool: pool}
+}
+
+func (store *PostgresSettingsStore) UpdateSettings(ctx context.Context, establishmentID string, patch SettingsPatch) error {
+	parsedID, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return fmt.Errorf("parse establishment ID: %w", err)
+	}
+	id := pgtype.UUID{Bytes: parsedID, Valid: true}
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin establishment settings update: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	queries := db.New(tx)
+	locked, err := queries.LockEstablishmentOperationalWrite(ctx, id)
+	if err != nil {
+		return fmt.Errorf("lock establishment for settings update: %w", err)
+	}
+	if patch.TimeZone.Set && patch.TimeZone.Value != locked.TimeZone && locked.OperationalDataStartedAt.Valid {
+		return ErrTimeZoneLocked
+	}
+	rowsAffected, err := queries.PatchEstablishmentSettings(ctx, db.PatchEstablishmentSettingsParams{
+		NameSet: patch.Name.Set, Name: patch.Name.Value,
+		TimeZoneSet: patch.TimeZone.Set, TimeZone: patch.TimeZone.Value,
+		DescriptionSet: patch.Description.Set, Description: pgtype.Text{String: patch.Description.Value, Valid: patch.Description.Set && !patch.Description.Null},
+		AddressSet: patch.Address.Set, Address: pgtype.Text{String: patch.Address.Value, Valid: patch.Address.Set && !patch.Address.Null},
+		ContactPhoneSet: patch.ContactPhone.Set, ContactPhone: pgtype.Text{String: patch.ContactPhone.Value, Valid: patch.ContactPhone.Set && !patch.ContactPhone.Null},
+		MinimumBookingNoticeMinutesSet:   patch.MinimumBookingNoticeMinutes.Set,
+		MinimumBookingNoticeMinutes:      pgtype.Int4{Int32: patch.MinimumBookingNoticeMinutes.Value, Valid: patch.MinimumBookingNoticeMinutes.Set && !patch.MinimumBookingNoticeMinutes.Null},
+		BookingHorizonDaysSet:            patch.BookingHorizonDays.Set,
+		BookingHorizonDays:               pgtype.Int4{Int32: patch.BookingHorizonDays.Value, Valid: patch.BookingHorizonDays.Set && !patch.BookingHorizonDays.Null},
+		CustomerChangeDeadlineMinutesSet: patch.CustomerChangeDeadlineMinutes.Set,
+		CustomerChangeDeadlineMinutes:    pgtype.Int4{Int32: patch.CustomerChangeDeadlineMinutes.Value, Valid: patch.CustomerChangeDeadlineMinutes.Set && !patch.CustomerChangeDeadlineMinutes.Null},
+		EstablishmentID:                  id,
+	})
+	if err != nil {
+		return fmt.Errorf("update establishment settings: %w", err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("update establishment settings: expected one row, got %d", rowsAffected)
+	}
+	if patch.SocialLinks.Set {
+		if err := queries.DeleteEstablishmentSocialLinks(ctx, id); err != nil {
+			return fmt.Errorf("replace establishment social links: %w", err)
+		}
+		for position, link := range patch.SocialLinks.Value {
+			if err := queries.CreateEstablishmentSocialLink(ctx, db.CreateEstablishmentSocialLinkParams{
+				EstablishmentID: id, Position: int32(position), Label: link.Label, Url: link.URL,
+			}); err != nil {
+				return fmt.Errorf("create establishment social link: %w", err)
+			}
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit establishment settings update: %w", err)
+	}
+	return nil
 }
 
 func (store *PostgresSettingsStore) GetSettingsByID(ctx context.Context, establishmentID string) (EstablishmentSettings, error) {

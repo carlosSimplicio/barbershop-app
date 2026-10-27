@@ -29,9 +29,10 @@ var publicPaths = map[string]struct{}{
 }
 
 var csrfProtectedPaths = map[string]struct{}{
-	"/api/v1/auth/logout":          {},
-	"/api/v1/auth/password/change": {},
-	"/api/v1/professionals":        {},
+	"/api/v1/auth/logout":            {},
+	"/api/v1/auth/password/change":   {},
+	"/api/v1/establishment/settings": {},
+	"/api/v1/professionals":          {},
 }
 
 type AccessTokenVerifier interface {

@@ -283,9 +283,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Consultar `GET /api/v1/establishment/settings` somente como proprietário, derivando o tenant da sessão autenticada e mantendo disponível a leitura em trial expirado.
 - [x] Retornar dados opcionais, links ordenados, limites, metadados públicos do logo e estados de conclusão/publicação; sinalizar slug legado reservado sem expor chave ou caminho interno do arquivo.
 - [x] Informar elegibilidade de escrita pelo componente central de direitos e permitir alteração futura do fuso somente antes do primeiro dado operacional.
-- [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
-- [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
-- [ ] Interpretar valores ausentes dessas configurações como ausência de limite.
+- [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
+- [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
+- [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
 - [ ] Criar painel de configurações do estabelecimento e dados da página pública.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 

@@ -633,6 +633,65 @@ func (q *Queries) MarkEstablishmentOperationalDataStarted(ctx context.Context, a
 	return result.RowsAffected(), nil
 }
 
+const patchEstablishmentSettings = `-- name: PatchEstablishmentSettings :execrows
+UPDATE establishments
+SET name = CASE WHEN $1::boolean THEN $2::text ELSE name END,
+    time_zone = CASE WHEN $3::boolean THEN $4::text ELSE time_zone END,
+    description = CASE WHEN $5::boolean THEN $6::text ELSE description END,
+    address = CASE WHEN $7::boolean THEN $8::text ELSE address END,
+    contact_phone = CASE WHEN $9::boolean THEN $10::text ELSE contact_phone END,
+    minimum_booking_notice_minutes = CASE WHEN $11::boolean THEN $12::integer ELSE minimum_booking_notice_minutes END,
+    booking_horizon_days = CASE WHEN $13::boolean THEN $14::integer ELSE booking_horizon_days END,
+    customer_change_deadline_minutes = CASE WHEN $15::boolean THEN $16::integer ELSE customer_change_deadline_minutes END
+WHERE id = $17
+`
+
+type PatchEstablishmentSettingsParams struct {
+	NameSet                          bool        `json:"name_set"`
+	Name                             string      `json:"name"`
+	TimeZoneSet                      bool        `json:"time_zone_set"`
+	TimeZone                         string      `json:"time_zone"`
+	DescriptionSet                   bool        `json:"description_set"`
+	Description                      pgtype.Text `json:"description"`
+	AddressSet                       bool        `json:"address_set"`
+	Address                          pgtype.Text `json:"address"`
+	ContactPhoneSet                  bool        `json:"contact_phone_set"`
+	ContactPhone                     pgtype.Text `json:"contact_phone"`
+	MinimumBookingNoticeMinutesSet   bool        `json:"minimum_booking_notice_minutes_set"`
+	MinimumBookingNoticeMinutes      pgtype.Int4 `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDaysSet            bool        `json:"booking_horizon_days_set"`
+	BookingHorizonDays               pgtype.Int4 `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutesSet bool        `json:"customer_change_deadline_minutes_set"`
+	CustomerChangeDeadlineMinutes    pgtype.Int4 `json:"customer_change_deadline_minutes"`
+	EstablishmentID                  pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) PatchEstablishmentSettings(ctx context.Context, arg PatchEstablishmentSettingsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, patchEstablishmentSettings,
+		arg.NameSet,
+		arg.Name,
+		arg.TimeZoneSet,
+		arg.TimeZone,
+		arg.DescriptionSet,
+		arg.Description,
+		arg.AddressSet,
+		arg.Address,
+		arg.ContactPhoneSet,
+		arg.ContactPhone,
+		arg.MinimumBookingNoticeMinutesSet,
+		arg.MinimumBookingNoticeMinutes,
+		arg.BookingHorizonDaysSet,
+		arg.BookingHorizonDays,
+		arg.CustomerChangeDeadlineMinutesSet,
+		arg.CustomerChangeDeadlineMinutes,
+		arg.EstablishmentID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setCurrentEstablishmentLogo = `-- name: SetCurrentEstablishmentLogo :execrows
 UPDATE establishments
 SET logo_id = $1

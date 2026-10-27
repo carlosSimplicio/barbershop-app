@@ -191,7 +191,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Atualiza os dados públicos e limites do estabelecimento */
+        patch: operations["patchEstablishmentSettings"];
         trace?: never;
     };
     "/professionals": {
@@ -336,6 +337,25 @@ export interface components {
             is_complete: boolean;
             is_publishable: boolean;
         };
+        EstablishmentSettingsPatchRequest: {
+            name?: string;
+            time_zone?: string;
+            description?: string | null;
+            address?: string | null;
+            contact_phone?: string | null;
+            social_links?: components["schemas"]["EstablishmentSocialLinkInput"][] | null;
+            /** Format: int32 */
+            minimum_booking_notice_minutes?: number | null;
+            /** Format: int32 */
+            booking_horizon_days?: number | null;
+            /** Format: int32 */
+            customer_change_deadline_minutes?: number | null;
+        };
+        EstablishmentSocialLinkInput: {
+            label: string;
+            /** Format: uri */
+            url: string;
+        };
         EstablishmentSocialLink: {
             label: string;
             /** Format: uri */
@@ -397,7 +417,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description E-mail ou slug indisponível */
+        /** @description Conflito com o estado atual do recurso */
         Conflict: {
             headers: {
                 [name: string]: unknown;
@@ -717,6 +737,33 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    patchEstablishmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstablishmentSettingsPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Configurações atualizadas */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["InternalServerError"];
         };
     };

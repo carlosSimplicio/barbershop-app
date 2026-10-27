@@ -150,6 +150,48 @@ func TestServiceSettingsReportLockedTimezoneAndReadOnlyAccess(t *testing.T) {
 	}
 }
 
+func TestServicePatchesSettingsForAuthenticatedOwnerAfterValidation(t *testing.T) {
+	store := &settingsStoreStub{}
+	service := NewSettingsService(store, writeEntitlementsStub{})
+
+	err := service.PatchSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: "owner"}, SettingsPatch{
+		Description: PatchField[string]{Set: true, Value: "  descrição  "},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.establishmentID != testEstablishmentID || store.patch == nil || store.patch.Description.Value != "descrição" {
+		t.Fatalf("updated tenant/patch = %q/%#v", store.establishmentID, store.patch)
+	}
+}
+
+func TestServiceRefusesSettingsPatchWithoutOwnerOrWriteEntitlement(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		role     string
+		writeErr error
+		wantErr  error
+	}{
+		{name: "professional", role: "professional", wantErr: ErrSettingsForbidden},
+		{name: "expired trial", role: "owner", writeErr: entitlements.ErrReadOnly, wantErr: entitlements.ErrReadOnly},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := &settingsStoreStub{}
+			service := NewSettingsService(store, writeEntitlementsStub{err: test.writeErr})
+			err := service.PatchSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: test.role}, SettingsPatch{
+				Description: PatchField[string]{Set: true, Value: "Descrição"},
+			})
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("error = %v, want %v", err, test.wantErr)
+			}
+			if store.patch != nil {
+				t.Fatal("settings store was updated despite refused patch")
+			}
+		})
+	}
+}
+
 func stringPointer(value string) *string { return &value }
 
 type storeStub struct {
@@ -162,6 +204,7 @@ type settingsStoreStub struct {
 	establishmentID string
 	settings        EstablishmentSettings
 	err             error
+	patch           *SettingsPatch
 }
 
 type writeEntitlementsStub struct {
@@ -173,6 +216,12 @@ func (stub writeEntitlementsStub) RequireWrite(context.Context, string) error { 
 func (stub *settingsStoreStub) GetSettingsByID(_ context.Context, establishmentID string) (EstablishmentSettings, error) {
 	stub.establishmentID = establishmentID
 	return stub.settings, stub.err
+}
+
+func (stub *settingsStoreStub) UpdateSettings(_ context.Context, establishmentID string, patch SettingsPatch) error {
+	stub.establishmentID = establishmentID
+	stub.patch = &patch
+	return stub.err
 }
 
 func (stub *storeStub) GetByID(_ context.Context, establishmentID string) (Establishment, error) {
