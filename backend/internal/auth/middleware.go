@@ -155,5 +155,17 @@ func requiresAccessToken(method, path string) bool {
 	if _, public := publicPaths[path]; public {
 		return false
 	}
+	if isPublicEstablishmentLogoRead(method, path) {
+		return false
+	}
 	return strings.HasPrefix(path, "/api/v1/")
+}
+
+func isPublicEstablishmentLogoRead(method, path string) bool {
+	if method != http.MethodGet {
+		return false
+	}
+	segments := strings.Split(path, "/")
+	return len(segments) == 7 && segments[1] == "api" && segments[2] == "v1" &&
+		segments[3] == "public" && segments[4] == "establishments" && segments[5] != "" && segments[6] == "logo"
 }

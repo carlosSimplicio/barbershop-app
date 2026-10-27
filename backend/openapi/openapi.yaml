@@ -320,6 +320,72 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /public/establishments/{slug}/logo:
+    get:
+      operationId: getPublicEstablishmentLogo
+      summary: Consulta o logo atual de um estabelecimento publicável
+      tags: [public-establishment]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 63
+        - name: If-None-Match
+          in: header
+          required: false
+          description: ETag do logo previamente recebido para revalidar o cache.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conteúdo do logo atual
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        "304":
+          description: Logo sem alterações desde o ETag informado
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        "404":
+          description: Estabelecimento inexistente, não publicável ou sem logo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals:
     get:
       operationId: getProfessionals

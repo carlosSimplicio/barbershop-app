@@ -212,6 +212,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/establishments/{slug}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o logo atual de um estabelecimento publicável */
+        get: operations["getPublicEstablishmentLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals": {
         parameters: {
             query?: never;
@@ -817,6 +834,56 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /** @description Arquivo ou corpo multipart acima do limite */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getPublicEstablishmentLogo: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description ETag do logo previamente recebido para revalidar o cache. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conteúdo do logo atual */
+            200: {
+                headers: {
+                    ETag?: string;
+                    "Cache-Control"?: string;
+                    "X-Content-Type-Options"?: string;
+                    "Content-Length"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Logo sem alterações desde o ETag informado */
+            304: {
+                headers: {
+                    ETag?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Estabelecimento inexistente, não publicável ou sem logo */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

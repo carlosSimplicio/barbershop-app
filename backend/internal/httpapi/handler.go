@@ -78,6 +78,10 @@ func (handler *Handler) PutEstablishmentLogo(c *gin.Context) {
 	handler.establishment.PutEstablishmentLogo(c)
 }
 
+func (handler *Handler) GetPublicEstablishmentLogo(c *gin.Context, slug string, _ api.GetPublicEstablishmentLogoParams) {
+	handler.establishment.GetPublicEstablishmentLogo(c, slug)
+}
+
 func (handler *Handler) PostProfessionals(c *gin.Context) {
 	handler.professionals.PostProfessionals(c)
 }

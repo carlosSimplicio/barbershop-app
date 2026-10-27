@@ -197,3 +197,16 @@ FROM establishments AS e
 JOIN establishment_logos AS l
     ON l.establishment_id = e.id AND l.id = e.logo_id
 WHERE e.id = $1;
+
+-- name: GetPublicEstablishmentBySlug :one
+SELECT id, name, slug
+FROM establishments
+WHERE slug = $1;
+
+-- name: GetPublicEstablishmentLogo :one
+SELECT l.object_key, l.content_type, l.byte_size, l.content_sha256
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = sqlc.arg('establishment_id')
+  AND e.slug = sqlc.arg('slug');

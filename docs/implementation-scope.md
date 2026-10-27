@@ -298,7 +298,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Persistir metadados e chave lógica estável no PostgreSQL, com associação do logo atual estruturalmente limitada ao mesmo estabelecimento.
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
 - [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.
-- [ ] Servir o logo de modo seguro e com cache apropriado, sem expor o caminho interno.
+- [x] Servir o logo atual por `GET /api/v1/public/establishments/{slug}/logo` somente quando publicável, com resolução central do slug, storage por interface, MIME/tamanho validados, `nosniff`, ETag SHA-256 e cache revalidável; trial expirado não oculta a imagem e nenhuma chave/caminho interno é exposto.
 
 ## 9. Administração de profissionais
 

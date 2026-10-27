@@ -68,6 +68,7 @@
 - Solicite uma substituição por `POST /api/v1/auth/email-confirmation`; a resposta permanece `202` para conta inexistente, já confirmada ou elegível. Para uma conta elegível, use somente a mensagem mais recente, pois o token anterior foi invalidado.
 - Copie manualmente apenas o valor de `token` do fragmento de `/confirmar-email#token=...` e envie-o no corpo de `POST /api/v1/auth/email-confirmation/verify`. Nunca coloque o token em path ou query. A resposta `200` cria a sessão e o trial.
 - Preserve os cookies retornados e consulte `GET /api/v1/establishment`; a resposta deve conter o mesmo tenant, o fuso persistido e o trial ativo com limites UTC separados por exatamente 14 dias.
+- Depois de enviar um logo válido como owner, consulte `GET /api/v1/public/establishments/{slug}/logo` sem cookies. Confira os bytes e `Content-Type`, `Content-Length`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, no-cache` e `ETag`. Repita com `If-None-Match` igual ao ETag e confirme `304` sem corpo; substitua o logo e reutilize o ETag antigo para receber `200` com os novos bytes. Confirme que slug reservado, slug ausente e estabelecimento sem logo retornam `404`, e que a leitura continua disponível após expirar o trial.
 - Use identificadores fictícios e descarte cookie jar e token ao terminar. Os comandos completos estão no `README.md`.
 
 ## CI/CD e releases

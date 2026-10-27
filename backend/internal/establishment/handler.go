@@ -10,6 +10,8 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
@@ -41,10 +43,11 @@ type Handler struct {
 	finder       Finder
 	settings     SettingsManager
 	logoUploader LogoUploader
+	publicLogo   PublicLogoReader
 }
 
-func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUploader) *Handler {
-	return &Handler{finder: finder, settings: settings, logoUploader: logoUploader}
+func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUploader, publicLogo PublicLogoReader) *Handler {
+	return &Handler{finder: finder, settings: settings, logoUploader: logoUploader, publicLogo: publicLogo}
 }
 
 const maxLogoMultipartBodyBytes = MaxLogoBytes + 64*1024
@@ -165,6 +168,62 @@ func (handler *Handler) GetEstablishment(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+func (handler *Handler) GetPublicEstablishmentLogo(c *gin.Context, slug string) {
+	logo, content, err := handler.publicLogo.OpenPublicLogo(c.Request.Context(), slug)
+	if errors.Is(err, ErrPublicLogoNotFound) {
+		writeError(c, http.StatusNotFound, "not_found", "O logo do estabelecimento não foi encontrado.")
+		return
+	}
+	if err != nil {
+		slog.Error("establishment_public_logo_open_failed", "request_id", httpserver.RequestID(c))
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
+		return
+	}
+	if matchesIfNoneMatch(c.Request.Header.Values("If-None-Match"), logo.ETag) {
+		if err := content.Close(); err != nil {
+			slog.Error("establishment_public_logo_close_failed", "request_id", httpserver.RequestID(c))
+			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
+			return
+		}
+		c.Header("Cache-Control", "public, no-cache")
+		c.Header("ETag", logo.ETag)
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Status(http.StatusNotModified)
+		return
+	}
+
+	body, readErr := io.ReadAll(io.LimitReader(content, logo.ByteSize+1))
+	closeErr := content.Close()
+	if readErr != nil || closeErr != nil || int64(len(body)) != logo.ByteSize {
+		slog.Error("establishment_public_logo_read_failed", "request_id", httpserver.RequestID(c))
+		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
+		return
+	}
+
+	c.Header("Cache-Control", "public, no-cache")
+	c.Header("ETag", logo.ETag)
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Content-Type", logo.ContentType)
+	c.Header("Content-Length", strconv.Itoa(len(body)))
+	c.Data(http.StatusOK, logo.ContentType, body)
+}
+
+func matchesIfNoneMatch(values []string, etag string) bool {
+	for _, value := range values {
+		for _, candidate := range strings.Split(value, ",") {
+			candidate = strings.TrimSpace(candidate)
+			if candidate == "*" {
+				return true
+			}
+			candidate = strings.TrimPrefix(candidate, "W/")
+			if candidate == etag {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (handler *Handler) GetEstablishmentSettings(c *gin.Context) {

@@ -182,6 +182,9 @@ func newTestApplication(t *testing.T) *testApplication {
 			establishment.NewService(establishment.NewPostgresStore(integrationPool)),
 			establishment.NewSettingsService(establishment.NewPostgresSettingsStore(integrationPool), writeEntitlements),
 			establishment.NewLogoUploadService(establishment.NewPostgresLogoUploadStore(integrationPool), logoStorage, writeEntitlements),
+			establishment.NewPublicLogoService(
+				establishment.NewPublicEstablishmentResolver(establishment.NewPostgresPublicEstablishmentStore(integrationPool)),
+				establishment.NewPostgresPublicLogoStore(integrationPool), logoStorage),
 		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
 			writeEntitlements)),

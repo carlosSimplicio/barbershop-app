@@ -294,6 +294,12 @@ type GetProfessionalsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetPublicEstablishmentLogoParams defines parameters for GetPublicEstablishmentLogo.
+type GetPublicEstablishmentLogoParams struct {
+	// IfNoneMatch ETag do logo previamente recebido para revalidar o cache.
+	IfNoneMatch *string `json:"If-None-Match,omitempty"`
+}
+
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
 type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
 
@@ -374,6 +380,9 @@ type ServerInterface interface {
 	// PostProfessionals Cadastra um profissional no estabelecimento do proprietário
 	// (POST /professionals)
 	PostProfessionals(c *gin.Context)
+	// GetPublicEstablishmentLogo Consulta o logo atual de um estabelecimento publicável
+	// (GET /public/establishments/{slug}/logo)
+	GetPublicEstablishmentLogo(c *gin.Context, slug string, params GetPublicEstablishmentLogoParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -615,6 +624,55 @@ func (siw *ServerInterfaceWrapper) PostProfessionals(c *gin.Context) {
 	siw.Handler.PostProfessionals(c)
 }
 
+// GetPublicEstablishmentLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicEstablishmentLogo(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", c.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slug: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicEstablishmentLogoParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "If-None-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-None-Match")]; found {
+		var IfNoneMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for If-None-Match, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-None-Match", valueList[0], &IfNoneMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter If-None-Match: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IfNoneMatch = &IfNoneMatch
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicEstablishmentLogo(c, slug, params)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -655,6 +713,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/establishment/settings", wrapper.GetEstablishmentSettings)
 	router.PATCH(options.BaseURL+"/establishment/settings", wrapper.PatchEstablishmentSettings)
 	router.PUT(options.BaseURL+"/establishment/logo", wrapper.PutEstablishmentLogo)
+	router.GET(options.BaseURL+"/public/establishments/:slug/logo", wrapper.GetPublicEstablishmentLogo)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)

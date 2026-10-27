@@ -82,3 +82,12 @@ var supportedLogoMediaTypes = map[string]string{
 	"jpeg": "image/jpeg",
 	"webp": "image/webp",
 }
+
+func isSupportedLogoMediaType(mediaType string) bool {
+	for _, supportedMediaType := range supportedLogoMediaTypes {
+		if mediaType == supportedMediaType {
+			return true
+		}
+	}
+	return false
+}

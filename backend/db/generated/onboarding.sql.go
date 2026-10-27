@@ -528,6 +528,58 @@ func (q *Queries) GetEstablishmentWithTrial(ctx context.Context, id pgtype.UUID)
 	return i, err
 }
 
+const getPublicEstablishmentBySlug = `-- name: GetPublicEstablishmentBySlug :one
+SELECT id, name, slug
+FROM establishments
+WHERE slug = $1
+`
+
+type GetPublicEstablishmentBySlugRow struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+	Slug string      `json:"slug"`
+}
+
+func (q *Queries) GetPublicEstablishmentBySlug(ctx context.Context, slug string) (GetPublicEstablishmentBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEstablishmentBySlug, slug)
+	var i GetPublicEstablishmentBySlugRow
+	err := row.Scan(&i.ID, &i.Name, &i.Slug)
+	return i, err
+}
+
+const getPublicEstablishmentLogo = `-- name: GetPublicEstablishmentLogo :one
+SELECT l.object_key, l.content_type, l.byte_size, l.content_sha256
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1
+  AND e.slug = $2
+`
+
+type GetPublicEstablishmentLogoParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Slug            string      `json:"slug"`
+}
+
+type GetPublicEstablishmentLogoRow struct {
+	ObjectKey     string `json:"object_key"`
+	ContentType   string `json:"content_type"`
+	ByteSize      int64  `json:"byte_size"`
+	ContentSha256 []byte `json:"content_sha256"`
+}
+
+func (q *Queries) GetPublicEstablishmentLogo(ctx context.Context, arg GetPublicEstablishmentLogoParams) (GetPublicEstablishmentLogoRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEstablishmentLogo, arg.EstablishmentID, arg.Slug)
+	var i GetPublicEstablishmentLogoRow
+	err := row.Scan(
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.ByteSize,
+		&i.ContentSha256,
+	)
+	return i, err
+}
+
 const invalidateActiveEmailConfirmations = `-- name: InvalidateActiveEmailConfirmations :exec
 UPDATE email_confirmations
 SET invalidated_at = $2

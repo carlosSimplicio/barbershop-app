@@ -115,6 +115,27 @@ func TestMiddlewareRequiresMatchingSignedCSRFTokenForEstablishmentLogoUpload(t *
 	}
 }
 
+func TestMiddlewareAllowsOnlyPublicLogoGETWithoutAuthentication(t *testing.T) {
+	path := "/api/v1/public/establishments/barbearia-central/logo"
+	if requiresAccessToken(http.MethodGet, path) {
+		t.Fatal("public logo GET unexpectedly requires authentication")
+	}
+	for _, method := range []string{http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		if !requiresAccessToken(method, path) {
+			t.Errorf("%s %s is public; only GET should be exempt", method, path)
+		}
+	}
+	for _, path := range []string{
+		"/api/v1/public/establishments/barbearia-central/logo/extra",
+		"/api/v1/public/establishments/barbearia-central",
+		"/api/v1/public/establishments//logo",
+	} {
+		if !requiresAccessToken(http.MethodGet, path) {
+			t.Errorf("GET %s is outside the public logo route but does not require authentication", path)
+		}
+	}
+}
+
 func TestMiddlewareDerivesTenantAndRoleFromCurrentUser(t *testing.T) {
 	user := validSessionUser()
 	claims := security.AccessClaims{
