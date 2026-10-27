@@ -7,6 +7,7 @@ import {
   AffixedInput,
   Button,
   Field,
+  FileField,
   Feedback,
   IconButton,
   PasswordField,
@@ -190,6 +191,10 @@ export function DesignSystemShowcase() {
               label="Descrição"
               maxLength={500}
             />
+            <FileField
+              hint="PNG, JPEG ou WebP. Até 2 MiB e 4.096 × 4.096 pixels. O backend confirma a validade do arquivo."
+              label="Logo do estabelecimento"
+            />
             <Field
               hint="O prefixo contextualiza sem fazer parte do valor."
               hintId="showcase-slug-hint"
@@ -243,6 +248,11 @@ export function DesignSystemShowcase() {
               label="Descrição com erro"
               maxLength={500}
             />
+            <FileField
+              error="Escolha uma imagem dentro dos limites informados."
+              hint="PNG, JPEG ou WebP. Até 2 MiB e 4.096 × 4.096 pixels."
+              label="Logo com erro"
+            />
             <TextField
               defaultValue="Não editável"
               disabled
@@ -257,6 +267,11 @@ export function DesignSystemShowcase() {
               disabled
               hint="Trial expirado: leitura disponível, edição bloqueada."
               label="Descrição desabilitada"
+            />
+            <FileField
+              disabled
+              hint="Envio indisponível no momento."
+              label="Logo desabilitado"
             />
           </div>
         </Showcase>

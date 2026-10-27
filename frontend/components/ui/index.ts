@@ -5,6 +5,7 @@ export {
 export { ActionLink, type ActionLinkProps } from "./action-link/action-link";
 export { Button, type ButtonProps } from "./button/button";
 export { Field, type FieldProps } from "./field/field";
+export { FileField, type FileFieldProps } from "./file-field/file-field";
 export { Feedback, type FeedbackProps } from "./feedback/feedback";
 export { IconButton, type IconButtonProps } from "./icon-button/icon-button";
 export { Input, type InputProps } from "./input/input";
