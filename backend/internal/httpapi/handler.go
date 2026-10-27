@@ -66,6 +66,10 @@ func (handler *Handler) GetEstablishment(c *gin.Context) {
 	handler.establishment.GetEstablishment(c)
 }
 
+func (handler *Handler) GetEstablishmentSettings(c *gin.Context) {
+	handler.establishment.GetEstablishmentSettings(c)
+}
+
 func (handler *Handler) PostProfessionals(c *gin.Context) {
 	handler.professionals.PostProfessionals(c)
 }

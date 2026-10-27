@@ -445,6 +445,59 @@ func (q *Queries) GetEstablishmentPublicSettings(ctx context.Context, id pgtype.
 	return i, err
 }
 
+const getEstablishmentSettingsByID = `-- name: GetEstablishmentSettingsByID :one
+SELECT
+    e.id, e.name, e.slug, e.time_zone, e.description, e.address, e.contact_phone,
+    e.minimum_booking_notice_minutes, e.booking_horizon_days, e.customer_change_deadline_minutes,
+    e.operational_data_started_at,
+    l.content_type AS logo_content_type, l.byte_size AS logo_byte_size,
+    l.width AS logo_width, l.height AS logo_height
+FROM establishments AS e
+LEFT JOIN establishment_logos AS l ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1
+`
+
+type GetEstablishmentSettingsByIDRow struct {
+	ID                            pgtype.UUID        `json:"id"`
+	Name                          string             `json:"name"`
+	Slug                          string             `json:"slug"`
+	TimeZone                      string             `json:"time_zone"`
+	Description                   pgtype.Text        `json:"description"`
+	Address                       pgtype.Text        `json:"address"`
+	ContactPhone                  pgtype.Text        `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4        `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4        `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4        `json:"customer_change_deadline_minutes"`
+	OperationalDataStartedAt      pgtype.Timestamptz `json:"operational_data_started_at"`
+	LogoContentType               pgtype.Text        `json:"logo_content_type"`
+	LogoByteSize                  pgtype.Int8        `json:"logo_byte_size"`
+	LogoWidth                     pgtype.Int4        `json:"logo_width"`
+	LogoHeight                    pgtype.Int4        `json:"logo_height"`
+}
+
+func (q *Queries) GetEstablishmentSettingsByID(ctx context.Context, id pgtype.UUID) (GetEstablishmentSettingsByIDRow, error) {
+	row := q.db.QueryRow(ctx, getEstablishmentSettingsByID, id)
+	var i GetEstablishmentSettingsByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.TimeZone,
+		&i.Description,
+		&i.Address,
+		&i.ContactPhone,
+		&i.MinimumBookingNoticeMinutes,
+		&i.BookingHorizonDays,
+		&i.CustomerChangeDeadlineMinutes,
+		&i.OperationalDataStartedAt,
+		&i.LogoContentType,
+		&i.LogoByteSize,
+		&i.LogoWidth,
+		&i.LogoHeight,
+	)
+	return i, err
+}
+
 const getEstablishmentWithTrial = `-- name: GetEstablishmentWithTrial :one
 SELECT e.id, e.name, e.slug, e.time_zone, t.starts_at, t.ends_at
 FROM establishments AS e

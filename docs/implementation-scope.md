@@ -280,6 +280,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
 - [x] Na interface de cadastro, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação ou alteração antes do envio.
 - [x] Consultar em `/testes` o estabelecimento da sessão sem enviar ID de tenant, exibindo nome, slug, fuso e trial ausente, ativo ou expirado; bloquear a consulta durante troca obrigatória de senha.
+- [x] Consultar `GET /api/v1/establishment/settings` somente como proprietário, derivando o tenant da sessão autenticada e mantendo disponível a leitura em trial expirado.
+- [x] Retornar dados opcionais, links ordenados, limites, metadados públicos do logo e estados de conclusão/publicação; sinalizar slug legado reservado sem expor chave ou caminho interno do arquivo.
+- [x] Informar elegibilidade de escrita pelo componente central de direitos e permitir alteração futura do fuso somente antes do primeiro dado operacional.
 - [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
 - [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
 - [ ] Interpretar valores ausentes dessas configurações como ausência de limite.

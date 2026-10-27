@@ -23,7 +23,7 @@ func TestHandlerReturnsOnlyAuthenticatedEstablishment(t *testing.T) {
 			EndsAt:   time.Date(2026, time.November, 2, 14, 30, 0, 0, time.UTC),
 		},
 	}}
-	recorder := performEstablishmentRequest(t, NewHandler(finder), &auth.Principal{
+	recorder := performEstablishmentRequest(t, NewHandler(finder, nil), &auth.Principal{
 		UserID: "018f47d2-e886-7f1c-8e8d-8b38eaf16463", EstablishmentID: testEstablishmentID, Role: "owner",
 	}, "?establishment_id="+otherEstablishmentID)
 
@@ -51,7 +51,7 @@ func TestHandlerReturnsOnlyAuthenticatedEstablishment(t *testing.T) {
 func TestHandlerReturnsNullTrialBeforeConfirmation(t *testing.T) {
 	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{establishment: Establishment{
 		ID: testEstablishmentID, Name: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo",
-	}}), &auth.Principal{EstablishmentID: testEstablishmentID}, "")
+	}}, nil), &auth.Principal{EstablishmentID: testEstablishmentID}, "")
 
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"trial":null`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
@@ -59,7 +59,7 @@ func TestHandlerReturnsNullTrialBeforeConfirmation(t *testing.T) {
 }
 
 func TestHandlerRejectsRequestWithoutAuthenticatedPrincipal(t *testing.T) {
-	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{}), nil, "")
+	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{}, nil), nil, "")
 
 	if recorder.Code != http.StatusUnauthorized || !strings.Contains(recorder.Body.String(), `"code":"authentication_required"`) {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
@@ -67,7 +67,7 @@ func TestHandlerRejectsRequestWithoutAuthenticatedPrincipal(t *testing.T) {
 }
 
 func TestHandlerDoesNotExposeInternalFailure(t *testing.T) {
-	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{err: errors.New("database-secret")}), &auth.Principal{
+	recorder := performEstablishmentRequest(t, NewHandler(&finderStub{err: errors.New("database-secret")}, nil), &auth.Principal{
 		EstablishmentID: testEstablishmentID,
 	}, "")
 

@@ -95,6 +95,7 @@
 - Não publique caminho e subdomínio simultaneamente como canônicos. Em migração futura, redirecione permanentemente os caminhos antigos.
 - Toda consulta autenticada ou pública inclui explicitamente o estabelecimento resolvido.
 - `GET /establishment` deriva o estabelecimento exclusivamente do `Principal` autenticado e não aceita identificador de tenant como autoridade em path, query ou corpo. A resposta limita-se a identificador, nome, slug, fuso IANA e trial; seus limites são instantes UTC, enquanto o fuso persistido continua sendo a autoridade para regras e apresentação locais.
+- `GET /establishment/settings` é exclusivo ao papel `owner` e também deriva o tenant somente do `Principal`. Retorna os dados públicos opcionais, links ordenados, limites, metadados públicos do logo e os estados `time_zone_editable`, `can_write`, `slug_conflict`, `is_complete` e `is_publishable`. `can_write` reutiliza `entitlements.Service`; a leitura continua permitida após expiração do trial. O fuso só é indicado como editável quando `operational_data_started_at` estiver nulo e o componente central autorizar escritas. Slugs legados reservados são sinalizados e não são considerados publicáveis. `is_publishable` indica elegibilidade do perfil, não a disponibilidade dos endpoints públicos ainda planejados. A resposta do logo expõe somente metadados validados; a URL pública por slug é nula quando o estabelecimento não é publicável. Nunca exponha a chave lógica de storage, caminho interno, nome original ou credenciais. `GET /establishment` mantém seu contrato enxuto e independente.
 
 ## Autenticação
 
@@ -121,7 +122,7 @@
 
 ### Contrato de sessão
 
-- A API expõe `POST /auth/register`, `POST /auth/email-confirmation`, `POST /auth/email-confirmation/verify`, `POST /auth/password/recovery`, `POST /auth/password/recovery/verify`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password/change` e `GET /establishment` sob `/api/v1`.
+- A API expõe `POST /auth/register`, `POST /auth/email-confirmation`, `POST /auth/email-confirmation/verify`, `POST /auth/password/recovery`, `POST /auth/password/recovery/verify`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password/change`, `GET /establishment` e `GET /establishment/settings` sob `/api/v1`.
 - `POST /auth/register` é público, mas mantém a allowlist estrita de `Origin`. Ele valida no backend nome, slug, fuso IANA, e-mail e senha; cria estabelecimento, usuário `owner`, credencial e primeira confirmação em uma única transação; e não cria trial.
 - O cadastro responde `202 Accepted` depois do commit. O envio da confirmação ocorre diretamente pelo serviço interno após a transação; falha de transporte é registrada apenas como evento operacional, sem e-mail, token ou link, e não transforma o cadastro persistido em erro HTTP.
 - Conflitos de e-mail global e slug único retornam `409` com erro associado ao campo correspondente. A limitação progressiva do cadastro usa escopo próprio e chaves HMAC separadas para IP e e-mail normalizado, sem persistir esses identificadores em claro.

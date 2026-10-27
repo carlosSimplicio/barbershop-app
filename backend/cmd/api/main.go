@@ -110,15 +110,17 @@ func run() error {
 	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	confirmationVerification := emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions)
+	writeEntitlements := entitlements.NewService(entitlements.NewPostgresStore(pool))
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
-	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, entitlements.NewService(entitlements.NewPostgresStore(pool)))
+	establishmentSettings := establishment.NewSettingsService(establishment.NewPostgresSettingsStore(pool), writeEntitlements)
+	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
 	passwordRecoveryVerification := passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)
 	handler := httpapi.NewHandler(
 		health.NewHandler(pool),
 		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
-		establishment.NewHandler(establishments),
+		establishment.NewHandler(establishments, establishmentSettings),
 		professionals.NewHandler(professionalService),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)

@@ -115,6 +115,17 @@ SELECT
 FROM establishments
 WHERE id = $1;
 
+-- name: GetEstablishmentSettingsByID :one
+SELECT
+    e.id, e.name, e.slug, e.time_zone, e.description, e.address, e.contact_phone,
+    e.minimum_booking_notice_minutes, e.booking_horizon_days, e.customer_change_deadline_minutes,
+    e.operational_data_started_at,
+    l.content_type AS logo_content_type, l.byte_size AS logo_byte_size,
+    l.width AS logo_width, l.height AS logo_height
+FROM establishments AS e
+LEFT JOIN establishment_logos AS l ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1;
+
 -- name: LockEstablishmentOperationalWrite :one
 SELECT time_zone, operational_data_started_at
 FROM establishments

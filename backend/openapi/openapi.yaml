@@ -242,6 +242,26 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /establishment/settings:
+    get:
+      operationId: getEstablishmentSettings
+      summary: Consulta as configurações do estabelecimento do proprietário
+      tags: [establishment]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Configurações e estado de publicação do estabelecimento autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstablishmentSettingsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals:
     get:
       operationId: getProfessionals
@@ -528,6 +548,80 @@ components:
           oneOf:
             - $ref: "#/components/schemas/EstablishmentTrial"
             - type: "null"
+    EstablishmentSettingsResponse:
+      type: object
+      required: [id, name, slug, time_zone, description, address, contact_phone, social_links, minimum_booking_notice_minutes, booking_horizon_days, customer_change_deadline_minutes, logo, time_zone_editable, can_write, slug_conflict, is_complete, is_publishable]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        time_zone:
+          type: string
+        description:
+          type: [string, "null"]
+        address:
+          type: [string, "null"]
+        contact_phone:
+          type: [string, "null"]
+        social_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/EstablishmentSocialLink"
+        minimum_booking_notice_minutes:
+          type: [integer, "null"]
+          format: int32
+        booking_horizon_days:
+          type: [integer, "null"]
+          format: int32
+        customer_change_deadline_minutes:
+          type: [integer, "null"]
+          format: int32
+        logo:
+          oneOf:
+            - $ref: "#/components/schemas/EstablishmentLogoMetadata"
+            - type: "null"
+        time_zone_editable:
+          type: boolean
+        can_write:
+          type: boolean
+        slug_conflict:
+          type: boolean
+        is_complete:
+          type: boolean
+        is_publishable:
+          type: boolean
+    EstablishmentSocialLink:
+      type: object
+      required: [label, url]
+      properties:
+        label:
+          type: string
+        url:
+          type: string
+          format: uri
+    EstablishmentLogoMetadata:
+      type: object
+      required: [url, content_type, byte_size, width, height]
+      properties:
+        url:
+          type: [string, "null"]
+          format: uri-reference
+        content_type:
+          type: string
+          enum: [image/png, image/jpeg, image/webp]
+        byte_size:
+          type: integer
+          format: int64
+        width:
+          type: integer
+          format: int32
+        height:
+          type: integer
+          format: int32
     HealthResponse:
       type: object
       required: [status]

@@ -160,6 +160,7 @@ func newTestApplication(t *testing.T) *testApplication {
 	messages := &messageCapture{}
 	confirmationMailer := emailconfirmation.NewConfirmationMailer(messages, trustedOrigin)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
+	writeEntitlements := entitlements.NewService(entitlements.NewPostgresStore(integrationPool))
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
@@ -170,9 +171,12 @@ func newTestApplication(t *testing.T) *testApplication {
 			emailconfirmation.NewEmailConfirmationRequestService(onboardingStore, emailconfirmation.NewConfirmationService(onboardingStore, confirmationMailer), rateLimitStore, rateKeys),
 			emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions),
 		),
-		establishment.NewHandler(establishment.NewService(establishment.NewPostgresStore(integrationPool))),
+		establishment.NewHandler(
+			establishment.NewService(establishment.NewPostgresStore(integrationPool)),
+			establishment.NewSettingsService(establishment.NewPostgresSettingsStore(integrationPool), writeEntitlements),
+		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
-			entitlements.NewService(entitlements.NewPostgresStore(integrationPool)))),
+			writeEntitlements)),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

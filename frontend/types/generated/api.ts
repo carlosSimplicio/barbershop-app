@@ -177,6 +177,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/establishment/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta as configurações do estabelecimento do proprietário */
+        get: operations["getEstablishmentSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals": {
         parameters: {
             query?: never;
@@ -295,6 +312,46 @@ export interface components {
             slug: string;
             time_zone: string;
             trial: components["schemas"]["EstablishmentTrial"] | null;
+        };
+        EstablishmentSettingsResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            time_zone: string;
+            description: string | null;
+            address: string | null;
+            contact_phone: string | null;
+            social_links: components["schemas"]["EstablishmentSocialLink"][];
+            /** Format: int32 */
+            minimum_booking_notice_minutes: number | null;
+            /** Format: int32 */
+            booking_horizon_days: number | null;
+            /** Format: int32 */
+            customer_change_deadline_minutes: number | null;
+            logo: components["schemas"]["EstablishmentLogoMetadata"] | null;
+            time_zone_editable: boolean;
+            can_write: boolean;
+            slug_conflict: boolean;
+            is_complete: boolean;
+            is_publishable: boolean;
+        };
+        EstablishmentSocialLink: {
+            label: string;
+            /** Format: uri */
+            url: string;
+        };
+        EstablishmentLogoMetadata: {
+            /** Format: uri-reference */
+            url: string | null;
+            /** @enum {string} */
+            content_type: "image/png" | "image/jpeg" | "image/webp";
+            /** Format: int64 */
+            byte_size: number;
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
         };
         HealthResponse: {
             /** @enum {string} */
@@ -633,6 +690,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EstablishmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getEstablishmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Configurações e estado de publicação do estabelecimento autenticado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstablishmentSettingsResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

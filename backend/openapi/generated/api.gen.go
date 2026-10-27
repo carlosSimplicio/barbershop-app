@@ -13,6 +13,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for EstablishmentLogoMetadataContentType.
+const (
+	Imagejpeg EstablishmentLogoMetadataContentType = "image/jpeg"
+	Imagepng  EstablishmentLogoMetadataContentType = "image/png"
+	Imagewebp EstablishmentLogoMetadataContentType = "image/webp"
+)
+
+// Valid indicates whether the value is a known member of the EstablishmentLogoMetadataContentType enum.
+func (e EstablishmentLogoMetadataContentType) Valid() bool {
+	switch e {
+	case Imagejpeg:
+		return true
+	case Imagepng:
+		return true
+	case Imagewebp:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthResponseStatus.
 const (
 	Ok HealthResponseStatus = "ok"
@@ -103,6 +124,18 @@ type ErrorResponse struct {
 	RequestId string        `json:"request_id"`
 }
 
+// EstablishmentLogoMetadata defines model for EstablishmentLogoMetadata.
+type EstablishmentLogoMetadata struct {
+	ByteSize    int64                                `json:"byte_size"`
+	ContentType EstablishmentLogoMetadataContentType `json:"content_type"`
+	Height      int32                                `json:"height"`
+	Url         *string                              `json:"url"`
+	Width       int32                                `json:"width"`
+}
+
+// EstablishmentLogoMetadataContentType defines model for EstablishmentLogoMetadata.ContentType.
+type EstablishmentLogoMetadataContentType string
+
 // EstablishmentResponse defines model for EstablishmentResponse.
 type EstablishmentResponse struct {
 	Id       openapi_types.UUID  `json:"id"`
@@ -110,6 +143,33 @@ type EstablishmentResponse struct {
 	Slug     string              `json:"slug"`
 	TimeZone string              `json:"time_zone"`
 	Trial    *EstablishmentTrial `json:"trial"`
+}
+
+// EstablishmentSettingsResponse defines model for EstablishmentSettingsResponse.
+type EstablishmentSettingsResponse struct {
+	Address                       *string                    `json:"address"`
+	BookingHorizonDays            *int32                     `json:"booking_horizon_days"`
+	CanWrite                      bool                       `json:"can_write"`
+	ContactPhone                  *string                    `json:"contact_phone"`
+	CustomerChangeDeadlineMinutes *int32                     `json:"customer_change_deadline_minutes"`
+	Description                   *string                    `json:"description"`
+	Id                            openapi_types.UUID         `json:"id"`
+	IsComplete                    bool                       `json:"is_complete"`
+	IsPublishable                 bool                       `json:"is_publishable"`
+	Logo                          *EstablishmentLogoMetadata `json:"logo"`
+	MinimumBookingNoticeMinutes   *int32                     `json:"minimum_booking_notice_minutes"`
+	Name                          string                     `json:"name"`
+	Slug                          string                     `json:"slug"`
+	SlugConflict                  bool                       `json:"slug_conflict"`
+	SocialLinks                   []EstablishmentSocialLink  `json:"social_links"`
+	TimeZone                      string                     `json:"time_zone"`
+	TimeZoneEditable              bool                       `json:"time_zone_editable"`
+}
+
+// EstablishmentSocialLink defines model for EstablishmentSocialLink.
+type EstablishmentSocialLink struct {
+	Label string `json:"label"`
+	Url   string `json:"url"`
 }
 
 // EstablishmentTrial defines model for EstablishmentTrial.
@@ -265,6 +325,9 @@ type ServerInterface interface {
 	// GetEstablishment Consulta o estabelecimento da sessão atual
 	// (GET /establishment)
 	GetEstablishment(c *gin.Context)
+	// GetEstablishmentSettings Consulta as configurações do estabelecimento do proprietário
+	// (GET /establishment/settings)
+	GetEstablishmentSettings(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -415,6 +478,19 @@ func (siw *ServerInterfaceWrapper) GetEstablishment(c *gin.Context) {
 	siw.Handler.GetEstablishment(c)
 }
 
+// GetEstablishmentSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetEstablishmentSettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetEstablishmentSettings(c)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 
@@ -513,6 +589,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
+	router.GET(options.BaseURL+"/establishment/settings", wrapper.GetEstablishmentSettings)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
