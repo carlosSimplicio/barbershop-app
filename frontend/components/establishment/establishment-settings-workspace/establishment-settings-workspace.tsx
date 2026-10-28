@@ -50,6 +50,11 @@ function SettingsRequest() {
     return () => controller.abort();
   }, [retryKey]);
 
+  function refreshSettings() {
+    setView({ status: "loading" });
+    setRetryKey((current) => current + 1);
+  }
+
   if (view.status === "unauthorized") return null;
 
   if (view.status === "error") {
@@ -59,16 +64,7 @@ function SettingsRequest() {
         className={styles.panel}
       >
         <Feedback
-          action={
-            <Button
-              onClick={() => {
-                setView({ status: "loading" });
-                setRetryKey((current) => current + 1);
-              }}
-            >
-              Tentar novamente
-            </Button>
-          }
+          action={<Button onClick={refreshSettings}>Tentar novamente</Button>}
           title="Não foi possível consultar as configurações"
           variant="error"
         >
@@ -92,5 +88,5 @@ function SettingsRequest() {
     );
   }
 
-  return <SettingsForm settings={view.settings} />;
+  return <SettingsForm onRefresh={refreshSettings} settings={view.settings} />;
 }

@@ -45,14 +45,17 @@ type FeedbackState = {
 
 export function SettingsForm({
   settings: initialSettings,
+  onRefresh,
 }: {
   settings: EstablishmentSettings;
+  onRefresh: () => void;
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [draft, setDraft] = useState(() => createDraft(initialSettings));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshNeeded, setRefreshNeeded] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const uploadingLogoRef = useRef(false);
   const submittingRef = useRef(false);
@@ -118,6 +121,7 @@ export function SettingsForm({
     if (
       submittingRef.current ||
       uploadingLogoRef.current ||
+      refreshNeeded ||
       !settings.can_write
     ) {
       return;
@@ -151,12 +155,13 @@ export function SettingsForm({
           setDraft(createDraft(refreshedSettings));
         }
         if (result.state === "empty" && result.status === 204) {
+          setRefreshNeeded(!refreshedSettings);
           setFeedback({
-            variant: "success",
+            variant: refreshedSettings ? "success" : "warning",
             title: "Configurações salvas",
             message: refreshedSettings
               ? "Os dados do estabelecimento foram atualizados."
-              : "Os dados foram salvos. Não foi possível atualizar a consulta agora.",
+              : "Os dados foram salvos. Atualize as configurações antes de fazer novas alterações.",
           });
           setErrors({});
           return;
@@ -231,13 +236,21 @@ export function SettingsForm({
         </Feedback>
       ) : null}
       {feedback ? (
-        <Feedback title={feedback.title} variant={feedback.variant}>
+        <Feedback
+          action={
+            refreshNeeded ? (
+              <Button onClick={onRefresh}>Atualizar configurações</Button>
+            ) : undefined
+          }
+          title={feedback.title}
+          variant={feedback.variant}
+        >
           {feedback.message}
         </Feedback>
       ) : null}
 
       <EstablishmentLogoUploader
-        disabled={submitting}
+        disabled={submitting || refreshNeeded}
         onBusyChange={updateLogoBusy}
         onSettingsChange={setSettings}
         settings={settings}
@@ -250,7 +263,9 @@ export function SettingsForm({
       >
         <fieldset
           className={styles.fields}
-          disabled={!settings.can_write || submitting || uploadingLogo}
+          disabled={
+            !settings.can_write || submitting || uploadingLogo || refreshNeeded
+          }
         >
           <legend className={styles.visuallyHidden}>
             Dados do estabelecimento
@@ -395,7 +410,11 @@ export function SettingsForm({
 
         <Button
           disabled={
-            !settings.can_write || submitting || uploadingLogo || !hasChanges
+            !settings.can_write ||
+            submitting ||
+            uploadingLogo ||
+            refreshNeeded ||
+            !hasChanges
           }
           type="submit"
         >

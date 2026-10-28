@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
 
@@ -52,7 +51,7 @@ func validateSettingsPatch(patch SettingsPatch) (SettingsPatch, error) {
 			return SettingsPatch{}, invalidSettingsField("name", "invalid_name", "Informe um nome com até 120 caracteres.")
 		}
 		name := strings.TrimSpace(patch.Name.Value)
-		if !utf8.ValidString(name) || name == "" || utf8.RuneCountInString(name) > 120 {
+		if !IsNameValid(name) {
 			return SettingsPatch{}, invalidSettingsField("name", "invalid_name", "Informe um nome com até 120 caracteres.")
 		}
 		patch.Name.Value = name
@@ -62,10 +61,7 @@ func validateSettingsPatch(patch SettingsPatch) (SettingsPatch, error) {
 			return SettingsPatch{}, invalidSettingsField("time_zone", "invalid_time_zone", "Informe um fuso horário IANA válido.")
 		}
 		name := strings.TrimSpace(patch.TimeZone.Value)
-		if name == "" || name == "Local" {
-			return SettingsPatch{}, invalidSettingsField("time_zone", "invalid_time_zone", "Informe um fuso horário IANA válido.")
-		}
-		if _, err := time.LoadLocation(name); err != nil {
+		if !IsTimeZoneValid(name) {
 			return SettingsPatch{}, invalidSettingsField("time_zone", "invalid_time_zone", "Informe um fuso horário IANA válido.")
 		}
 		patch.TimeZone.Value = name

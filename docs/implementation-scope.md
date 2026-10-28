@@ -180,10 +180,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
 - [x] Persistir descrição, endereço, telefone de contato, links sociais ordenados e limites opcionais de agenda por estabelecimento; aplicação das configurações aos fluxos de agenda permanece pendente no escopo 7.
-- [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a integração atômica com agendamentos, bloqueios, lançamentos e alteração de fuso permanece pendente no escopo 7.
+- [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a alteração de fuso já usa esse bloqueio; a integração atômica com futuros agendamentos, bloqueios e lançamentos permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
 - [ ] Criar persistência para serviços.
-- [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries base de criação e listagem; os fluxos da API permanecem pendentes.
+- [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries de criação e listagem, integradas aos fluxos entregues da API.
 - [ ] Criar persistência para associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
@@ -258,7 +258,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Implementar papéis `owner` e `professional`; clientes permanecem anônimos.
 - [x] Garantir que cada usuário pertença a exatamente um estabelecimento.
-- [x] Derivar estabelecimento e permissões da sessão autenticada, nunca de identificador enviado como autorização; o resolvedor público por slug permanece pendente.
+- [x] Derivar estabelecimento e permissões da sessão autenticada, nunca de identificador enviado como autorização; resolver o estabelecimento público por slug no serviço central compartilhado pelo perfil e pelo logo.
 - [ ] Aplicar isolamento do estabelecimento em toda consulta e mutação, inclusive em SQL e recursos relacionados.
 - [ ] Garantir ao proprietário administração completa apenas do próprio estabelecimento.
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.
@@ -288,7 +288,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
 - [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
 - [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
-- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda.
+- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda, preservando links legados incompatíveis com o editor e exigindo reconciliação quando a consulta falha após salvamento confirmado.
 - [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após falha confirmada, reconciliar respostas ambíguas e conservar a seleção até a reconciliação quando necessário, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 
@@ -357,7 +357,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 13. Página pública e agendamento do cliente
 
-- [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas.
+- [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas, com nova consulta ao servidor ao tentar novamente após falha temporária.
 - [x] Não renderizar seções vazias para informações públicas opcionais.
 - [ ] Criar fluxo interativo para escolher serviço, profissional associado, dia e horário.
 - [ ] Coletar somente nome e telefone para criar o agendamento.

@@ -268,15 +268,26 @@ function comparableSettings(settings: EstablishmentSettings) {
 }
 
 function identifySocialNetwork(url: string) {
-  let hostname = "";
+  let parsed: URL;
   try {
-    hostname = new URL(url).hostname.toLowerCase();
+    parsed = new URL(url);
   } catch {
     return undefined;
   }
 
-  return ESTABLISHMENT_SOCIAL_NETWORKS.find((network) =>
-    network.hostnames.some((host) => host === hostname),
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.username ||
+    parsed.password ||
+    parsed.port
+  ) {
+    return undefined;
+  }
+
+  return ESTABLISHMENT_SOCIAL_NETWORKS.find(
+    (network) =>
+      network.hostnames.some((host) => host === parsed.hostname) &&
+      parsed.pathname.startsWith(new URL(network.urlPrefix).pathname),
   )?.value;
 }
 

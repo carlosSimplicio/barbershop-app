@@ -145,6 +145,138 @@ test("preserva como legado um link cujo rótulo não corresponde ao domínio", a
   );
 });
 
+test.each([
+  ["LinkedIn", "https://linkedin.com/company/aurora"],
+  ["YouTube", "https://youtu.be/aurora"],
+  ["TikTok", "https://tiktok.com/business/aurora"],
+])(
+  "preserva o link de %s incompatível com o prefixo do editor",
+  async (label, url) => {
+    getSettingsMock.mockResolvedValue(
+      successfulResult(
+        successfulSettings({
+          social_links: [
+            { label, url },
+            { label: "Instagram", url: "https://instagram.com/aurora" },
+          ],
+        }),
+      ),
+    );
+    patchSettingsMock.mockResolvedValue({ state: "empty", status: 204 });
+
+    render(<EstablishmentSettingsWorkspace />);
+
+    expect(
+      await screen.findByRole("combobox", { name: "Rede social 1" }),
+    ).toHaveValue("");
+    expect(screen.queryByLabelText(`URL do ${label}`)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Este link existente não corresponde/),
+    ).toBeVisible();
+
+    fireEvent.change(screen.getByLabelText("Nome do estabelecimento"), {
+      target: { value: "Novo nome" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remover rede social Instagram" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Salvar configurações" }),
+    );
+
+    await waitFor(() => expect(patchSettingsMock).toHaveBeenCalledOnce());
+    expect(patchSettingsMock).toHaveBeenCalledWith(
+      { name: "Novo nome", social_links: [{ label, url }] },
+      expect.any(AbortSignal),
+    );
+  },
+);
+
+test.each([
+  [
+    "LinkedIn",
+    "https://www.linkedin.com/in/aurora",
+    "https://linkedin.com/in/aurora-nova",
+  ],
+  ["X", "https://twitter.com/aurora", "https://x.com/aurora-nova"],
+])(
+  "mantém o caminho de perfil ao editar um domínio alternativo de %s",
+  async (label, url, updatedURL) => {
+    getSettingsMock.mockResolvedValue(
+      successfulResult(
+        successfulSettings({
+          social_links: [{ label, url }],
+        }),
+      ),
+    );
+    patchSettingsMock.mockResolvedValue({ state: "empty", status: 204 });
+
+    render(<EstablishmentSettingsWorkspace />);
+
+    fireEvent.change(await screen.findByLabelText(`URL do ${label}`), {
+      target: { value: "aurora-nova" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Salvar configurações" }),
+    );
+
+    await waitFor(() => expect(patchSettingsMock).toHaveBeenCalledOnce());
+    expect(patchSettingsMock).toHaveBeenCalledWith(
+      { social_links: [{ label, url: updatedURL }] },
+      expect.any(AbortSignal),
+    );
+  },
+);
+
+test("reconcilia o salvamento confirmado antes de permitir novas alterações", async () => {
+  const savedSettings = successfulSettings({ name: "Novo nome" });
+  getSettingsMock
+    .mockResolvedValueOnce(successfulResult())
+    .mockRejectedValueOnce(new Error("temporary refresh failure"))
+    .mockRejectedValueOnce(new Error("temporary retry failure"))
+    .mockResolvedValueOnce(successfulResult(savedSettings))
+    .mockResolvedValueOnce(successfulResult());
+  patchSettingsMock.mockResolvedValue({ state: "empty", status: 204 });
+
+  render(<EstablishmentSettingsWorkspace />);
+
+  fireEvent.change(await screen.findByLabelText("Nome do estabelecimento"), {
+    target: { value: savedSettings.name },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Salvar configurações" }));
+
+  const refresh = await screen.findByRole("button", {
+    name: "Atualizar configurações",
+  });
+  expect(screen.getByLabelText("Nome do estabelecimento")).toBeDisabled();
+  expect(screen.getByLabelText("Selecionar logo")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Salvar configurações" }),
+  ).toBeDisabled();
+
+  fireEvent.click(refresh);
+  await screen.findByText("Não foi possível consultar as configurações");
+  expect(
+    screen.queryByLabelText("Nome do estabelecimento"),
+  ).not.toBeInTheDocument();
+  expect(patchSettingsMock).toHaveBeenCalledOnce();
+
+  fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+  const nameField = await screen.findByLabelText("Nome do estabelecimento");
+  expect(nameField).toBeEnabled();
+  expect(nameField).toHaveValue(savedSettings.name);
+  fireEvent.change(nameField, { target: { value: "Estúdio Aurora" } });
+  const save = screen.getByRole("button", { name: "Salvar configurações" });
+  expect(save).toBeEnabled();
+  fireEvent.click(save);
+
+  await waitFor(() => expect(patchSettingsMock).toHaveBeenCalledTimes(2));
+  expect(patchSettingsMock).toHaveBeenLastCalledWith(
+    { name: "Estúdio Aurora" },
+    expect.any(AbortSignal),
+  );
+});
+
 test("permite limpar dados opcionais, links e limites", async () => {
   getSettingsMock.mockResolvedValue(successfulResult());
   patchSettingsMock.mockResolvedValue({ state: "empty", status: 204 });

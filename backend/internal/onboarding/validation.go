@@ -2,10 +2,6 @@ package onboarding
 
 import (
 	"errors"
-	"strings"
-	"time"
-	_ "time/tzdata"
-	"unicode/utf8"
 
 	"barbershop-app/backend/internal/establishment"
 )
@@ -18,7 +14,7 @@ var (
 )
 
 func ValidateEstablishmentName(name string) error {
-	if !utf8.ValidString(name) || strings.TrimSpace(name) == "" || utf8.RuneCountInString(name) > 120 {
+	if !establishment.IsNameValid(name) {
 		return ErrInvalidName
 	}
 	return nil
@@ -37,10 +33,7 @@ func ValidateSlug(slug string) error {
 
 // ValidateTimeZone validates the establishment IANA time zone.
 func ValidateTimeZone(name string) error {
-	if name == "" || name == "Local" {
-		return ErrInvalidTimeZone
-	}
-	if _, err := time.LoadLocation(name); err != nil {
+	if !establishment.IsTimeZoneValid(name) {
 		return ErrInvalidTimeZone
 	}
 	return nil

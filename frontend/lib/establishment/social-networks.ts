@@ -21,7 +21,7 @@ export const ESTABLISHMENT_SOCIAL_NETWORKS = [
     value: "youtube",
     label: "YouTube",
     urlPrefix: "https://youtube.com/",
-    hostnames: ["youtube.com", "www.youtube.com", "youtu.be"],
+    hostnames: ["youtube.com", "www.youtube.com"],
   },
   {
     value: "tiktok",
