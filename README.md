@@ -63,14 +63,20 @@ permanecem nas redes internas do Compose.
 Com o ambiente local ativo e as migrations aplicadas, abra
 <https://localhost:8443>, siga para `/cadastro`, use um e-mail fictício
 exclusivo, confira o link no Mailpit e abra-o no navegador. A confirmação
-inicia a sessão e leva o proprietário a `/painel/profissionais`. Nessa página,
-cadastre um profissional com e-mail fictício exclusivo e senha temporária; a
-lista é atualizada após o cadastro e o campo da senha é limpo. Compartilhe a
+inicia a sessão e leva o proprietário a `/painel`. Sem logo, essa entrada abre
+`/painel/configuracoes`: confira os dados do estabelecimento e envie uma imagem
+PNG, JPEG ou WebP para habilitar sua página pública em `/{slug}`. Com logo, a
+entrada abre `/painel/profissionais`. Também é possível abrir Profissionais pela
+navegação antes do envio do logo.
+
+Em Profissionais, cadastre um nome, e-mail fictício exclusivo e senha temporária;
+a lista é atualizada após o cadastro e o campo da senha é limpo. Compartilhe a
 senha apenas por um canal seguro, pois ela não pode ser recuperada. Saia da
 sessão do proprietário e entre com a conta profissional: ela abre `/testes` e
 exige a troca da senha antes de acessar recursos de domínio. Use o link “Área
 de testes” para consultar a sessão e o estabelecimento e sair. Depois, `/login`
-leva o proprietário de volta ao painel. Com trial expirado, a lista continua
+leva o proprietário novamente a `/painel`, que escolhe o destino conforme a
+presença do logo. Com trial expirado, a lista continua
 disponível, mas novos cadastros ficam bloqueados.
 
 Para validar a recuperação do proprietário, saia da sessão e, em `/login`, abra
