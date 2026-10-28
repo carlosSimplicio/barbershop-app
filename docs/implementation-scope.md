@@ -179,7 +179,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Usar UUIDs aleatórios e não sequenciais para identificadores expostos.
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
-- [x] Persistir descrição, endereço, telefone de contato, links sociais ordenados e limites opcionais de agenda por estabelecimento; edição e aplicação pelos fluxos do produto permanecem pendentes no escopo 7.
+- [x] Persistir descrição, endereço, telefone de contato, links sociais ordenados e limites opcionais de agenda por estabelecimento; aplicação das configurações aos fluxos de agenda permanece pendente no escopo 7.
 - [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a integração atômica com agendamentos, bloqueios, lançamentos e alteração de fuso permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
 - [ ] Criar persistência para serviços.
@@ -287,7 +287,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
 - [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
 - [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
-- [ ] Criar painel de configurações do estabelecimento e dados da página pública.
+- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 
 ## 8. Logos e arquivos públicos

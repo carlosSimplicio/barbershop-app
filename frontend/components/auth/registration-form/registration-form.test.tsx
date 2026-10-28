@@ -3,6 +3,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { registerOwner } from "@/lib/auth/registration-api/registration-api";
+import { BRAZILIAN_TIME_ZONES } from "@/lib/establishment/brazilian-time-zones";
 
 import { RegistrationForm } from "./registration-form";
 
@@ -102,6 +103,28 @@ test("preserva o slug editado e permite corrigir o fuso sugerido", () => {
   );
 });
 
+test("oferece somente os quatro fusos brasileiros e usa fallback para detecção externa", async () => {
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    timeZone: "America/New_York",
+  } as Intl.ResolvedDateTimeFormatOptions);
+  render(<RegistrationForm />);
+
+  const timeZoneSelect = screen.getByRole("combobox", {
+    name: /fuso horário/i,
+  });
+  await waitFor(() => expect(timeZoneSelect).toHaveValue("America/Sao_Paulo"));
+  expect(
+    Array.from(timeZoneSelect.querySelectorAll("option")).map(
+      (option) => (option as HTMLOptionElement).value,
+    ),
+  ).toEqual(BRAZILIAN_TIME_ZONES.map(({ value }) => value));
+  expect(
+    Array.from(timeZoneSelect.querySelectorAll("option")).map((option) =>
+      option.textContent?.trim(),
+    ),
+  ).toEqual(BRAZILIAN_TIME_ZONES.map(({ label }) => label));
+});
+
 test("mantém o fallback no HTML inicial para evitar divergência na hidratação", () => {
   vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
     timeZone: "America/Manaus",
@@ -109,9 +132,9 @@ test("mantém o fallback no HTML inicial para evitar divergência na hidrataçã
 
   const html = renderToString(<RegistrationForm />);
 
-  expect(
-    html.match(/<input[^>]*list="registration-time-zones"[^>]*>/)?.[0],
-  ).toContain('value="America/Sao_Paulo"');
+  expect(html).toMatch(
+    /<option value="America\/Sao_Paulo" selected="">Horário de Brasília<\/option>/,
+  );
 });
 
 test("bloqueia dados inválidos e foca o primeiro campo", () => {

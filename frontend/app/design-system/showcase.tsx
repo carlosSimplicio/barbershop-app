@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   ActionLink,
   AffixedInput,
+  BrazilianPhoneField,
   Button,
   Field,
   FileField,
@@ -41,6 +42,7 @@ export function DesignSystemShowcase() {
     "Use os controles para validar as interações.",
   );
   const [iconPressed, setIconPressed] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("(11) 99999-0000");
 
   return (
     <main className={styles.page} data-theme={theme}>
@@ -178,6 +180,13 @@ export function DesignSystemShowcase() {
               hint="Para nomes e informações curtas."
               label="Texto"
               placeholder="Ex.: Estúdio Aurora"
+            />
+            <BrazilianPhoneField
+              hint="DDD e número com máscara para telefone fixo ou celular."
+              id="showcase-phone"
+              label="Telefone brasileiro"
+              onValueChange={setPhoneNumber}
+              value={phoneNumber}
             />
             <TextField
               defaultValue="voce@exemplo.com"
