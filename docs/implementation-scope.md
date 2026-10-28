@@ -226,7 +226,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir solicitar novo link no estado pós-cadastro e no login após confirmação obrigatória, sempre com resposta genérica.
 - [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e direcionar o proprietário pela entrada `/painel` conforme a presença do logo.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
-- [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
+- [x] Validar senhas de 8 a 32 pontos de código sem Unicode `White_Space`, sem regra obrigatória de composição, com regressões equivalentes no backend e no frontend.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
 - [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
 - [x] Iniciar o trial somente depois da confirmação do e-mail.

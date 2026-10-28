@@ -70,3 +70,16 @@ func TestPasswordHasherDetectsParametersThatNeedRehash(t *testing.T) {
 		t.Fatalf("NeedsRehash = %v, %v; want true, nil", needsRehash, err)
 	}
 }
+
+func TestValidatePasswordUsesUnicodeWhiteSpace(t *testing.T) {
+	for _, space := range []rune{'\u0085', '\u00a0', '\u1680', '\u2007', '\u2028', '\u202f', '\u3000'} {
+		if err := ValidatePassword("abcd" + string(space) + "efgh"); !errors.Is(err, ErrInvalidPassword) {
+			t.Errorf("accepted Unicode whitespace U+%04X", space)
+		}
+	}
+	for _, character := range []rune{'\uFEFF', '\u200B'} {
+		if err := ValidatePassword("abcd" + string(character) + "efgh"); err != nil {
+			t.Errorf("rejected non-whitespace U+%04X", character)
+		}
+	}
+}

@@ -111,6 +111,7 @@
 - O e-mail de login é único em toda a plataforma, comparado de forma normalizada e sem diferenciar maiúsculas de minúsculas; não use o estabelecimento para desambiguar contas.
 - O e-mail de login é imutável no MVP; não ofereça endpoint ou ação de interface para alterá-lo.
 - Nunca armazene senha em texto puro nem registre senhas ou tokens.
+- Backend e validação de conveniência do frontend usam a propriedade Unicode `White_Space` para a recusa de espaços em senhas, contando de 8 a 32 pontos de código. `U+0085` é recusado; `U+FEFF` e `U+200B` não pertencem a essa propriedade e permanecem aceitos, preservando credenciais válidas já permitidas pelo backend.
 - Senhas devem ter entre 8 e 32 caracteres e não podem conter espaços ou outros caracteres de whitespace.
 - Não exija combinações obrigatórias de maiúsculas, minúsculas, números ou símbolos e não imponha troca periódica.
 - Não consulte listas de senhas comuns ou credenciais comprometidas no MVP.

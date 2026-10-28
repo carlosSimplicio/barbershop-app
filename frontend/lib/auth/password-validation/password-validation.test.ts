@@ -26,3 +26,22 @@ test("mantém a mensagem de obrigatoriedade própria de cada formulário", () =>
     "Informe uma nova senha.",
   );
 });
+
+test.each([
+  "\u0085",
+  "\u00a0",
+  "\u1680",
+  "\u2007",
+  "\u2028",
+  "\u202f",
+  "\u3000",
+])("rejeita whitespace Unicode %j, como o backend", (space) => {
+  expect(validatePassword(`abcd${space}efgh`, "Obrigatória.")).toBe(
+    INVALID_PASSWORD_MESSAGE,
+  );
+});
+
+test("aceita U+FEFF e espaços de largura zero que o backend não classifica como whitespace", () => {
+  expect(validatePassword("abcd\uFEFFefgh", "Obrigatória.")).toBeUndefined();
+  expect(validatePassword("abcd\u200Befgh", "Obrigatória.")).toBeUndefined();
+});

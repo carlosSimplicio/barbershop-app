@@ -6,7 +6,11 @@ export function validatePassword(
   requiredMessage: string,
 ): string | undefined {
   if (!value) return requiredMessage;
-  if ([...value].length < 8 || [...value].length > 32 || /\s/.test(value)) {
+  if (
+    [...value].length < 8 ||
+    [...value].length > 32 ||
+    /\p{White_Space}/u.test(value)
+  ) {
     return INVALID_PASSWORD_MESSAGE;
   }
 }
