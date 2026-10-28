@@ -34,7 +34,7 @@
 - Um slice pode conter handler, entrada/saída, validação, caso de uso e persistência necessários ao fluxo.
 - Cadastro e edição de estabelecimento compartilham as validações puras `establishment.IsNameValid` e `establishment.IsTimeZoneValid`; normalização e tradução para erros de cada fluxo permanecem nas suas bordas.
 - Evite grandes diretórios horizontais globais de handlers, services e repositories.
-- Mantenha regras testáveis sem Gin, `pgx`, rede ou banco reais.
+- Mantenha regras testáveis sem Gin, `pgx`, rede ou banco reais. A verificação de recuperação de senha decide elegibilidade, expiração, uso único e diferença da nova senha no caso de uso `auth/password_recovery`; o store recebe um preparador de hash, executa-o após bloquear usuário e token nessa ordem e só então persiste consumo, credencial e revogações atomicamente. O adaptador não recebe a nova senha nem o gerenciador de criptografia.
 - Gin fica na borda HTTP; `pgx` e `sqlc`, na borda de persistência.
 - Compartilhe apenas abstrações de domínio estáveis ou necessidades transversais reais; evite utilitários genéricos.
 - Não adote CQRS formal, command/query bus, mediator ou event bus sem necessidade concreta.

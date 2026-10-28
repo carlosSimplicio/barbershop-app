@@ -28,6 +28,16 @@ type PasswordRecoveryRequestResult struct {
 	DeliveryFailed bool
 }
 
+type PasswordRecoveryState struct {
+	UserID      string
+	ExpiresAt   time.Time
+	Consumed    bool
+	Invalidated bool
+}
+
+// RecoveredPasswordPreparer runs under the owner and token locks, before any write.
+type RecoveredPasswordPreparer func(User, PasswordRecoveryState) (string, error)
+
 type PasswordRecoveryVerificationStore interface {
-	ResetOwnerPassword(context.Context, []byte, string, PasswordManager) error
+	ResetOwnerPassword(context.Context, []byte, RecoveredPasswordPreparer) error
 }

@@ -563,6 +563,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 26. Testes e critérios de qualidade
 
 - [x] Criar testes unitários de backend com o pacote `testing`.
+- [x] Testar elegibilidade, expiração, recusa de senha atual e falhas da recuperação sem PostgreSQL, preservando integração para bloqueios, uso único e rollback.
 - [x] Criar testes unitários de frontend com Vitest.
 - [x] Orientar testes unitários a comportamentos observáveis e regras de negócio, evitando detalhes internos e casos sem risco ou requisito identificável.
 - [x] Criar infraestrutura de integração do backend com Testcontainers, PostgreSQL real, migrations Goose e servidor HTTP TLS descartável.
