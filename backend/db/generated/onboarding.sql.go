@@ -365,7 +365,7 @@ SELECT
 FROM email_confirmations AS ec
 JOIN users AS u ON u.id = ec.user_id
 WHERE ec.token_hash = $1
-FOR UPDATE OF ec, u
+FOR UPDATE OF ec
 `
 
 type GetEmailConfirmationForUpdateRow struct {
@@ -405,6 +405,21 @@ func (q *Queries) GetEmailConfirmationForUpdate(ctx context.Context, tokenHash [
 		&i.PasswordChangeRequired,
 	)
 	return i, err
+}
+
+const getEmailConfirmationOwnerForUpdate = `-- name: GetEmailConfirmationOwnerForUpdate :one
+SELECT u.id
+FROM users AS u
+JOIN email_confirmations AS ec ON ec.user_id = u.id
+WHERE ec.token_hash = $1
+FOR UPDATE OF u
+`
+
+func (q *Queries) GetEmailConfirmationOwnerForUpdate(ctx context.Context, tokenHash []byte) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getEmailConfirmationOwnerForUpdate, tokenHash)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getEstablishmentPublicSettings = `-- name: GetEstablishmentPublicSettings :one

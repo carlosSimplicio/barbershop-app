@@ -48,6 +48,13 @@ INSERT INTO email_confirmations (user_id, token_hash, expires_at, created_at)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
 
+-- name: GetEmailConfirmationOwnerForUpdate :one
+SELECT u.id
+FROM users AS u
+JOIN email_confirmations AS ec ON ec.user_id = u.id
+WHERE ec.token_hash = $1
+FOR UPDATE OF u;
+
 -- name: GetEmailConfirmationForUpdate :one
 SELECT
     ec.id,
@@ -67,7 +74,7 @@ SELECT
 FROM email_confirmations AS ec
 JOIN users AS u ON u.id = ec.user_id
 WHERE ec.token_hash = $1
-FOR UPDATE OF ec, u;
+FOR UPDATE OF ec;
 
 -- name: ConsumeEmailConfirmation :execrows
 UPDATE email_confirmations

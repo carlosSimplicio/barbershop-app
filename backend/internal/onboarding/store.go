@@ -108,6 +108,14 @@ type postgresVerificationTransaction struct {
 }
 
 func (transaction *postgresVerificationTransaction) Lock(ctx context.Context, tokenHash []byte) (verificationRecord, bool, error) {
+	// Resends and verification both lock the owner before any confirmation row.
+	_, err := transaction.queries.GetEmailConfirmationOwnerForUpdate(ctx, tokenHash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return verificationRecord{}, false, nil
+	}
+	if err != nil {
+		return verificationRecord{}, false, err
+	}
 	row, err := transaction.queries.GetEmailConfirmationForUpdate(ctx, tokenHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return verificationRecord{}, false, nil

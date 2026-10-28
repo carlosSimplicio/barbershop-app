@@ -464,6 +464,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 20. Trial, planos e assinatura
 
 - [x] Iniciar um único trial de 14 dias após confirmação do e-mail, com acesso completo.
+- [x] Serializar reenvio e consumo da confirmação na ordem proprietário → token, com regressão concorrente em PostgreSQL real.
 - [x] Persistir uso do trial independentemente da assinatura atual para impedir reutilização.
 - [ ] Modelar catálogo com planos, opções de preço e período, sem assumir plano único no schema ou domínio.
 - [ ] Preservar versão, preço e termos contratados no histórico da assinatura.
