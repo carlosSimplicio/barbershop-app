@@ -231,7 +231,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
 - [x] Iniciar o trial somente depois da confirmação do e-mail.
 - [x] Implementar login de proprietário e profissional na API e em `/login`, com resposta genérica para credenciais inválidas, reenvio de confirmação e sincronização de sessão.
-- [x] Implementar access JWT e sessões com expiração fixa de 15 dias, sem refresh token ou renovação.
+- [x] Implementar access JWT e sessões com expiração fixa de 15 dias, sem refresh token ou renovação, centralizada com o prazo dos cookies em `auth.SessionLifetime`.
 - [x] Transportar access e CSRF em cookies `Secure` e `SameSite=Strict`, com escopo mínimo e `HttpOnly` no access.
 - [x] Implementar logout idempotente e revogação da sessão atual identificada no access JWT.
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.

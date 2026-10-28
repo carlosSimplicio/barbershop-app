@@ -120,7 +120,7 @@
 - Não bloqueie a conta permanentemente. Use janelas temporárias, responda de forma genérica e não revele se o e-mail está cadastrado.
 - Retorne `429` e `Retry-After` quando aplicável e estenda a mesma proteção aos fluxos de confirmação e recuperação.
 - Não implemente autenticação em dois fatores no MVP; preserve o modelo de autenticação de forma que ela possa ser adicionada posteriormente sem alterar as regras de domínio.
-- Use access JWT com expiração fixa de 15 dias, sem refresh token ou renovação por uso.
+- Use access JWT com expiração fixa de 15 dias, sem refresh token ou renovação por uso. `auth.SessionLifetime` centraliza essa duração para o emissor JWT, criação de sessões no login/confirmação/troca de senha e `Max-Age` dos cookies access e CSRF.
 - Transporte o access JWT em cookie `HttpOnly`, `Secure` e `SameSite=Strict`, com escopo mínimo; o CSRF fica em cookie legível pelo frontend.
 - Não use `localStorage` ou `sessionStorage` para tokens.
 - Cada access JWT identifica uma sessão persistida, que pode ser revogada imediatamente no backend.
