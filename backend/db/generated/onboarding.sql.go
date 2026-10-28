@@ -86,6 +86,74 @@ func (q *Queries) CreateEmailConfirmation(ctx context.Context, arg CreateEmailCo
 	return i, err
 }
 
+const createEstablishmentLogo = `-- name: CreateEstablishmentLogo :one
+INSERT INTO establishment_logos (
+    establishment_id, object_key, content_type, byte_size, width, height, content_sha256
+)
+VALUES (
+    $1, $2, $3,
+    $4, $5, $6, $7
+)
+RETURNING id, establishment_id, object_key, content_type, byte_size, width, height, content_sha256, created_at
+`
+
+type CreateEstablishmentLogoParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	ObjectKey       string      `json:"object_key"`
+	ContentType     string      `json:"content_type"`
+	ByteSize        int64       `json:"byte_size"`
+	Width           int32       `json:"width"`
+	Height          int32       `json:"height"`
+	ContentSha256   []byte      `json:"content_sha256"`
+}
+
+func (q *Queries) CreateEstablishmentLogo(ctx context.Context, arg CreateEstablishmentLogoParams) (EstablishmentLogo, error) {
+	row := q.db.QueryRow(ctx, createEstablishmentLogo,
+		arg.EstablishmentID,
+		arg.ObjectKey,
+		arg.ContentType,
+		arg.ByteSize,
+		arg.Width,
+		arg.Height,
+		arg.ContentSha256,
+	)
+	var i EstablishmentLogo
+	err := row.Scan(
+		&i.ID,
+		&i.EstablishmentID,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.ByteSize,
+		&i.Width,
+		&i.Height,
+		&i.ContentSha256,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createEstablishmentSocialLink = `-- name: CreateEstablishmentSocialLink :exec
+INSERT INTO establishment_social_links (establishment_id, position, label, url)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateEstablishmentSocialLinkParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Position        int32       `json:"position"`
+	Label           string      `json:"label"`
+	Url             string      `json:"url"`
+}
+
+func (q *Queries) CreateEstablishmentSocialLink(ctx context.Context, arg CreateEstablishmentSocialLinkParams) error {
+	_, err := q.db.Exec(ctx, createEstablishmentSocialLink,
+		arg.EstablishmentID,
+		arg.Position,
+		arg.Label,
+		arg.Url,
+	)
+	return err
+}
+
 const createEstablishmentTrial = `-- name: CreateEstablishmentTrial :one
 INSERT INTO establishment_trials (owner_user_id, establishment_id, starts_at, ends_at, created_at)
 SELECT
@@ -220,6 +288,16 @@ func (q *Queries) CreateRegistrationOwner(ctx context.Context, arg CreateRegistr
 	return id, err
 }
 
+const deleteEstablishmentSocialLinks = `-- name: DeleteEstablishmentSocialLinks :exec
+DELETE FROM establishment_social_links
+WHERE establishment_id = $1
+`
+
+func (q *Queries) DeleteEstablishmentSocialLinks(ctx context.Context, establishmentID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEstablishmentSocialLinks, establishmentID)
+	return err
+}
+
 const findUnconfirmedOwnerByNormalizedEmail = `-- name: FindUnconfirmedOwnerByNormalizedEmail :one
 SELECT id, email
 FROM users
@@ -238,6 +316,33 @@ func (q *Queries) FindUnconfirmedOwnerByNormalizedEmail(ctx context.Context, nor
 	row := q.db.QueryRow(ctx, findUnconfirmedOwnerByNormalizedEmail, normalizedEmail)
 	var i FindUnconfirmedOwnerByNormalizedEmailRow
 	err := row.Scan(&i.ID, &i.Email)
+	return i, err
+}
+
+const getCurrentEstablishmentLogo = `-- name: GetCurrentEstablishmentLogo :one
+SELECT
+    l.id, l.establishment_id, l.object_key, l.content_type, l.byte_size,
+    l.width, l.height, l.content_sha256, l.created_at
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1
+`
+
+func (q *Queries) GetCurrentEstablishmentLogo(ctx context.Context, id pgtype.UUID) (EstablishmentLogo, error) {
+	row := q.db.QueryRow(ctx, getCurrentEstablishmentLogo, id)
+	var i EstablishmentLogo
+	err := row.Scan(
+		&i.ID,
+		&i.EstablishmentID,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.ByteSize,
+		&i.Width,
+		&i.Height,
+		&i.ContentSha256,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -302,6 +407,97 @@ func (q *Queries) GetEmailConfirmationForUpdate(ctx context.Context, tokenHash [
 	return i, err
 }
 
+const getEstablishmentPublicSettings = `-- name: GetEstablishmentPublicSettings :one
+SELECT
+    id,
+    description,
+    address,
+    contact_phone,
+    minimum_booking_notice_minutes,
+    booking_horizon_days,
+    customer_change_deadline_minutes
+FROM establishments
+WHERE id = $1
+`
+
+type GetEstablishmentPublicSettingsRow struct {
+	ID                            pgtype.UUID `json:"id"`
+	Description                   pgtype.Text `json:"description"`
+	Address                       pgtype.Text `json:"address"`
+	ContactPhone                  pgtype.Text `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4 `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4 `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4 `json:"customer_change_deadline_minutes"`
+}
+
+func (q *Queries) GetEstablishmentPublicSettings(ctx context.Context, id pgtype.UUID) (GetEstablishmentPublicSettingsRow, error) {
+	row := q.db.QueryRow(ctx, getEstablishmentPublicSettings, id)
+	var i GetEstablishmentPublicSettingsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Description,
+		&i.Address,
+		&i.ContactPhone,
+		&i.MinimumBookingNoticeMinutes,
+		&i.BookingHorizonDays,
+		&i.CustomerChangeDeadlineMinutes,
+	)
+	return i, err
+}
+
+const getEstablishmentSettingsByID = `-- name: GetEstablishmentSettingsByID :one
+SELECT
+    e.id, e.name, e.slug, e.time_zone, e.description, e.address, e.contact_phone,
+    e.minimum_booking_notice_minutes, e.booking_horizon_days, e.customer_change_deadline_minutes,
+    e.operational_data_started_at,
+    l.content_type AS logo_content_type, l.byte_size AS logo_byte_size,
+    l.width AS logo_width, l.height AS logo_height
+FROM establishments AS e
+LEFT JOIN establishment_logos AS l ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1
+`
+
+type GetEstablishmentSettingsByIDRow struct {
+	ID                            pgtype.UUID        `json:"id"`
+	Name                          string             `json:"name"`
+	Slug                          string             `json:"slug"`
+	TimeZone                      string             `json:"time_zone"`
+	Description                   pgtype.Text        `json:"description"`
+	Address                       pgtype.Text        `json:"address"`
+	ContactPhone                  pgtype.Text        `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4        `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4        `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4        `json:"customer_change_deadline_minutes"`
+	OperationalDataStartedAt      pgtype.Timestamptz `json:"operational_data_started_at"`
+	LogoContentType               pgtype.Text        `json:"logo_content_type"`
+	LogoByteSize                  pgtype.Int8        `json:"logo_byte_size"`
+	LogoWidth                     pgtype.Int4        `json:"logo_width"`
+	LogoHeight                    pgtype.Int4        `json:"logo_height"`
+}
+
+func (q *Queries) GetEstablishmentSettingsByID(ctx context.Context, id pgtype.UUID) (GetEstablishmentSettingsByIDRow, error) {
+	row := q.db.QueryRow(ctx, getEstablishmentSettingsByID, id)
+	var i GetEstablishmentSettingsByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.TimeZone,
+		&i.Description,
+		&i.Address,
+		&i.ContactPhone,
+		&i.MinimumBookingNoticeMinutes,
+		&i.BookingHorizonDays,
+		&i.CustomerChangeDeadlineMinutes,
+		&i.OperationalDataStartedAt,
+		&i.LogoContentType,
+		&i.LogoByteSize,
+		&i.LogoWidth,
+		&i.LogoHeight,
+	)
+	return i, err
+}
+
 const getEstablishmentWithTrial = `-- name: GetEstablishmentWithTrial :one
 SELECT e.id, e.name, e.slug, e.time_zone, t.starts_at, t.ends_at
 FROM establishments AS e
@@ -332,6 +528,111 @@ func (q *Queries) GetEstablishmentWithTrial(ctx context.Context, id pgtype.UUID)
 	return i, err
 }
 
+const getPublicEstablishmentBySlug = `-- name: GetPublicEstablishmentBySlug :one
+SELECT id, name, slug
+FROM establishments
+WHERE slug = $1
+  AND logo_id IS NOT NULL
+  AND btrim(name) <> ''
+`
+
+type GetPublicEstablishmentBySlugRow struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+	Slug string      `json:"slug"`
+}
+
+func (q *Queries) GetPublicEstablishmentBySlug(ctx context.Context, slug string) (GetPublicEstablishmentBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEstablishmentBySlug, slug)
+	var i GetPublicEstablishmentBySlugRow
+	err := row.Scan(&i.ID, &i.Name, &i.Slug)
+	return i, err
+}
+
+const getPublicEstablishmentLogo = `-- name: GetPublicEstablishmentLogo :one
+SELECT l.object_key, l.content_type, l.byte_size, l.content_sha256
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1
+  AND e.slug = $2
+`
+
+type GetPublicEstablishmentLogoParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Slug            string      `json:"slug"`
+}
+
+type GetPublicEstablishmentLogoRow struct {
+	ObjectKey     string `json:"object_key"`
+	ContentType   string `json:"content_type"`
+	ByteSize      int64  `json:"byte_size"`
+	ContentSha256 []byte `json:"content_sha256"`
+}
+
+func (q *Queries) GetPublicEstablishmentLogo(ctx context.Context, arg GetPublicEstablishmentLogoParams) (GetPublicEstablishmentLogoRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEstablishmentLogo, arg.EstablishmentID, arg.Slug)
+	var i GetPublicEstablishmentLogoRow
+	err := row.Scan(
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.ByteSize,
+		&i.ContentSha256,
+	)
+	return i, err
+}
+
+const getPublicEstablishmentProfile = `-- name: GetPublicEstablishmentProfile :one
+SELECT
+    e.name,
+    e.slug,
+    e.description,
+    e.address,
+    e.contact_phone,
+    COALESCE(
+        jsonb_agg(jsonb_build_object('label', links.label, 'url', links.url) ORDER BY links.position)
+            FILTER (WHERE links.position IS NOT NULL),
+        '[]'::jsonb
+    )::text AS social_links
+FROM establishments AS e
+JOIN establishment_logos AS logo
+    ON logo.establishment_id = e.id AND logo.id = e.logo_id
+LEFT JOIN establishment_social_links AS links
+    ON links.establishment_id = e.id
+WHERE e.id = $1
+  AND e.slug = $2
+  AND btrim(e.name) <> ''
+GROUP BY e.id
+`
+
+type GetPublicEstablishmentProfileParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Slug            string      `json:"slug"`
+}
+
+type GetPublicEstablishmentProfileRow struct {
+	Name         string      `json:"name"`
+	Slug         string      `json:"slug"`
+	Description  pgtype.Text `json:"description"`
+	Address      pgtype.Text `json:"address"`
+	ContactPhone pgtype.Text `json:"contact_phone"`
+	SocialLinks  string      `json:"social_links"`
+}
+
+func (q *Queries) GetPublicEstablishmentProfile(ctx context.Context, arg GetPublicEstablishmentProfileParams) (GetPublicEstablishmentProfileRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEstablishmentProfile, arg.EstablishmentID, arg.Slug)
+	var i GetPublicEstablishmentProfileRow
+	err := row.Scan(
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Address,
+		&i.ContactPhone,
+		&i.SocialLinks,
+	)
+	return i, err
+}
+
 const invalidateActiveEmailConfirmations = `-- name: InvalidateActiveEmailConfirmations :exec
 UPDATE email_confirmations
 SET invalidated_at = $2
@@ -350,6 +651,57 @@ func (q *Queries) InvalidateActiveEmailConfirmations(ctx context.Context, arg In
 	return err
 }
 
+const listEstablishmentSocialLinks = `-- name: ListEstablishmentSocialLinks :many
+SELECT establishment_id, position, label, url
+FROM establishment_social_links
+WHERE establishment_id = $1
+ORDER BY position
+`
+
+func (q *Queries) ListEstablishmentSocialLinks(ctx context.Context, establishmentID pgtype.UUID) ([]EstablishmentSocialLink, error) {
+	rows, err := q.db.Query(ctx, listEstablishmentSocialLinks, establishmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EstablishmentSocialLink{}
+	for rows.Next() {
+		var i EstablishmentSocialLink
+		if err := rows.Scan(
+			&i.EstablishmentID,
+			&i.Position,
+			&i.Label,
+			&i.Url,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockEstablishmentOperationalWrite = `-- name: LockEstablishmentOperationalWrite :one
+SELECT time_zone, operational_data_started_at
+FROM establishments
+WHERE id = $1
+FOR UPDATE
+`
+
+type LockEstablishmentOperationalWriteRow struct {
+	TimeZone                 string             `json:"time_zone"`
+	OperationalDataStartedAt pgtype.Timestamptz `json:"operational_data_started_at"`
+}
+
+func (q *Queries) LockEstablishmentOperationalWrite(ctx context.Context, id pgtype.UUID) (LockEstablishmentOperationalWriteRow, error) {
+	row := q.db.QueryRow(ctx, lockEstablishmentOperationalWrite, id)
+	var i LockEstablishmentOperationalWriteRow
+	err := row.Scan(&i.TimeZone, &i.OperationalDataStartedAt)
+	return i, err
+}
+
 const lockUserForEmailConfirmation = `-- name: LockUserForEmailConfirmation :one
 SELECT id
 FROM users
@@ -365,4 +717,139 @@ func (q *Queries) LockUserForEmailConfirmation(ctx context.Context, id pgtype.UU
 	var id_2 pgtype.UUID
 	err := row.Scan(&id_2)
 	return id_2, err
+}
+
+const markEstablishmentOperationalDataStarted = `-- name: MarkEstablishmentOperationalDataStarted :execrows
+UPDATE establishments
+SET operational_data_started_at = COALESCE(operational_data_started_at, $2, statement_timestamp())
+WHERE id = $1
+`
+
+type MarkEstablishmentOperationalDataStartedParams struct {
+	ID                       pgtype.UUID        `json:"id"`
+	OperationalDataStartedAt pgtype.Timestamptz `json:"operational_data_started_at"`
+}
+
+func (q *Queries) MarkEstablishmentOperationalDataStarted(ctx context.Context, arg MarkEstablishmentOperationalDataStartedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markEstablishmentOperationalDataStarted, arg.ID, arg.OperationalDataStartedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const patchEstablishmentSettings = `-- name: PatchEstablishmentSettings :execrows
+UPDATE establishments
+SET name = CASE WHEN $1::boolean THEN $2::text ELSE name END,
+    time_zone = CASE WHEN $3::boolean THEN $4::text ELSE time_zone END,
+    description = CASE WHEN $5::boolean THEN $6::text ELSE description END,
+    address = CASE WHEN $7::boolean THEN $8::text ELSE address END,
+    contact_phone = CASE WHEN $9::boolean THEN $10::text ELSE contact_phone END,
+    minimum_booking_notice_minutes = CASE WHEN $11::boolean THEN $12::integer ELSE minimum_booking_notice_minutes END,
+    booking_horizon_days = CASE WHEN $13::boolean THEN $14::integer ELSE booking_horizon_days END,
+    customer_change_deadline_minutes = CASE WHEN $15::boolean THEN $16::integer ELSE customer_change_deadline_minutes END
+WHERE id = $17
+`
+
+type PatchEstablishmentSettingsParams struct {
+	NameSet                          bool        `json:"name_set"`
+	Name                             string      `json:"name"`
+	TimeZoneSet                      bool        `json:"time_zone_set"`
+	TimeZone                         string      `json:"time_zone"`
+	DescriptionSet                   bool        `json:"description_set"`
+	Description                      pgtype.Text `json:"description"`
+	AddressSet                       bool        `json:"address_set"`
+	Address                          pgtype.Text `json:"address"`
+	ContactPhoneSet                  bool        `json:"contact_phone_set"`
+	ContactPhone                     pgtype.Text `json:"contact_phone"`
+	MinimumBookingNoticeMinutesSet   bool        `json:"minimum_booking_notice_minutes_set"`
+	MinimumBookingNoticeMinutes      pgtype.Int4 `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDaysSet            bool        `json:"booking_horizon_days_set"`
+	BookingHorizonDays               pgtype.Int4 `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutesSet bool        `json:"customer_change_deadline_minutes_set"`
+	CustomerChangeDeadlineMinutes    pgtype.Int4 `json:"customer_change_deadline_minutes"`
+	EstablishmentID                  pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) PatchEstablishmentSettings(ctx context.Context, arg PatchEstablishmentSettingsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, patchEstablishmentSettings,
+		arg.NameSet,
+		arg.Name,
+		arg.TimeZoneSet,
+		arg.TimeZone,
+		arg.DescriptionSet,
+		arg.Description,
+		arg.AddressSet,
+		arg.Address,
+		arg.ContactPhoneSet,
+		arg.ContactPhone,
+		arg.MinimumBookingNoticeMinutesSet,
+		arg.MinimumBookingNoticeMinutes,
+		arg.BookingHorizonDaysSet,
+		arg.BookingHorizonDays,
+		arg.CustomerChangeDeadlineMinutesSet,
+		arg.CustomerChangeDeadlineMinutes,
+		arg.EstablishmentID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setCurrentEstablishmentLogo = `-- name: SetCurrentEstablishmentLogo :execrows
+UPDATE establishments
+SET logo_id = $1
+WHERE id = $2
+  AND $1::uuid IS NOT NULL
+`
+
+type SetCurrentEstablishmentLogoParams struct {
+	LogoID          pgtype.UUID `json:"logo_id"`
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) SetCurrentEstablishmentLogo(ctx context.Context, arg SetCurrentEstablishmentLogoParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setCurrentEstablishmentLogo, arg.LogoID, arg.EstablishmentID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateEstablishmentPublicSettings = `-- name: UpdateEstablishmentPublicSettings :execrows
+UPDATE establishments
+SET description = $1,
+    address = $2,
+    contact_phone = $3,
+    minimum_booking_notice_minutes = $4,
+    booking_horizon_days = $5,
+    customer_change_deadline_minutes = $6
+WHERE id = $7
+`
+
+type UpdateEstablishmentPublicSettingsParams struct {
+	Description                   pgtype.Text `json:"description"`
+	Address                       pgtype.Text `json:"address"`
+	ContactPhone                  pgtype.Text `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4 `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4 `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4 `json:"customer_change_deadline_minutes"`
+	EstablishmentID               pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) UpdateEstablishmentPublicSettings(ctx context.Context, arg UpdateEstablishmentPublicSettingsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateEstablishmentPublicSettings,
+		arg.Description,
+		arg.Address,
+		arg.ContactPhone,
+		arg.MinimumBookingNoticeMinutes,
+		arg.BookingHorizonDays,
+		arg.CustomerChangeDeadlineMinutes,
+		arg.EstablishmentID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

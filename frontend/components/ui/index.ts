@@ -4,7 +4,13 @@ export {
 } from "./affixed-input/affixed-input";
 export { ActionLink, type ActionLinkProps } from "./action-link/action-link";
 export { Button, type ButtonProps } from "./button/button";
+export {
+  BrazilianPhoneField,
+  formatBrazilianPhoneNumber,
+  type BrazilianPhoneFieldProps,
+} from "./brazilian-phone-field/brazilian-phone-field";
 export { Field, type FieldProps } from "./field/field";
+export { FileField, type FileFieldProps } from "./file-field/file-field";
 export { Feedback, type FeedbackProps } from "./feedback/feedback";
 export { IconButton, type IconButtonProps } from "./icon-button/icon-button";
 export { Input, type InputProps } from "./input/input";
@@ -19,3 +25,8 @@ export {
   type SelectFieldProps,
 } from "./select-field/select-field";
 export { TextField, type TextFieldProps } from "./text-field/text-field";
+export { Textarea, type TextareaProps } from "./textarea/textarea";
+export {
+  TextareaField,
+  type TextareaFieldProps,
+} from "./textarea-field/textarea-field";

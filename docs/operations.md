@@ -3,12 +3,13 @@
 ## Infraestrutura
 
 - Produção roda em uma única VPS com Docker Compose.
-- Serviços: frontend, backend, PostgreSQL e Caddy.
+- Serviços permanentes: frontend, backend, PostgreSQL e Caddy. O Compose executa também `logo-storage-init` como tarefa de inicialização de curta duração antes do backend.
 - O Compose de desenvolvimento inclui também o Mailpit, preferencialmente por arquivo de override ou profile próprio; ele não faz parte do deploy de produção.
 - Exponha a interface web do Mailpit somente no ambiente local e mantenha seu SMTP acessível apenas pela rede interna do Compose.
 - Somente Caddy expõe portas HTTP/HTTPS publicamente. Frontend, backend e PostgreSQL permanecem nas redes internas necessárias.
 - PostgreSQL e dados operacionais do Caddy usam volumes persistentes.
 - Logos enviados pelos estabelecimentos usam um volume persistente local próprio, preservado em deploys e não incorporado às imagens.
+- `logo-storage-init` usa root transitoriamente apenas para preparar a raiz do volume como `app:app` com modo `0700`; a API executa como `app` e falha no startup se não conseguir criar e remover um arquivo de verificação em `LOGO_STORAGE_DIR`.
 - Adicione health checks. `depends_on` não substitui verificação real de prontidão.
 - Considere os recursos da VPS e não introduza serviços gerenciados ou dependências externas sem justificativa e decisão explícita.
 - Mantenha o deploy agnóstico ao provedor da VPS. Não dependa de serviços proprietários do fornecedor sem uma decisão arquitetural explícita.
@@ -43,21 +44,31 @@
 - Versione `.env.example` com todas as chaves, sem valores sensíveis.
 - Ignore arquivos `.env` reais e nunca os copie para imagens ou logs.
 - Cada aplicação valida configuração obrigatória na inicialização e falha claramente se estiver ausente ou inválida.
+- `LOGO_STORAGE_DIR` é um caminho absoluto interno ao container, sem `..` e diferente da raiz do filesystem. No Compose use `/var/lib/barbershop/logos`; não configure um caminho do host nem publique esse diretório pelo Caddy.
 - Segredos nunca usam `NEXT_PUBLIC_*`.
 - Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
 - Configure `JWT_ACTIVE_KEY_ID`, `JWT_PRIVATE_KEY_BASE64`, `JWT_PUBLIC_KEYS_JSON`, `CSRF_SIGNING_KEY_BASE64`, `RATE_LIMIT_HMAC_KEY_BASE64`, `TRUSTED_ORIGINS` e `TRUSTED_PROXY_CIDRS`. A chave JWT privada é um seed Ed25519 em base64 sem padding; o keyring público é um objeto JSON de `kid` para chave pública.
-- Configure `PUBLIC_APP_URL` como a origem HTTPS usada nos links transacionais. No ambiente local, `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT` e `SMTP_FROM` apontam exclusivamente para o Mailpit interno. O modo desabilitado é aceito somente em testes; produção recusa a inicialização enquanto não houver um provedor real suportado e explicitamente configurado.
+- O frontend recebe `API_INTERNAL_URL` (origem HTTP/HTTPS interna da API) e `PUBLIC_APP_URL` (origem HTTPS canônica) em runtime pelo Compose. A inicialização Node valida origens sem credenciais, caminho, query ou fragmento; valores inválidos impedem o startup sem expor seus conteúdos. Essas variáveis são exclusivas ao servidor e não usam `NEXT_PUBLIC_*`.
+- Configure `PUBLIC_APP_URL` como a origem HTTPS usada nos links transacionais e nos metadados da página pública. No ambiente local, `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT` e `SMTP_FROM` apontam exclusivamente para o Mailpit interno. O modo desabilitado é aceito somente em testes; produção recusa a inicialização enquanto não houver um provedor real suportado e explicitamente configurado.
 - `PUBLIC_APP_URL` e cada item de `TRUSTED_ORIGINS` devem ser origens HTTPS sem path, query ou fragmento. `SMTP_HOST` não inclui porta; `SMTP_PORT` aceita de 1 a 65535; `SMTP_FROM` precisa ser um endereço válido. `EMAIL_PROVIDER=disabled` é exclusivo de testes.
 - Ao adicionar configuração obrigatória, atualize `.env.example` e a documentação operacional.
 
 ### Validação local do onboarding pela interface
 
 - Com `make dev` em execução e as migrations aplicadas, abra `https://localhost:8443` e siga da home para `/cadastro`.
-- Use um e-mail fictício exclusivo, confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva o proprietário a `/painel/profissionais`.
+- Use um e-mail fictício exclusivo, confira as quatro opções brasileiras do seletor de fuso e confirme que um fuso de dispositivo fora da lista usa `America/Sao_Paulo`. Confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva o proprietário a `/painel`. Sem logo, essa entrada deve encaminhar para Configurações; depois de enviar o logo, novo login ou acesso a `/painel` deve encaminhar para Profissionais. Simule uma falha temporária na consulta de configurações e confirme a mensagem de erro, a nova tentativa e a permanência da sessão.
 - No painel, abra “Profissionais”, cadastre um nome, e-mail fictício exclusivo e senha temporária de teste. A resposta deve aparecer na lista, e o campo da senha deve ser limpo; guarde a senha somente para o login de teste, sem colocá-la em logs, URLs ou capturas públicas. Se o trial estiver expirado, confirme que a lista continua visível e a interface explica o bloqueio de novos cadastros. Saia da sessão do proprietário, entre com o e-mail do profissional e a senha temporária; o login deve abrir `/testes` e exigir a troca da senha antes de liberar recursos de domínio. Confira que a senha temporária não funciona novamente após a troca.
-- No painel, use Tab para percorrer os links “Profissionais” e “Área de testes”; o último abre `/testes`, onde é possível consultar novamente a sessão por `GET /auth/me` e o estabelecimento. Confira a navegação em desktop e tela estreita. Saia e entre outra vez por `/login`: o proprietário deve voltar ao painel. Inspecione os dois cookies e confirme `Secure`, `SameSite=Strict`, `Max-Age` de 15 dias e os caminhos documentados em `docs/architecture.md`; somente o access é `HttpOnly`, e somente o CSRF é legível pelo JavaScript.
+- Como proprietário, abra `/painel/configuracoes`. Confirme que o slug é somente leitura, que o seletor lista apenas “Horário de Brasília”, “Horário da Amazônia”, “Horário do Acre” e “Horário de Fernando de Noronha” e só pode ser alterado quando permitido pela API, e que descrição, endereço, telefone, links e limites opcionais podem ser atualizados ou limpos. O campo de logo aceita PNG, JPEG ou WebP e mostra a pré-visualização no lugar da imagem atual; limpe uma seleção e confira que o campo volta a “Nenhum arquivo selecionado”, sem alterar o logo publicado. Selecione novamente e envie; confirme que a consulta é atualizada e, quando publicável, “Abrir página pública” leva ao slug do estabelecimento. Envie uma segunda imagem e confirme que uma recusa confirmada restaura o logo anterior e limpa o campo; selecione o arquivo novamente para tentar de novo. Em falha ambígua, confirme que a tela consulta as configurações antes de decidir qual logo mostrar; se a consulta também falhar, o arquivo permanece selecionado e o botão “Atualizar estado do logo” permite reconciliar antes de outro envio. Confira mensagens sem detalhes internos. Não há opção para remover o logo publicado. Com trial expirado, confirme que a consulta e o logo atual continuam visíveis e que seleção/envio ficam bloqueados. O telefone aplica máscara para fixo ou celular com DDD, aceita no máximo 10 ou 11 dígitos nacionais e exibe o número persistido sem o código do país. Para redes sociais, confira as seis opções disponíveis, os botões `+` e `×` e o prefixo fixo HTTPS separado do trecho editável. Campos de minutos aceitam zero; o horizonte em dias exige valor positivo; deixar qualquer limite vazio remove a restrição. Após salvar, a tela deve mostrar os valores persistidos; se a consulta posterior falhar, confira que edição e upload ficam bloqueados e “Atualizar configurações” recarrega os dados sem repetir o PATCH. Links legados incompatíveis com o prefixo do editor devem permanecer intactos ao salvar outros campos; em estabelecimento com slug reservado legado, confirme que há aviso sem alteração automática do endereço.
+- No painel, use Tab para percorrer os links “Profissionais”, “Configurações” e “Área de testes”; Configurações abre `/painel/configuracoes` e o último link abre `/testes`, onde é possível consultar novamente a sessão por `GET /auth/me` e o estabelecimento. Confira que o link da página atual recebe `aria-current`, e que a entrada `/painel` não marca Profissionais como atual. Verifique a navegação em desktop e tela estreita, incluindo acesso direto a `/painel/profissionais` quando o logo estiver ausente. Saia e entre outra vez por `/login`: o proprietário deve voltar a `/painel` e seguir o destino pelo logo. Inspecione os dois cookies e confirme `Secure`, `SameSite=Strict`, `Max-Age` de 15 dias e os caminhos documentados em `docs/architecture.md`; somente o access é `HttpOnly`, e somente o CSRF é legível pelo JavaScript.
 - Para recuperação, mantenha uma segunda sessão de teste aberta para verificar a revogação, saia da sessão usada para o fluxo e use “Esqueci minha senha” em `/login` com o e-mail confirmado do proprietário. Abra o link mais recente no Mailpit e confira que `/redefinir-senha` remove fragmento e query antes de mostrar o formulário; defina uma senha diferente da atual, volte ao login e entre com a nova senha. Confira que o link usado não pode ser reutilizado e que a segunda sessão anterior retorna `401`. Não copie token ou senha para logs, URL query ou capturas públicas.
 - Para validar a restrição de papel, entre com a conta profissional criada no painel: o login deve abrir `/testes`, exibir a troca obrigatória e não permitir acesso a `/painel/profissionais`. Use somente contas e senhas fictícias e não exponha a senha em comandos ou logs.
+
+### Validação local da página pública
+
+- Depois do cadastro, confirmação e envio do logo, abra `/{slug}` sem sessão e confira nome, logo, título e URL canônica no HTML recebido. Verifique descrição, endereço, telefone e redes quando preenchidos; limpe os opcionais no painel e confirme que as seções desaparecem.
+- Substitua o logo e recarregue o endereço estável: o navegador deve revalidar a imagem. Estabelecimento incompleto ou slug ausente retorna página não encontrada; uma indisponibilidade da API mostra falha com nova tentativa, sem afirmar inexistência. Depois de restaurar a API, “Tentar novamente” deve solicitar um novo render ao servidor e recuperar a página sem recarregar manualmente o navegador.
+- Confira a identificação após expirar o trial, os links por teclado, o foco visível e o layout em tela estreita. Não há controles de disponibilidade nem agendamento nesta entrega. Confira também `/`, `/cadastro`, `/login`, `/painel`, `/testes` e a política existente de `/design-system`.
+- Reinicie o backend e confirme que o logo permanece disponível, preservando os volumes. Nunca use `down -v` neste procedimento.
 
 ### Validação local do onboarding pela API
 
@@ -66,6 +77,7 @@
 - Solicite uma substituição por `POST /api/v1/auth/email-confirmation`; a resposta permanece `202` para conta inexistente, já confirmada ou elegível. Para uma conta elegível, use somente a mensagem mais recente, pois o token anterior foi invalidado.
 - Copie manualmente apenas o valor de `token` do fragmento de `/confirmar-email#token=...` e envie-o no corpo de `POST /api/v1/auth/email-confirmation/verify`. Nunca coloque o token em path ou query. A resposta `200` cria a sessão e o trial.
 - Preserve os cookies retornados e consulte `GET /api/v1/establishment`; a resposta deve conter o mesmo tenant, o fuso persistido e o trial ativo com limites UTC separados por exatamente 14 dias.
+- Depois de enviar um logo válido como owner, consulte `GET /api/v1/public/establishments/{slug}/logo` sem cookies. Confira os bytes e `Content-Type`, `Content-Length`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, no-cache` e `ETag`. Repita com `If-None-Match` igual ao ETag e confirme `304` sem corpo; substitua o logo e reutilize o ETag antigo para receber `200` com os novos bytes. Confirme que slug reservado, slug ausente e estabelecimento sem logo retornam `404`, e que a leitura continua disponível após expirar o trial.
 - Use identificadores fictícios e descarte cookie jar e token ao terminar. Os comandos completos estão no `README.md`.
 
 ## CI/CD e releases
@@ -90,6 +102,26 @@
 - Para mudanças destrutivas, use etapas expansivas e contrativas em releases separadas.
 - A migration `00002_owner_onboarding.sql` exige que `establishments` esteja vazia, pois os registros mínimos anteriores não possuem nome, slug ou fuso que possam ser preenchidos sem inventar dados. Se a precondição falhar, interrompa o deploy e trate explicitamente os registros antes de reaplicar; não os apague nem atribua valores fictícios.
 - A migration `00003_access_only_sessions.sql` remove `refresh_tokens` e seus hashes. A aplicação existe somente em ambiente local nesta mudança; pare o backend antigo antes de aplicar a migration. O `Down` recria a tabela vazia e não recupera os hashes descartados. Antes de qualquer release em produção, reavalie a estratégia de migração e a ausência de backup.
+- A migration `00006_establishment_settings.sql` preserva os estabelecimentos existentes e cria os novos campos como opcionais. Seu `Down` recusa rollback enquanto houver dados de configuração, para evitar apagá-los silenciosamente.
+- A migration `00007_establishment_operational_lock.sql` preserva estabelecimentos existentes e inicia o marcador como nulo. Seu `Down` recusa rollback enquanto houver marcador, para não reabilitar alteração de fuso após a criação de dados operacionais.
+- A migration `00008_establishment_logos.sql` preserva estabelecimentos existentes e inicia `logo_id` como nulo. Seu `Down` recusa rollback quando existe metadado de logo, pois o volume local não possui backup no escopo inicial e apagar as referências do banco poderia deixar arquivos órfãos.
+
+### Diagnóstico de slugs legados em conflito
+
+Antes de habilitar a resolução ou publicação de páginas públicas, execute a consulta somente de leitura abaixo no PostgreSQL para identificar slugs legados que coincidem com rotas da plataforma:
+
+```sql
+SELECT slug
+FROM establishments
+WHERE slug = ANY (ARRAY[
+    'admin', 'api', 'assets', 'cadastro', 'confirmar-email',
+    'design-system', 'login', 'painel', 'recuperar-senha',
+    'redefinir-senha', 'testes'
+]::text[])
+ORDER BY slug;
+```
+
+A consulta retorna somente os slugs conflitantes. Não registre seus resultados em logs ou tickets nem altere os cadastros automaticamente. Preserve os slugs existentes e exija resolução operacional explícita antes de qualquer mudança ou publicação.
 
 ## Persistência
 
@@ -98,6 +130,10 @@
 - Preserve o volume em deploys e manutenções.
 - A ausência de backup também se aplica ao volume de logos no escopo inicial.
 - Antes de alteração destrutiva, destaque a ausência de backup e prefira alternativa reversível.
+- Preserve `logos_data` em `docker compose down` e deploys; não use `down -v` em ambientes com dados. A tarefa `logo-storage-init` ajusta apenas a raiz do volume e o backend permanece sem privilégios de root. Se o backend não iniciar, confira o estado de saída de `logo-storage-init` e os logs do container, corrija a configuração ou as permissões e recrie os serviços sem apagar o volume.
+- Para investigar resíduos, pare primeiro o backend e liste os nomes no volume. Compare cada chave com os logos atualmente associados por `establishments.logo_id` e `establishment_logos.id`; metadados de logos substituídos permanecem no banco sem representar um objeto atual. Remova manualmente somente arquivos sem associação atual, após confirmar também a origem do resíduo; não faça limpeza recursiva nem automatize exclusões. Temporários `.write-*` só podem ser removidos após confirmar que o backend está parado e que são resíduos de uma interrupção.
+- Se `PUT /api/v1/establishment/logo` falhar, a associação anterior é preservada quando o erro é confirmado. Eventos `establishment_logo_association_uncertain` exigem consultar o `object_key` atual em `establishments`/`establishment_logos` antes de remover qualquer objeto; não apague o novo objeto enquanto o estado do commit não estiver confirmado. Eventos `establishment_logo_upload_compensation_failed` e `establishment_logo_cleanup_failed` indicam possíveis objetos órfãos: aplique o procedimento de comparação com metadados acima e remova manualmente somente objetos sem referência. Esses eventos não registram conteúdo, nome enviado, caminho nem chave.
+- Para uma futura troca para S3, copie somente os logos atualmente associados, preservando suas chaves e comparando tamanho e SHA-256 com os metadados alcançados por `establishments.logo_id`, antes de apontar a aplicação ao novo adaptador. Mantenha os originais locais até validar leituras no novo storage; sua remoção exige uma decisão operacional posterior, pois não há backup.
 
 ### Manutenção dos dados de autenticação
 

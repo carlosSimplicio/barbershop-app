@@ -2,11 +2,8 @@ package onboarding
 
 import (
 	"errors"
-	"regexp"
-	"strings"
-	"time"
-	_ "time/tzdata"
-	"unicode/utf8"
+
+	"barbershop-app/backend/internal/establishment"
 )
 
 var (
@@ -14,15 +11,10 @@ var (
 	ErrReservedSlug    = errors.New("reserved establishment slug")
 	ErrInvalidTimeZone = errors.New("invalid establishment time zone")
 	ErrInvalidName     = errors.New("invalid establishment name")
-
-	validSlug     = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`)
-	reservedSlugs = map[string]struct{}{
-		"admin": {}, "api": {}, "login": {}, "assets": {},
-	}
 )
 
 func ValidateEstablishmentName(name string) error {
-	if !utf8.ValidString(name) || strings.TrimSpace(name) == "" || utf8.RuneCountInString(name) > 120 {
+	if !establishment.IsNameValid(name) {
 		return ErrInvalidName
 	}
 	return nil
@@ -30,10 +22,10 @@ func ValidateEstablishmentName(name string) error {
 
 // ValidateSlug validates the immutable public identifier chosen during onboarding.
 func ValidateSlug(slug string) error {
-	if !validSlug.MatchString(slug) {
+	if !establishment.IsPublicSlugFormatValid(slug) {
 		return ErrInvalidSlug
 	}
-	if _, reserved := reservedSlugs[slug]; reserved {
+	if establishment.IsPublicSlugReserved(slug) {
 		return ErrReservedSlug
 	}
 	return nil
@@ -41,10 +33,7 @@ func ValidateSlug(slug string) error {
 
 // ValidateTimeZone validates the establishment IANA time zone.
 func ValidateTimeZone(name string) error {
-	if name == "" || name == "Local" {
-		return ErrInvalidTimeZone
-	}
-	if _, err := time.LoadLocation(name); err != nil {
+	if !establishment.IsTimeZoneValid(name) {
 		return ErrInvalidTimeZone
 	}
 	return nil

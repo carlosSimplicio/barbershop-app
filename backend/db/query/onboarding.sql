@@ -102,3 +102,135 @@ SELECT e.id, e.name, e.slug, e.time_zone, t.starts_at, t.ends_at
 FROM establishments AS e
 LEFT JOIN establishment_trials AS t ON t.establishment_id = e.id
 WHERE e.id = $1;
+
+-- name: GetEstablishmentPublicSettings :one
+SELECT
+    id,
+    description,
+    address,
+    contact_phone,
+    minimum_booking_notice_minutes,
+    booking_horizon_days,
+    customer_change_deadline_minutes
+FROM establishments
+WHERE id = $1;
+
+-- name: GetEstablishmentSettingsByID :one
+SELECT
+    e.id, e.name, e.slug, e.time_zone, e.description, e.address, e.contact_phone,
+    e.minimum_booking_notice_minutes, e.booking_horizon_days, e.customer_change_deadline_minutes,
+    e.operational_data_started_at,
+    l.content_type AS logo_content_type, l.byte_size AS logo_byte_size,
+    l.width AS logo_width, l.height AS logo_height
+FROM establishments AS e
+LEFT JOIN establishment_logos AS l ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1;
+
+-- name: LockEstablishmentOperationalWrite :one
+SELECT time_zone, operational_data_started_at
+FROM establishments
+WHERE id = $1
+FOR UPDATE;
+
+-- name: MarkEstablishmentOperationalDataStarted :execrows
+UPDATE establishments
+SET operational_data_started_at = COALESCE(operational_data_started_at, $2, statement_timestamp())
+WHERE id = $1;
+
+-- name: ListEstablishmentSocialLinks :many
+SELECT establishment_id, position, label, url
+FROM establishment_social_links
+WHERE establishment_id = $1
+ORDER BY position;
+
+-- name: UpdateEstablishmentPublicSettings :execrows
+UPDATE establishments
+SET description = sqlc.narg('description'),
+    address = sqlc.narg('address'),
+    contact_phone = sqlc.narg('contact_phone'),
+    minimum_booking_notice_minutes = sqlc.narg('minimum_booking_notice_minutes'),
+    booking_horizon_days = sqlc.narg('booking_horizon_days'),
+    customer_change_deadline_minutes = sqlc.narg('customer_change_deadline_minutes')
+WHERE id = sqlc.arg('establishment_id');
+
+-- name: PatchEstablishmentSettings :execrows
+UPDATE establishments
+SET name = CASE WHEN sqlc.arg('name_set')::boolean THEN sqlc.arg('name')::text ELSE name END,
+    time_zone = CASE WHEN sqlc.arg('time_zone_set')::boolean THEN sqlc.arg('time_zone')::text ELSE time_zone END,
+    description = CASE WHEN sqlc.arg('description_set')::boolean THEN sqlc.narg('description')::text ELSE description END,
+    address = CASE WHEN sqlc.arg('address_set')::boolean THEN sqlc.narg('address')::text ELSE address END,
+    contact_phone = CASE WHEN sqlc.arg('contact_phone_set')::boolean THEN sqlc.narg('contact_phone')::text ELSE contact_phone END,
+    minimum_booking_notice_minutes = CASE WHEN sqlc.arg('minimum_booking_notice_minutes_set')::boolean THEN sqlc.narg('minimum_booking_notice_minutes')::integer ELSE minimum_booking_notice_minutes END,
+    booking_horizon_days = CASE WHEN sqlc.arg('booking_horizon_days_set')::boolean THEN sqlc.narg('booking_horizon_days')::integer ELSE booking_horizon_days END,
+    customer_change_deadline_minutes = CASE WHEN sqlc.arg('customer_change_deadline_minutes_set')::boolean THEN sqlc.narg('customer_change_deadline_minutes')::integer ELSE customer_change_deadline_minutes END
+WHERE id = sqlc.arg('establishment_id');
+
+-- name: DeleteEstablishmentSocialLinks :exec
+DELETE FROM establishment_social_links
+WHERE establishment_id = $1;
+
+-- name: CreateEstablishmentSocialLink :exec
+INSERT INTO establishment_social_links (establishment_id, position, label, url)
+VALUES ($1, $2, $3, $4);
+
+-- name: CreateEstablishmentLogo :one
+INSERT INTO establishment_logos (
+    establishment_id, object_key, content_type, byte_size, width, height, content_sha256
+)
+VALUES (
+    sqlc.arg('establishment_id'), sqlc.arg('object_key'), sqlc.arg('content_type'),
+    sqlc.arg('byte_size'), sqlc.arg('width'), sqlc.arg('height'), sqlc.arg('content_sha256')
+)
+RETURNING id, establishment_id, object_key, content_type, byte_size, width, height, content_sha256, created_at;
+
+-- name: SetCurrentEstablishmentLogo :execrows
+UPDATE establishments
+SET logo_id = sqlc.arg('logo_id')
+WHERE id = sqlc.arg('establishment_id')
+  AND sqlc.arg('logo_id')::uuid IS NOT NULL;
+
+-- name: GetCurrentEstablishmentLogo :one
+SELECT
+    l.id, l.establishment_id, l.object_key, l.content_type, l.byte_size,
+    l.width, l.height, l.content_sha256, l.created_at
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = $1;
+
+-- name: GetPublicEstablishmentBySlug :one
+SELECT id, name, slug
+FROM establishments
+WHERE slug = $1
+  AND logo_id IS NOT NULL
+  AND btrim(name) <> '';
+
+-- name: GetPublicEstablishmentProfile :one
+SELECT
+    e.name,
+    e.slug,
+    e.description,
+    e.address,
+    e.contact_phone,
+    COALESCE(
+        jsonb_agg(jsonb_build_object('label', links.label, 'url', links.url) ORDER BY links.position)
+            FILTER (WHERE links.position IS NOT NULL),
+        '[]'::jsonb
+    )::text AS social_links
+FROM establishments AS e
+JOIN establishment_logos AS logo
+    ON logo.establishment_id = e.id AND logo.id = e.logo_id
+LEFT JOIN establishment_social_links AS links
+    ON links.establishment_id = e.id
+WHERE e.id = sqlc.arg('establishment_id')
+  AND e.slug = sqlc.arg('slug')
+  AND btrim(e.name) <> ''
+GROUP BY e.id;
+
+-- name: GetPublicEstablishmentLogo :one
+SELECT l.object_key, l.content_type, l.byte_size, l.content_sha256
+FROM establishments AS e
+JOIN establishment_logos AS l
+    ON l.establishment_id = e.id AND l.id = e.logo_id
+WHERE e.id = sqlc.arg('establishment_id')
+  AND e.slug = sqlc.arg('slug');

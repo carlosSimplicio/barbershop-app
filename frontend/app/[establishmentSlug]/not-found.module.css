@@ -1,0 +1,5 @@
+.title {
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}

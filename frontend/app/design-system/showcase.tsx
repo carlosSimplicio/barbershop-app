@@ -5,13 +5,16 @@ import { useState } from "react";
 import {
   ActionLink,
   AffixedInput,
+  BrazilianPhoneField,
   Button,
   Field,
+  FileField,
   Feedback,
   IconButton,
   PasswordField,
   RecordList,
   SelectField,
+  TextareaField,
   TextField,
 } from "@/components/ui";
 
@@ -39,6 +42,7 @@ export function DesignSystemShowcase() {
     "Use os controles para validar as interações.",
   );
   const [iconPressed, setIconPressed] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("(11) 99999-0000");
 
   return (
     <main className={styles.page} data-theme={theme}>
@@ -177,11 +181,28 @@ export function DesignSystemShowcase() {
               label="Texto"
               placeholder="Ex.: Estúdio Aurora"
             />
+            <BrazilianPhoneField
+              hint="DDD e número com máscara para telefone fixo ou celular."
+              id="showcase-phone"
+              label="Telefone brasileiro"
+              onValueChange={setPhoneNumber}
+              value={phoneNumber}
+            />
             <TextField
               defaultValue="voce@exemplo.com"
               hint="Use teclado e autocomplete adequados."
               label="E-mail"
               type="email"
+            />
+            <TextareaField
+              defaultValue="Cortes, barba e cuidado em um só lugar."
+              hint="Até 500 caracteres, apresentados como texto simples."
+              label="Descrição"
+              maxLength={500}
+            />
+            <FileField
+              hint="PNG, JPEG ou WebP. Até 2 MiB e 4.096 × 4.096 pixels. O backend confirma a validade do arquivo."
+              label="Logo do estabelecimento"
             />
             <Field
               hint="O prefixo contextualiza sem fazer parte do valor."
@@ -229,6 +250,18 @@ export function DesignSystemShowcase() {
               label="Erro"
               type="email"
             />
+            <TextareaField
+              defaultValue="Descrição muito longa"
+              error="Use até 500 caracteres."
+              hint="A ajuda permanece associada durante a correção."
+              label="Descrição com erro"
+              maxLength={500}
+            />
+            <FileField
+              error="Escolha uma imagem dentro dos limites informados."
+              hint="PNG, JPEG ou WebP. Até 2 MiB e 4.096 × 4.096 pixels."
+              label="Logo com erro"
+            />
             <TextField
               defaultValue="Não editável"
               disabled
@@ -238,6 +271,17 @@ export function DesignSystemShowcase() {
             <SelectField disabled label="Seleção desabilitada">
               <option>Não editável</option>
             </SelectField>
+            <TextareaField
+              defaultValue="Não editável"
+              disabled
+              hint="Trial expirado: leitura disponível, edição bloqueada."
+              label="Descrição desabilitada"
+            />
+            <FileField
+              disabled
+              hint="Envio indisponível no momento."
+              label="Logo desabilitado"
+            />
           </div>
         </Showcase>
         <Showcase title="Feedback assíncrono">

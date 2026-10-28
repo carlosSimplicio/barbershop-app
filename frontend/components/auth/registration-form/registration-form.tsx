@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
+import { EstablishmentSlugField } from "@/components/establishment/establishment-slug-field/establishment-slug-field";
+import { BrazilianTimeZoneField } from "@/components/establishment/brazilian-time-zone-field/brazilian-time-zone-field";
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
 import {
   EMAIL_MAX_LENGTH,
@@ -17,6 +19,7 @@ import {
   registerOwner,
   type RegisterRequest,
 } from "@/lib/auth/registration-api/registration-api";
+import { BRAZILIAN_TIME_ZONES } from "@/lib/establishment/brazilian-time-zones";
 
 import { ConfirmationResend } from "../confirmation-resend/confirmation-resend";
 import styles from "./registration-form.module.css";
@@ -60,7 +63,7 @@ export function RegistrationForm() {
   const submittingRef = useRef(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
-  const timeZoneRef = useRef<HTMLInputElement>(null);
+  const timeZoneRef = useRef<HTMLSelectElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -192,7 +195,7 @@ export function RegistrationForm() {
         required
         value={values.establishment_name}
       />
-      <TextField
+      <EstablishmentSlugField
         autoCapitalize="none"
         autoComplete="off"
         readOnly={submitting}
@@ -224,29 +227,19 @@ export function RegistrationForm() {
           type="email"
           value={values.email}
         />
-        <div>
-          <TextField
-            autoComplete="off"
-            readOnly={submitting}
-            error={errors.time_zone}
-            hint="Confirme ou altere para o fuso IANA do seu estabelecimento."
-            label="Fuso horário"
-            list="registration-time-zones"
-            onChange={(event) => {
-              timeZoneEdited.current = true;
-              update("time_zone", event.target.value);
-            }}
-            ref={timeZoneRef}
-            required
-            value={values.time_zone}
-          />
-          <datalist id="registration-time-zones">
-            <option value="America/Sao_Paulo" />
-            <option value="America/Manaus" />
-            <option value="America/Rio_Branco" />
-            <option value="America/Noronha" />
-          </datalist>
-        </div>
+        <BrazilianTimeZoneField
+          disabled={submitting}
+          error={errors.time_zone}
+          hint="Escolha o fuso horário brasileiro do seu estabelecimento."
+          label="Fuso horário"
+          onChange={(event) => {
+            timeZoneEdited.current = true;
+            update("time_zone", event.target.value);
+          }}
+          ref={timeZoneRef}
+          required
+          value={values.time_zone}
+        />
       </div>
       <PasswordField
         autoComplete="new-password"
@@ -273,7 +266,9 @@ export function RegistrationForm() {
 function detectTimeZone() {
   try {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (timeZone && timeZone !== "Local") return timeZone;
+    if (BRAZILIAN_TIME_ZONES.some((zone) => zone.value === timeZone)) {
+      return timeZone;
+    }
   } catch {
     // Browser did not expose a usable time zone.
   }

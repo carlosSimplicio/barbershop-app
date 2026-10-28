@@ -12,7 +12,9 @@ vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
 vi.mock("@/components/session/auth-provider/auth-provider", () => ({
   useAuthSession: vi.fn(),
 }));
-vi.mock("@/lib/auth/email-verification-api/email-verification-api", () => ({ verifyEmail: vi.fn() }));
+vi.mock("@/lib/auth/email-verification-api/email-verification-api", () => ({
+  verifyEmail: vi.fn(),
+}));
 
 const replace = vi.fn();
 const runAction = vi.fn(async (action: () => ReturnType<typeof verifyEmail>) =>
@@ -51,9 +53,7 @@ test("sincroniza a sessão após sucesso e substitui a rota", async () => {
     expect(verifyEmail).toHaveBeenCalledWith({ token: "opaque-sample" }),
   );
   expect(runAction).toHaveBeenCalledWith(expect.any(Function), "authenticated");
-  await waitFor(() =>
-    expect(replace).toHaveBeenCalledWith("/painel/profissionais"),
-  );
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/painel"));
   expect(document.body.textContent).not.toContain("opaque-sample");
   expect(screen.getByText(/e-mail confirmado/i)).toBeInTheDocument();
 });
@@ -109,9 +109,7 @@ test("Strict Mode não envia duas vezes um token de uso único", async () => {
     </StrictMode>,
   );
 
-  await waitFor(() =>
-    expect(replace).toHaveBeenCalledWith("/painel/profissionais"),
-  );
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/painel"));
   expect(verifyEmail).toHaveBeenCalledOnce();
 });
 

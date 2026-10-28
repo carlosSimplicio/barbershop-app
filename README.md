@@ -24,6 +24,12 @@ make auth-keys # copie a saída para as variáveis correspondentes do .env
 make dev
 ```
 
+`LOGO_STORAGE_DIR` aponta para `/var/lib/barbershop/logos` dentro do container.
+O Compose inicializa o volume persistente e prepara suas permissões antes de
+iniciar a API; o processo do backend continua executando como usuário não
+privilegiado `app`. Preserve o volume `logos_data` ao recriar ou atualizar os
+containers.
+
 A aplicação fica em <https://localhost:8443> e o Mailpit em
 <http://localhost:8025>. Quando houver migrations de domínio, aplique-as em
 outro terminal:
@@ -144,7 +150,7 @@ PostgreSQL acessível pelo host e use:
 
 ```sh
 cd backend && go run ./cmd/api
-cd frontend && npm run dev
+cd frontend && API_INTERNAL_URL=http://127.0.0.1:8080 PUBLIC_APP_URL=https://localhost:8443 npm run dev
 ```
 
 O contrato é alterado primeiro em `backend/openapi/openapi.yaml`. `make generate`
@@ -178,3 +184,11 @@ docs/                produto, arquitetura, operação e escopo vivo
 
 Configurações reais ficam apenas no `.env` local ou na VPS. Nunca versione
 senhas, tokens ou outros dados sensíveis.
+
+A página pública informativa é publicada em `/{slug}` depois de preencher nome e logo.
+O frontend consulta a API Go no servidor por `API_INTERNAL_URL`; `PUBLIC_APP_URL`
+fornece a origem HTTPS canônica. O Compose injeta ambas em runtime; fora dele,
+configure-as no ambiente do processo Next.js ou em `frontend/.env.local`.
+São origens sem credenciais, caminho, query ou fragmento, validadas no startup.
+A página mostra os dados opcionais preenchidos e permanece identificável após
+expiração do trial; disponibilidade e agendamento público continuam pendentes.

@@ -242,6 +242,181 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /establishment/settings:
+    get:
+      operationId: getEstablishmentSettings
+      summary: Consulta as configurações do estabelecimento do proprietário
+      tags: [establishment]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Configurações e estado de publicação do estabelecimento autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstablishmentSettingsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      operationId: patchEstablishmentSettings
+      summary: Atualiza os dados públicos e limites do estabelecimento
+      tags: [establishment]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstablishmentSettingsPatchRequest"
+      responses:
+        "204":
+          description: Configurações atualizadas
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /establishment/logo:
+    put:
+      operationId: putEstablishmentLogo
+      summary: Envia ou substitui o logo do estabelecimento
+      tags: [establishment]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        description: O corpo multipart aceita no máximo 2.162.688 bytes, incluindo até 65.536 bytes de envelope além do arquivo.
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/EstablishmentLogoUploadRequest"
+      responses:
+        "204":
+          description: Logo associado ao estabelecimento
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          description: Arquivo ou corpo multipart acima do limite
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /public/establishments/{slug}/logo:
+    get:
+      operationId: getPublicEstablishmentLogo
+      summary: Consulta o logo atual de um estabelecimento publicável
+      tags: [public-establishment]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 63
+        - name: If-None-Match
+          in: header
+          required: false
+          description: ETag do logo previamente recebido para revalidar o cache.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conteúdo do logo atual
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        "304":
+          description: Logo sem alterações desde o ETag informado
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        "404":
+          description: Estabelecimento inexistente, não publicável ou sem logo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /public/establishments/{slug}:
+    get:
+      operationId: getPublicEstablishment
+      summary: Consulta o perfil informativo de um estabelecimento publicável
+      tags: [public-establishment]
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 63
+      responses:
+        "200":
+          description: Perfil público informativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicEstablishmentProfileResponse"
+        "404":
+          description: Estabelecimento inexistente, não publicável ou com slug reservado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals:
     get:
       operationId: getProfessionals
@@ -528,6 +703,165 @@ components:
           oneOf:
             - $ref: "#/components/schemas/EstablishmentTrial"
             - type: "null"
+    EstablishmentSettingsResponse:
+      type: object
+      required: [id, name, slug, time_zone, description, address, contact_phone, social_links, minimum_booking_notice_minutes, booking_horizon_days, customer_change_deadline_minutes, logo, time_zone_editable, can_write, slug_conflict, is_complete, is_publishable]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        time_zone:
+          type: string
+        description:
+          type: [string, "null"]
+        address:
+          type: [string, "null"]
+        contact_phone:
+          type: [string, "null"]
+        social_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/EstablishmentSocialLink"
+        minimum_booking_notice_minutes:
+          type: [integer, "null"]
+          format: int32
+        booking_horizon_days:
+          type: [integer, "null"]
+          format: int32
+        customer_change_deadline_minutes:
+          type: [integer, "null"]
+          format: int32
+        logo:
+          oneOf:
+            - $ref: "#/components/schemas/EstablishmentLogoMetadata"
+            - type: "null"
+        time_zone_editable:
+          type: boolean
+        can_write:
+          type: boolean
+        slug_conflict:
+          type: boolean
+        is_complete:
+          type: boolean
+        is_publishable:
+          type: boolean
+    EstablishmentSettingsPatchRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        time_zone:
+          type: string
+          minLength: 1
+        description:
+          type: [string, "null"]
+          maxLength: 500
+        address:
+          type: [string, "null"]
+          maxLength: 500
+        contact_phone:
+          type: [string, "null"]
+        social_links:
+          oneOf:
+            - type: array
+              maxItems: 5
+              items:
+                $ref: "#/components/schemas/EstablishmentSocialLinkInput"
+            - type: "null"
+        minimum_booking_notice_minutes:
+          type: [integer, "null"]
+          format: int32
+          minimum: 0
+        booking_horizon_days:
+          type: [integer, "null"]
+          format: int32
+          minimum: 1
+        customer_change_deadline_minutes:
+          type: [integer, "null"]
+          format: int32
+          minimum: 0
+    EstablishmentLogoUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Imagem PNG, JPEG ou WebP de até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels.
+    EstablishmentSocialLinkInput:
+      type: object
+      additionalProperties: false
+      required: [label, url]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+    EstablishmentSocialLink:
+      type: object
+      required: [label, url]
+      properties:
+        label:
+          type: string
+        url:
+          type: string
+          format: uri
+    PublicEstablishmentProfileResponse:
+      type: object
+      required: [name, slug, logo_url]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logo_url:
+          type: string
+          format: uri-reference
+        description:
+          type: string
+          maxLength: 500
+        address:
+          type: string
+          maxLength: 500
+        contact_phone:
+          type: string
+        social_links:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/EstablishmentSocialLink"
+    EstablishmentLogoMetadata:
+      type: object
+      required: [url, content_type, byte_size, width, height]
+      properties:
+        url:
+          type: [string, "null"]
+          format: uri-reference
+        content_type:
+          type: string
+          enum: [image/png, image/jpeg, image/webp]
+        byte_size:
+          type: integer
+          format: int64
+        width:
+          type: integer
+          format: int32
+        height:
+          type: integer
+          format: int32
     HealthResponse:
       type: object
       required: [status]
@@ -579,7 +913,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     Conflict:
-      description: E-mail ou slug indisponível
+      description: Conflito com o estado atual do recurso
       content:
         application/json:
           schema:

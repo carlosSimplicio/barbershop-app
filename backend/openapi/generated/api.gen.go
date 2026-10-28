@@ -13,6 +13,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for EstablishmentLogoMetadataContentType.
+const (
+	Imagejpeg EstablishmentLogoMetadataContentType = "image/jpeg"
+	Imagepng  EstablishmentLogoMetadataContentType = "image/png"
+	Imagewebp EstablishmentLogoMetadataContentType = "image/webp"
+)
+
+// Valid indicates whether the value is a known member of the EstablishmentLogoMetadataContentType enum.
+func (e EstablishmentLogoMetadataContentType) Valid() bool {
+	switch e {
+	case Imagejpeg:
+		return true
+	case Imagepng:
+		return true
+	case Imagewebp:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthResponseStatus.
 const (
 	Ok HealthResponseStatus = "ok"
@@ -103,6 +124,24 @@ type ErrorResponse struct {
 	RequestId string        `json:"request_id"`
 }
 
+// EstablishmentLogoMetadata defines model for EstablishmentLogoMetadata.
+type EstablishmentLogoMetadata struct {
+	ByteSize    int64                                `json:"byte_size"`
+	ContentType EstablishmentLogoMetadataContentType `json:"content_type"`
+	Height      int32                                `json:"height"`
+	Url         *string                              `json:"url"`
+	Width       int32                                `json:"width"`
+}
+
+// EstablishmentLogoMetadataContentType defines model for EstablishmentLogoMetadata.ContentType.
+type EstablishmentLogoMetadataContentType string
+
+// EstablishmentLogoUploadRequest defines model for EstablishmentLogoUploadRequest.
+type EstablishmentLogoUploadRequest struct {
+	// File Imagem PNG, JPEG ou WebP de até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels.
+	File openapi_types.File `json:"file"`
+}
+
 // EstablishmentResponse defines model for EstablishmentResponse.
 type EstablishmentResponse struct {
 	Id       openapi_types.UUID  `json:"id"`
@@ -110,6 +149,52 @@ type EstablishmentResponse struct {
 	Slug     string              `json:"slug"`
 	TimeZone string              `json:"time_zone"`
 	Trial    *EstablishmentTrial `json:"trial"`
+}
+
+// EstablishmentSettingsPatchRequest defines model for EstablishmentSettingsPatchRequest.
+type EstablishmentSettingsPatchRequest struct {
+	Address                       *string                         `json:"address,omitempty"`
+	BookingHorizonDays            *int32                          `json:"booking_horizon_days,omitempty"`
+	ContactPhone                  *string                         `json:"contact_phone,omitempty"`
+	CustomerChangeDeadlineMinutes *int32                          `json:"customer_change_deadline_minutes,omitempty"`
+	Description                   *string                         `json:"description,omitempty"`
+	MinimumBookingNoticeMinutes   *int32                          `json:"minimum_booking_notice_minutes,omitempty"`
+	Name                          *string                         `json:"name,omitempty"`
+	SocialLinks                   *[]EstablishmentSocialLinkInput `json:"social_links,omitempty"`
+	TimeZone                      *string                         `json:"time_zone,omitempty"`
+}
+
+// EstablishmentSettingsResponse defines model for EstablishmentSettingsResponse.
+type EstablishmentSettingsResponse struct {
+	Address                       *string                    `json:"address"`
+	BookingHorizonDays            *int32                     `json:"booking_horizon_days"`
+	CanWrite                      bool                       `json:"can_write"`
+	ContactPhone                  *string                    `json:"contact_phone"`
+	CustomerChangeDeadlineMinutes *int32                     `json:"customer_change_deadline_minutes"`
+	Description                   *string                    `json:"description"`
+	Id                            openapi_types.UUID         `json:"id"`
+	IsComplete                    bool                       `json:"is_complete"`
+	IsPublishable                 bool                       `json:"is_publishable"`
+	Logo                          *EstablishmentLogoMetadata `json:"logo"`
+	MinimumBookingNoticeMinutes   *int32                     `json:"minimum_booking_notice_minutes"`
+	Name                          string                     `json:"name"`
+	Slug                          string                     `json:"slug"`
+	SlugConflict                  bool                       `json:"slug_conflict"`
+	SocialLinks                   []EstablishmentSocialLink  `json:"social_links"`
+	TimeZone                      string                     `json:"time_zone"`
+	TimeZoneEditable              bool                       `json:"time_zone_editable"`
+}
+
+// EstablishmentSocialLink defines model for EstablishmentSocialLink.
+type EstablishmentSocialLink struct {
+	Label string `json:"label"`
+	Url   string `json:"url"`
+}
+
+// EstablishmentSocialLinkInput defines model for EstablishmentSocialLinkInput.
+type EstablishmentSocialLinkInput struct {
+	Label string `json:"label"`
+	Url   string `json:"url"`
 }
 
 // EstablishmentTrial defines model for EstablishmentTrial.
@@ -167,6 +252,17 @@ type ProfessionalResponse struct {
 	Name   string              `json:"name"`
 }
 
+// PublicEstablishmentProfileResponse defines model for PublicEstablishmentProfileResponse.
+type PublicEstablishmentProfileResponse struct {
+	Address      *string                    `json:"address,omitempty"`
+	ContactPhone *string                    `json:"contact_phone,omitempty"`
+	Description  *string                    `json:"description,omitempty"`
+	LogoUrl      string                     `json:"logo_url"`
+	Name         string                     `json:"name"`
+	Slug         string                     `json:"slug"`
+	SocialLinks  *[]EstablishmentSocialLink `json:"social_links,omitempty"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -209,6 +305,12 @@ type GetProfessionalsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetPublicEstablishmentLogoParams defines parameters for GetPublicEstablishmentLogo.
+type GetPublicEstablishmentLogoParams struct {
+	// IfNoneMatch ETag do logo previamente recebido para revalidar o cache.
+	IfNoneMatch *string `json:"If-None-Match,omitempty"`
+}
+
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
 type PostAuthEmailConfirmationJSONRequestBody = EmailConfirmationRequest
 
@@ -229,6 +331,12 @@ type PostAuthPasswordRecoveryVerifyJSONRequestBody = PasswordRecoveryVerifyReque
 
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody = RegisterRequest
+
+// PutEstablishmentLogoMultipartRequestBody defines body for PutEstablishmentLogo for multipart/form-data ContentType.
+type PutEstablishmentLogoMultipartRequestBody = EstablishmentLogoUploadRequest
+
+// PatchEstablishmentSettingsJSONRequestBody defines body for PatchEstablishmentSettings for application/json ContentType.
+type PatchEstablishmentSettingsJSONRequestBody = EstablishmentSettingsPatchRequest
 
 // PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
 type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
@@ -265,6 +373,15 @@ type ServerInterface interface {
 	// GetEstablishment Consulta o estabelecimento da sessão atual
 	// (GET /establishment)
 	GetEstablishment(c *gin.Context)
+	// PutEstablishmentLogo Envia ou substitui o logo do estabelecimento
+	// (PUT /establishment/logo)
+	PutEstablishmentLogo(c *gin.Context)
+	// GetEstablishmentSettings Consulta as configurações do estabelecimento do proprietário
+	// (GET /establishment/settings)
+	GetEstablishmentSettings(c *gin.Context)
+	// PatchEstablishmentSettings Atualiza os dados públicos e limites do estabelecimento
+	// (PATCH /establishment/settings)
+	PatchEstablishmentSettings(c *gin.Context)
 	// GetHealth Verifica se a API esta em execucao
 	// (GET /health)
 	GetHealth(c *gin.Context)
@@ -274,6 +391,12 @@ type ServerInterface interface {
 	// PostProfessionals Cadastra um profissional no estabelecimento do proprietário
 	// (POST /professionals)
 	PostProfessionals(c *gin.Context)
+	// GetPublicEstablishment Consulta o perfil informativo de um estabelecimento publicável
+	// (GET /public/establishments/{slug})
+	GetPublicEstablishment(c *gin.Context, slug string)
+	// GetPublicEstablishmentLogo Consulta o logo atual de um estabelecimento publicável
+	// (GET /public/establishments/{slug}/logo)
+	GetPublicEstablishmentLogo(c *gin.Context, slug string, params GetPublicEstablishmentLogoParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -415,6 +538,45 @@ func (siw *ServerInterfaceWrapper) GetEstablishment(c *gin.Context) {
 	siw.Handler.GetEstablishment(c)
 }
 
+// PutEstablishmentLogo operation middleware
+func (siw *ServerInterfaceWrapper) PutEstablishmentLogo(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PutEstablishmentLogo(c)
+}
+
+// GetEstablishmentSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetEstablishmentSettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetEstablishmentSettings(c)
+}
+
+// PatchEstablishmentSettings operation middleware
+func (siw *ServerInterfaceWrapper) PatchEstablishmentSettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PatchEstablishmentSettings(c)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 
@@ -476,6 +638,80 @@ func (siw *ServerInterfaceWrapper) PostProfessionals(c *gin.Context) {
 	siw.Handler.PostProfessionals(c)
 }
 
+// GetPublicEstablishment operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicEstablishment(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", c.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slug: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicEstablishment(c, slug)
+}
+
+// GetPublicEstablishmentLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicEstablishmentLogo(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", c.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slug: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicEstablishmentLogoParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "If-None-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-None-Match")]; found {
+		var IfNoneMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for If-None-Match, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-None-Match", valueList[0], &IfNoneMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter If-None-Match: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IfNoneMatch = &IfNoneMatch
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicEstablishmentLogo(c, slug, params)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -513,6 +749,11 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	router.POST(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
 	router.GET(options.BaseURL+"/establishment", wrapper.GetEstablishment)
+	router.GET(options.BaseURL+"/establishment/settings", wrapper.GetEstablishmentSettings)
+	router.PATCH(options.BaseURL+"/establishment/settings", wrapper.PatchEstablishmentSettings)
+	router.PUT(options.BaseURL+"/establishment/logo", wrapper.PutEstablishmentLogo)
+	router.GET(options.BaseURL+"/public/establishments/:slug/logo", wrapper.GetPublicEstablishmentLogo)
+	router.GET(options.BaseURL+"/public/establishments/:slug", wrapper.GetPublicEstablishment)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)

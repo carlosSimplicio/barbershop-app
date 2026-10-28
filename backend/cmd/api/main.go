@@ -27,6 +27,7 @@ import (
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
 	"barbershop-app/backend/internal/platform/ratelimit"
+	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
 
 	"github.com/gin-gonic/gin"
@@ -47,6 +48,15 @@ func run() error {
 
 	logger := newLogger(configuration)
 	slog.SetDefault(logger)
+	logoStorage, err := storage.NewLocalStore(configuration.LogoStorageDir)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := logoStorage.Close(); err != nil {
+			logger.Error("logo_storage_close_failed")
+		}
+	}()
 	if configuration.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -100,15 +110,22 @@ func run() error {
 	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
 	confirmationVerification := emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions)
+	writeEntitlements := entitlements.NewService(entitlements.NewPostgresStore(pool))
 	establishments := establishment.NewService(establishment.NewPostgresStore(pool))
-	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, entitlements.NewService(entitlements.NewPostgresStore(pool)))
+	establishmentSettings := establishment.NewSettingsService(establishment.NewPostgresSettingsStore(pool), writeEntitlements)
+	establishmentLogoUploads := establishment.NewLogoUploadService(establishment.NewPostgresLogoUploadStore(pool), logoStorage, writeEntitlements)
+	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(pool)
+	publicEstablishmentResolver := establishment.NewPublicEstablishmentResolver(publicEstablishmentStore)
+	publicEstablishments := establishment.NewPublicEstablishmentService(publicEstablishmentResolver, publicEstablishmentStore)
+	publicEstablishmentLogos := establishment.NewPublicLogoService(publicEstablishmentResolver, establishment.NewPostgresPublicLogoStore(pool), logoStorage)
+	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
 	passwordRecoveryVerification := passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)
 	handler := httpapi.NewHandler(
 		health.NewHandler(pool),
 		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
-		establishment.NewHandler(establishments),
+		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads, publicEstablishments, publicEstablishmentLogos),
 		professionals.NewHandler(professionalService),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)

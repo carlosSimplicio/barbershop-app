@@ -18,7 +18,10 @@ ENTRYPOINT ["goose", "-dir", "/migrations", "postgres"]
 FROM alpine:3.24 AS runtime
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S app \
-    && adduser -S -G app app
+    && adduser -S -G app app \
+    && mkdir -p /var/lib/barbershop/logos \
+    && chown app:app /var/lib/barbershop/logos \
+    && chmod 0700 /var/lib/barbershop/logos
 USER app
 COPY --from=builder /out/api /usr/local/bin/api
 EXPOSE 8080

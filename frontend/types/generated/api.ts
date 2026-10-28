@@ -177,6 +177,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/establishment/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta as configurações do estabelecimento do proprietário */
+        get: operations["getEstablishmentSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Atualiza os dados públicos e limites do estabelecimento */
+        patch: operations["patchEstablishmentSettings"];
+        trace?: never;
+    };
+    "/establishment/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Envia ou substitui o logo do estabelecimento */
+        put: operations["putEstablishmentLogo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/establishments/{slug}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o logo atual de um estabelecimento publicável */
+        get: operations["getPublicEstablishmentLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/establishments/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o perfil informativo de um estabelecimento publicável */
+        get: operations["getPublicEstablishment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals": {
         parameters: {
             query?: never;
@@ -296,6 +365,82 @@ export interface components {
             time_zone: string;
             trial: components["schemas"]["EstablishmentTrial"] | null;
         };
+        EstablishmentSettingsResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            time_zone: string;
+            description: string | null;
+            address: string | null;
+            contact_phone: string | null;
+            social_links: components["schemas"]["EstablishmentSocialLink"][];
+            /** Format: int32 */
+            minimum_booking_notice_minutes: number | null;
+            /** Format: int32 */
+            booking_horizon_days: number | null;
+            /** Format: int32 */
+            customer_change_deadline_minutes: number | null;
+            logo: components["schemas"]["EstablishmentLogoMetadata"] | null;
+            time_zone_editable: boolean;
+            can_write: boolean;
+            slug_conflict: boolean;
+            is_complete: boolean;
+            is_publishable: boolean;
+        };
+        EstablishmentSettingsPatchRequest: {
+            name?: string;
+            time_zone?: string;
+            description?: string | null;
+            address?: string | null;
+            contact_phone?: string | null;
+            social_links?: components["schemas"]["EstablishmentSocialLinkInput"][] | null;
+            /** Format: int32 */
+            minimum_booking_notice_minutes?: number | null;
+            /** Format: int32 */
+            booking_horizon_days?: number | null;
+            /** Format: int32 */
+            customer_change_deadline_minutes?: number | null;
+        };
+        EstablishmentLogoUploadRequest: {
+            /**
+             * Format: binary
+             * @description Imagem PNG, JPEG ou WebP de até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels.
+             */
+            file: string;
+        };
+        EstablishmentSocialLinkInput: {
+            label: string;
+            /** Format: uri */
+            url: string;
+        };
+        EstablishmentSocialLink: {
+            label: string;
+            /** Format: uri */
+            url: string;
+        };
+        PublicEstablishmentProfileResponse: {
+            name: string;
+            slug: string;
+            /** Format: uri-reference */
+            logo_url: string;
+            description?: string;
+            address?: string;
+            contact_phone?: string;
+            social_links?: components["schemas"]["EstablishmentSocialLink"][];
+        };
+        EstablishmentLogoMetadata: {
+            /** Format: uri-reference */
+            url: string | null;
+            /** @enum {string} */
+            content_type: "image/png" | "image/jpeg" | "image/webp";
+            /** Format: int64 */
+            byte_size: number;
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+        };
         HealthResponse: {
             /** @enum {string} */
             status: "ok";
@@ -340,7 +485,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description E-mail ou slug indisponível */
+        /** @description Conflito com o estado atual do recurso */
         Conflict: {
             headers: {
                 [name: string]: unknown;
@@ -637,6 +782,174 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getEstablishmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Configurações e estado de publicação do estabelecimento autenticado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstablishmentSettingsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    patchEstablishmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EstablishmentSettingsPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Configurações atualizadas */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    putEstablishmentLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description O corpo multipart aceita no máximo 2.162.688 bytes, incluindo até 65.536 bytes de envelope além do arquivo. */
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["EstablishmentLogoUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Logo associado ao estabelecimento */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Arquivo ou corpo multipart acima do limite */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getPublicEstablishmentLogo: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description ETag do logo previamente recebido para revalidar o cache. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conteúdo do logo atual */
+            200: {
+                headers: {
+                    ETag?: string;
+                    "Cache-Control"?: string;
+                    "X-Content-Type-Options"?: string;
+                    "Content-Length"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Logo sem alterações desde o ETag informado */
+            304: {
+                headers: {
+                    ETag?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Estabelecimento inexistente, não publicável ou sem logo */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getPublicEstablishment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Perfil público informativo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicEstablishmentProfileResponse"];
+                };
+            };
+            /** @description Estabelecimento inexistente, não publicável ou com slug reservado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             500: components["responses"]["InternalServerError"];
         };
     };

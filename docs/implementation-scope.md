@@ -179,9 +179,11 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Usar UUIDs aleatórios e não sequenciais para identificadores expostos.
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
+- [x] Persistir descrição, endereço, telefone de contato, links sociais ordenados e limites opcionais de agenda por estabelecimento; aplicação das configurações aos fluxos de agenda permanece pendente no escopo 7.
+- [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a alteração de fuso já usa esse bloqueio; a integração atômica com futuros agendamentos, bloqueios e lançamentos permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
 - [ ] Criar persistência para serviços.
-- [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries base de criação e listagem; os fluxos da API permanecem pendentes.
+- [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries de criação e listagem, integradas aos fluxos entregues da API.
 - [ ] Criar persistência para associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
@@ -202,7 +204,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
 - [x] Centralizar cores, tipografia, espaçamento, raios, sombras e temas claro e escuro em tokens visuais compartilhados.
 - [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado.
-- [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis.
+- [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis, incluindo `Textarea` e `TextareaField` para conteúdo multilinha e `FileField` para seleção de imagens.
 - [ ] Criar padrões compartilhados para tabelas.
 - [ ] Criar padrões compartilhados para modais.
 - [x] Criar padrões compartilhados de feedback.
@@ -210,7 +212,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
-- [ ] Manter página pública e agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
+- [x] Manter a página pública informativa mobile-first.
+- [ ] Manter agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
 - [x] Usar Server Components para cascas e conteúdo estático e Client Components somente nas fronteiras interativas necessárias.
 - [x] Consumir `/api/v1` diretamente; não criar BFF, Server Actions de negócio ou Route Handlers intermediários.
 - [x] Criar home deslogada responsiva em `pt-BR`, com proposta da plataforma e links para cadastro e login, sem chamadas à API.
@@ -220,7 +223,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Implementar cadastro público do proprietário com criação atômica de usuário, estabelecimento e vínculo de proprietário.
 - [x] Oferecer formulário público de cadastro com validação de conveniência, conflitos específicos por campo e estado de confirmação pendente após `202`, sem iniciar o trial na interface.
 - [x] Permitir solicitar novo link no estado pós-cadastro e no login após confirmação obrigatória, sempre com resposta genérica.
-- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e redirecionar o proprietário para `/painel/profissionais` após sucesso.
+- [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e direcionar o proprietário pela entrada `/painel` conforme a presença do logo.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
 - [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
@@ -233,7 +236,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
 - [x] Criar o Context único de sessão para rotas autenticadas, com consulta de identidade, distinção entre sessão ausente e erro temporário, guardas reutilizáveis e ações explícitas de login, confirmação, troca de senha e logout.
 - [x] Criar `/testes` como área temporária protegida que mostra identidade não sensível e permite consultar novamente `GET /auth/me`, trocar a senha temporária quando exigido e encerrar a sessão com `POST /auth/logout`.
-- [x] Direcionar proprietários após login e confirmação a uma casca de painel protegida por papel, manter profissionais em `/testes` e oferecer no painel navegação por teclado para Profissionais e para `/testes`.
+- [x] Direcionar login, confirmação e redirecionamento de proprietário autenticado pela entrada protegida `/painel`, encaminhando a Configurações sem logo e a Profissionais com logo, permitindo acesso direto ao restante do painel; manter profissionais em `/testes` e oferecer navegação por teclado para Profissionais, Configurações e `/testes` com indicação correta da página ativa.
 - [ ] Definir janelas de retenção de sessões, confirmações de e-mail, tokens de recuperação de senha e tentativas de login.
 - [ ] Implementar limpeza diária, idempotente e em lotes de sessões, confirmações de e-mail, tokens de recuperação de senha e eventos de rate limiting elegíveis, com índices adequados, proteção contra execução concorrente e métricas agregadas.
 - [x] Implementar proteção CSRF e validação de origem nas mutações autenticadas.
@@ -255,7 +258,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Implementar papéis `owner` e `professional`; clientes permanecem anônimos.
 - [x] Garantir que cada usuário pertença a exatamente um estabelecimento.
-- [x] Derivar estabelecimento e permissões da sessão autenticada, nunca de identificador enviado como autorização; o resolvedor público por slug permanece pendente.
+- [x] Derivar estabelecimento e permissões da sessão autenticada, nunca de identificador enviado como autorização; resolver o estabelecimento público por slug no serviço central compartilhado pelo perfil e pelo logo.
 - [ ] Aplicar isolamento do estabelecimento em toda consulta e mutação, inclusive em SQL e recursos relacionados.
 - [ ] Garantir ao proprietário administração completa apenas do próprio estabelecimento.
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.
@@ -269,30 +272,37 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 7. Cadastro e administração do estabelecimento
 
-- [ ] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
-- [ ] Tornar nome e logo obrigatórios; descrição, endereço, telefone de contato e redes sociais são opcionais.
+- [x] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
+- [x] Tornar nome e logo obrigatórios para publicação; descrição, endereço, telefone de contato e redes sociais são opcionais.
 - [x] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
-- [x] Reservar ao menos os slugs `admin`, `api`, `login` e `assets`.
+- [x] Reservar slugs que colidem com rotas da plataforma (`admin`, `api`, `assets`, `cadastro`, `confirmar-email`, `design-system`, `login`, `painel`, `recuperar-senha`, `redefinir-senha` e `testes`); preservar legados em conflito e diagnosticá-los sem renomeação automática.
 - [x] Manter o slug imutável nos endpoints atualmente entregues.
-- [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
+- [x] Publicar a URL canônica `/{establishment_slug}` no MVP.
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
 - [x] Na interface de cadastro, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação ou alteração antes do envio.
 - [x] Consultar em `/testes` o estabelecimento da sessão sem enviar ID de tenant, exibindo nome, slug, fuso e trial ausente, ativo ou expirado; bloquear a consulta durante troca obrigatória de senha.
-- [ ] Permitir alterar o fuso apenas antes do primeiro agendamento, bloqueio ou lançamento financeiro.
-- [ ] Criar configurações opcionais de antecedência mínima, horizonte futuro e prazo para cancelamento/reagendamento do cliente.
-- [ ] Interpretar valores ausentes dessas configurações como ausência de limite.
-- [ ] Criar painel de configurações do estabelecimento e dados da página pública.
+- [x] Consultar `GET /api/v1/establishment/settings` somente como proprietário, derivando o tenant da sessão autenticada e mantendo disponível a leitura em trial expirado.
+- [x] Retornar dados opcionais, links ordenados, limites, metadados públicos do logo e estados de conclusão/publicação; sinalizar slug legado reservado sem expor chave ou caminho interno do arquivo.
+- [x] Consultar sem sessão o perfil informativo de estabelecimento publicável por `GET /api/v1/public/establishments/{slug}`, expondo apenas nome, slug, URL pública do logo e dados opcionais preenchidos; manter a resposta após expiração do trial e recusar estabelecimentos incompletos ou com slug reservado.
+- [x] Informar elegibilidade de escrita pelo componente central de direitos e permitir alteração futura do fuso somente antes do primeiro dado operacional.
+- [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
+- [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
+- [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
+- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda, preservando links legados incompatíveis com o editor e exigindo reconciliação quando a consulta falha após salvamento confirmado.
+- [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após falha confirmada, reconciliar respostas ambíguas e conservar a seleção até a reconciliação quando necessário, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 
 ## 8. Logos e arquivos públicos
 
-- [ ] Implementar upload de logo controlado pelo backend.
-- [ ] Aceitar somente PNG, JPEG e WebP com até 2 MB; rejeitar SVG.
-- [ ] Validar assinatura e decodificação do arquivo, não apenas extensão ou `Content-Type`.
-- [ ] Gerar nome interno não previsível e impedir que entrada do cliente determine caminhos.
-- [ ] Persistir metadados e referência relativa no PostgreSQL.
-- [ ] Armazenar arquivos em volume local persistente próprio, preservado em deploys.
-- [ ] Servir o logo de modo seguro e com cache apropriado, sem expor o caminho interno.
+- [x] Implementar upload e substituição de logo controlados pelo backend por `PUT /api/v1/establishment/logo`, com tenant da sessão, CSRF, entitlement de escrita, limite multipart e associação transacional; upload concluído pode completar os obrigatórios sem permitir remoção.
+- [x] Validar conteúdo PNG, JPEG ou WebP, com até 2.097.152 bytes e dimensões positivas de até 4.096 × 4.096 pixels; rejeitar SVG e conteúdo truncado ou incompatível.
+- [x] Derivar tipo, tamanho, dimensões e hash do conteúdo decodificado, sem confiar em extensão ou `Content-Type` informado pelo cliente.
+- [x] Gerar nome interno UUID v4 não previsível e impedir que nome, extensão e cabeçalhos do cliente determinem chave ou caminho.
+- [x] Persistir metadados e chave lógica estável no PostgreSQL, com associação do logo atual estruturalmente limitada ao mesmo estabelecimento.
+- [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
+- [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.
+- [x] Servir o logo atual por `GET /api/v1/public/establishments/{slug}/logo` somente quando publicável, com resolução central do slug, storage por interface, MIME/tamanho validados, `nosniff`, ETag SHA-256 e cache revalidável; trial expirado não oculta a imagem e nenhuma chave/caminho interno é exposto.
+- [x] Entregar em `/painel/configuracoes` o envio e a substituição do logo com pré-visualização substitutiva, limpeza da seleção temporária, mensagens de recusa, restauração do logo e limpeza do seletor após falha confirmada, reconciliação de respostas ambíguas, nova seleção para nova tentativa e atualização do endereço público após sucesso; conservar a consulta em `read_only` e não permitir remoção do logo publicado.
 
 ## 9. Administração de profissionais
 
@@ -347,8 +357,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 13. Página pública e agendamento do cliente
 
-- [ ] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas.
-- [ ] Não renderizar seções vazias para informações públicas opcionais.
+- [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas, com nova consulta ao servidor ao tentar novamente após falha temporária.
+- [x] Não renderizar seções vazias para informações públicas opcionais.
 - [ ] Criar fluxo interativo para escolher serviço, profissional associado, dia e horário.
 - [ ] Coletar somente nome e telefone para criar o agendamento.
 - [ ] Criar agendamento com exatamente um serviço e um profissional.
@@ -362,7 +372,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Reagendar atomicamente o mesmo registro, preservar histórico e manter o horário original em caso de falha.
 - [ ] Preservar snapshots originais de preço e duração no reagendamento.
 - [ ] Não expor histórico concluído, cancelado, `no_show` ou passado pela consulta pública.
-- [ ] Quando assinatura ou trial estiver expirado, manter página identificável e remover consulta de disponibilidade e criação/mutação de agendamentos.
+- [x] Manter a página informativa identificável após expiração do trial, sem controles de agendamento nesta entrega.
+- [ ] Quando assinatura ou trial estiver expirado, bloquear consulta de disponibilidade e criação/mutação nos futuros fluxos de agendamento.
 
 ## 14. Agenda autenticada
 

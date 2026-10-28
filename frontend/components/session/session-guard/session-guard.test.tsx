@@ -53,7 +53,7 @@ test("envia visitante sem sessão do painel de proprietário para login", async 
   expect(screen.queryByText("Conteúdo protegido")).not.toBeInTheDocument();
 });
 
-test("envia proprietário autenticado do login para o painel", async () => {
+test("envia proprietário autenticado do login para a entrada do painel", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse());
 
   render(
@@ -62,9 +62,7 @@ test("envia proprietário autenticado do login para o painel", async () => {
     </AuthProvider>,
   );
 
-  await waitFor(() =>
-    expect(replace).toHaveBeenCalledWith("/painel/profissionais"),
-  );
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/painel"));
   expect(screen.queryByText("Formulário de login")).not.toBeInTheDocument();
 });
 

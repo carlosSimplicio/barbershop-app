@@ -36,11 +36,38 @@ type EmailConfirmation struct {
 }
 
 type Establishment struct {
-	ID        pgtype.UUID        `json:"id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	Name      string             `json:"name"`
-	Slug      string             `json:"slug"`
-	TimeZone  string             `json:"time_zone"`
+	ID                            pgtype.UUID        `json:"id"`
+	CreatedAt                     pgtype.Timestamptz `json:"created_at"`
+	Name                          string             `json:"name"`
+	Slug                          string             `json:"slug"`
+	TimeZone                      string             `json:"time_zone"`
+	Description                   pgtype.Text        `json:"description"`
+	Address                       pgtype.Text        `json:"address"`
+	ContactPhone                  pgtype.Text        `json:"contact_phone"`
+	MinimumBookingNoticeMinutes   pgtype.Int4        `json:"minimum_booking_notice_minutes"`
+	BookingHorizonDays            pgtype.Int4        `json:"booking_horizon_days"`
+	CustomerChangeDeadlineMinutes pgtype.Int4        `json:"customer_change_deadline_minutes"`
+	OperationalDataStartedAt      pgtype.Timestamptz `json:"operational_data_started_at"`
+	LogoID                        pgtype.UUID        `json:"logo_id"`
+}
+
+type EstablishmentLogo struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	ObjectKey       string             `json:"object_key"`
+	ContentType     string             `json:"content_type"`
+	ByteSize        int64              `json:"byte_size"`
+	Width           int32              `json:"width"`
+	Height          int32              `json:"height"`
+	ContentSha256   []byte             `json:"content_sha256"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type EstablishmentSocialLink struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	Position        int32       `json:"position"`
+	Label           string      `json:"label"`
+	Url             string      `json:"url"`
 }
 
 type EstablishmentTrial struct {

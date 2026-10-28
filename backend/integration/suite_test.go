@@ -37,6 +37,7 @@ import (
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/mailer"
 	"barbershop-app/backend/internal/platform/ratelimit"
+	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
 
 	"github.com/gin-gonic/gin"
@@ -120,6 +121,7 @@ type testApplication struct {
 	messages     *messageCapture
 	passwords    *security.PasswordHasher
 	accessTokens *security.JWTManager
+	logoStorage  *storage.LocalStore
 }
 
 func newTestApplication(t *testing.T) *testApplication {
@@ -160,6 +162,13 @@ func newTestApplication(t *testing.T) *testApplication {
 	messages := &messageCapture{}
 	confirmationMailer := emailconfirmation.NewConfirmationMailer(messages, trustedOrigin)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
+	writeEntitlements := entitlements.NewService(entitlements.NewPostgresStore(integrationPool))
+	logoStorage, err := storage.NewLocalStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("create test logo storage: %v", err)
+	}
+	t.Cleanup(func() { _ = logoStorage.Close() })
+	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(integrationPool)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
@@ -170,9 +179,18 @@ func newTestApplication(t *testing.T) *testApplication {
 			emailconfirmation.NewEmailConfirmationRequestService(onboardingStore, emailconfirmation.NewConfirmationService(onboardingStore, confirmationMailer), rateLimitStore, rateKeys),
 			emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions),
 		),
-		establishment.NewHandler(establishment.NewService(establishment.NewPostgresStore(integrationPool))),
+		establishment.NewHandler(
+			establishment.NewService(establishment.NewPostgresStore(integrationPool)),
+			establishment.NewSettingsService(establishment.NewPostgresSettingsStore(integrationPool), writeEntitlements),
+			establishment.NewLogoUploadService(establishment.NewPostgresLogoUploadStore(integrationPool), logoStorage, writeEntitlements),
+			establishment.NewPublicEstablishmentService(
+				establishment.NewPublicEstablishmentResolver(publicEstablishmentStore), publicEstablishmentStore),
+			establishment.NewPublicLogoService(
+				establishment.NewPublicEstablishmentResolver(publicEstablishmentStore),
+				establishment.NewPostgresPublicLogoStore(integrationPool), logoStorage),
+		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
-			entitlements.NewService(entitlements.NewPostgresStore(integrationPool)))),
+			writeEntitlements)),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -186,7 +204,7 @@ func newTestApplication(t *testing.T) *testApplication {
 	client := server.Client()
 	client.Jar = jar
 
-	application := &testApplication{server: server, client: client, messages: messages, passwords: passwords, accessTokens: accessTokens}
+	application := &testApplication{server: server, client: client, messages: messages, passwords: passwords, accessTokens: accessTokens, logoStorage: logoStorage}
 	t.Cleanup(server.Close)
 	return application
 }
@@ -269,7 +287,7 @@ func requiresTestCSRF(method, path string) bool {
 	if method == http.MethodGet || method == http.MethodHead {
 		return false
 	}
-	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/professionals"
+	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/establishment/settings" || path == "/api/v1/establishment/logo" || path == "/api/v1/professionals"
 }
 
 func (application *testApplication) cookie(t *testing.T, name string) *http.Cookie {

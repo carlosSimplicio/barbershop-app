@@ -2,10 +2,12 @@ package establishment
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/entitlements"
 )
 
 const (
@@ -77,10 +79,149 @@ func TestServiceExpiresTrialAtExactEnd(t *testing.T) {
 	}
 }
 
+func TestServiceReturnsSettingsOnlyForOwnerAndDerivesAccessFlags(t *testing.T) {
+	store := &settingsStoreStub{settings: EstablishmentSettings{
+		Establishment: Establishment{
+			ID: testEstablishmentID, Name: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo",
+		}, Description: stringPointer("Descrição"), OperationalDataStarted: false,
+	}}
+	service := NewSettingsService(store, writeEntitlementsStub{})
+
+	result, err := service.GetSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: "owner"})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.establishmentID != testEstablishmentID {
+		t.Fatalf("queried establishment = %q", store.establishmentID)
+	}
+	if !result.TimeZoneEditable || !result.CanWrite || result.SlugConflict || result.IsPublishable || result.IsComplete {
+		t.Fatalf("unexpected settings flags: %+v", result)
+	}
+}
+
+func TestServiceRejectsProfessionalSettingsAccess(t *testing.T) {
+	store := &settingsStoreStub{}
+	service := NewSettingsService(store, writeEntitlementsStub{})
+
+	_, err := service.GetSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: "professional"})
+
+	if !errors.Is(err, ErrSettingsForbidden) {
+		t.Fatalf("error = %v, want ErrSettingsForbidden", err)
+	}
+	if store.establishmentID != "" {
+		t.Fatalf("store queried for unauthorized role: %q", store.establishmentID)
+	}
+}
+
+func TestServiceSettingsPreserveOptionalFieldsAndMarkPublicationState(t *testing.T) {
+	store := &settingsStoreStub{settings: EstablishmentSettings{
+		Establishment: Establishment{ID: testEstablishmentID, Name: "Barbearia Central", Slug: "barbearia-central", TimeZone: "America/Sao_Paulo"},
+		SocialLinks:   []SocialLink{{Label: "Instagram", URL: "https://instagram.com/example"}},
+		Logo:          &LogoMetadata{ContentType: "image/png", ByteSize: 120, Width: 20, Height: 10},
+	}}
+	service := NewSettingsService(store, writeEntitlementsStub{})
+
+	result, err := service.GetSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: "owner"})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsComplete || !result.IsPublishable || result.SlugConflict || result.Logo == nil || len(result.SocialLinks) != 1 {
+		t.Fatalf("unexpected publication settings: %+v", result)
+	}
+}
+
+func TestServiceSettingsReportLockedTimezoneAndReadOnlyAccess(t *testing.T) {
+	store := &settingsStoreStub{settings: EstablishmentSettings{
+		Establishment:          Establishment{ID: testEstablishmentID, Name: "Legado", Slug: "admin", TimeZone: "America/Sao_Paulo"},
+		OperationalDataStarted: true,
+		Logo:                   &LogoMetadata{ContentType: "image/png", ByteSize: 120, Width: 20, Height: 10},
+	}}
+	service := NewSettingsService(store, writeEntitlementsStub{err: entitlements.ErrReadOnly})
+
+	result, err := service.GetSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: "owner"})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.CanWrite || result.TimeZoneEditable || !result.SlugConflict || result.IsPublishable || result.Logo == nil || result.Logo.URL != nil {
+		t.Fatalf("unexpected restricted settings flags: %+v", result)
+	}
+}
+
+func TestServicePatchesSettingsForAuthenticatedOwnerAfterValidation(t *testing.T) {
+	store := &settingsStoreStub{}
+	service := NewSettingsService(store, writeEntitlementsStub{})
+
+	err := service.PatchSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: "owner"}, SettingsPatch{
+		Description: PatchField[string]{Set: true, Value: "  descrição  "},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.establishmentID != testEstablishmentID || store.patch == nil || store.patch.Description.Value != "descrição" {
+		t.Fatalf("updated tenant/patch = %q/%#v", store.establishmentID, store.patch)
+	}
+}
+
+func TestServiceRefusesSettingsPatchWithoutOwnerOrWriteEntitlement(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		role     string
+		writeErr error
+		wantErr  error
+	}{
+		{name: "professional", role: "professional", wantErr: ErrSettingsForbidden},
+		{name: "expired trial", role: "owner", writeErr: entitlements.ErrReadOnly, wantErr: entitlements.ErrReadOnly},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := &settingsStoreStub{}
+			service := NewSettingsService(store, writeEntitlementsStub{err: test.writeErr})
+			err := service.PatchSettings(context.Background(), auth.Principal{EstablishmentID: testEstablishmentID, Role: test.role}, SettingsPatch{
+				Description: PatchField[string]{Set: true, Value: "Descrição"},
+			})
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("error = %v, want %v", err, test.wantErr)
+			}
+			if store.patch != nil {
+				t.Fatal("settings store was updated despite refused patch")
+			}
+		})
+	}
+}
+
+func stringPointer(value string) *string { return &value }
+
 type storeStub struct {
 	establishmentID string
 	establishment   Establishment
 	err             error
+}
+
+type settingsStoreStub struct {
+	establishmentID string
+	settings        EstablishmentSettings
+	err             error
+	patch           *SettingsPatch
+}
+
+type writeEntitlementsStub struct {
+	err error
+}
+
+func (stub writeEntitlementsStub) RequireWrite(context.Context, string) error { return stub.err }
+
+func (stub *settingsStoreStub) GetSettingsByID(_ context.Context, establishmentID string) (EstablishmentSettings, error) {
+	stub.establishmentID = establishmentID
+	return stub.settings, stub.err
+}
+
+func (stub *settingsStoreStub) UpdateSettings(_ context.Context, establishmentID string, patch SettingsPatch) error {
+	stub.establishmentID = establishmentID
+	stub.patch = &patch
+	return stub.err
 }
 
 func (stub *storeStub) GetByID(_ context.Context, establishmentID string) (Establishment, error) {
