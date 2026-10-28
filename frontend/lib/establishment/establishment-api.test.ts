@@ -4,6 +4,7 @@ import {
   getEstablishment,
   getEstablishmentSettings,
   patchEstablishmentSettings,
+  uploadEstablishmentLogo,
 } from "./establishment-api";
 
 afterEach(() => vi.restoreAllMocks());
@@ -75,4 +76,29 @@ test("expõe operações de consulta e atualização das configurações", async
   expect(new Headers(patchInit?.headers).get("X-CSRF-Token")).toBe(
     "csrf-current",
   );
+});
+
+test("envia o logo como multipart com CSRF sem definir o boundary manualmente", async () => {
+  vi.spyOn(document, "cookie", "get").mockReturnValue(
+    "__Secure-barbershop_csrf=csrf-current",
+  );
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(new Response(null, { status: 204 }));
+  const file = new File(["image bytes"], "logo.png", { type: "image/png" });
+  const controller = new AbortController();
+
+  await expect(
+    uploadEstablishmentLogo(file, controller.signal),
+  ).resolves.toEqual({ state: "empty", status: 204 });
+
+  const [path, init] = fetchMock.mock.calls[0];
+  expect(path).toBe("/api/v1/establishment/logo");
+  expect(init?.method).toBe("PUT");
+  expect(init?.body).toBeInstanceOf(FormData);
+  expect((init?.body as FormData).get("file")).toBe(file);
+  expect(init?.signal).toBe(controller.signal);
+  expect(init?.credentials).toBe("include");
+  expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe("csrf-current");
+  expect(new Headers(init?.headers).has("Content-Type")).toBe(false);
 });

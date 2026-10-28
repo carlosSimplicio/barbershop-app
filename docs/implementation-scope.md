@@ -288,6 +288,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
 - [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
 - [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda.
+- [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após falha confirmada, reconciliar respostas ambíguas e conservar a seleção até a reconciliação quando necessário, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 
 ## 8. Logos e arquivos públicos
@@ -300,6 +301,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
 - [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.
 - [x] Servir o logo atual por `GET /api/v1/public/establishments/{slug}/logo` somente quando publicável, com resolução central do slug, storage por interface, MIME/tamanho validados, `nosniff`, ETag SHA-256 e cache revalidável; trial expirado não oculta a imagem e nenhuma chave/caminho interno é exposto.
+- [x] Entregar em `/painel/configuracoes` o envio e a substituição do logo com pré-visualização substitutiva, limpeza da seleção temporária, mensagens de recusa, restauração do logo e limpeza do seletor após falha confirmada, reconciliação de respostas ambíguas, nova seleção para nova tentativa e atualização do endereço público após sucesso; conservar a consulta em `read_only` e não permitir remoção do logo publicado.
 
 ## 9. Administração de profissionais
 

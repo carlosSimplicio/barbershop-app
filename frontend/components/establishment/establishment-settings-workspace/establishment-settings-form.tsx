@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 
 import { EstablishmentSlugField } from "@/components/establishment/establishment-slug-field/establishment-slug-field";
 import { BrazilianTimeZoneField } from "@/components/establishment/brazilian-time-zone-field/brazilian-time-zone-field";
+import { EstablishmentLogoUploader } from "@/components/establishment/establishment-logo-uploader/establishment-logo-uploader";
 import {
   BrazilianPhoneField,
   Button,
@@ -52,6 +53,8 @@ export function SettingsForm({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const uploadingLogoRef = useRef(false);
   const submittingRef = useRef(false);
   const activeMutation = useRef<AbortController | null>(null);
   const fieldRefs = useRef<
@@ -85,6 +88,11 @@ export function SettingsForm({
     setFeedback(null);
   }
 
+  function updateLogoBusy(busy: boolean) {
+    uploadingLogoRef.current = busy;
+    setUploadingLogo(busy);
+  }
+
   function updateSocialLinks(
     socialLinks: SettingsDraft["social_links"],
     fieldsToClear: string[] | "all",
@@ -107,7 +115,13 @@ export function SettingsForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submittingRef.current || !settings.can_write) return;
+    if (
+      submittingRef.current ||
+      uploadingLogoRef.current ||
+      !settings.can_write
+    ) {
+      return;
+    }
 
     const nextErrors = validateDraft(
       draft,
@@ -200,7 +214,7 @@ export function SettingsForm({
   return (
     <section
       aria-labelledby="owner-panel-page-title"
-      aria-busy={submitting}
+      aria-busy={submitting || uploadingLogo}
       className={styles.panel}
     >
       {!settings.can_write ? (
@@ -222,6 +236,13 @@ export function SettingsForm({
         </Feedback>
       ) : null}
 
+      <EstablishmentLogoUploader
+        disabled={submitting}
+        onBusyChange={updateLogoBusy}
+        onSettingsChange={setSettings}
+        settings={settings}
+      />
+
       <form
         className={styles.form}
         noValidate
@@ -229,7 +250,7 @@ export function SettingsForm({
       >
         <fieldset
           className={styles.fields}
-          disabled={!settings.can_write || submitting}
+          disabled={!settings.can_write || submitting || uploadingLogo}
         >
           <legend className={styles.visuallyHidden}>
             Dados do estabelecimento
@@ -373,7 +394,9 @@ export function SettingsForm({
         </fieldset>
 
         <Button
-          disabled={!settings.can_write || submitting || !hasChanges}
+          disabled={
+            !settings.can_write || submitting || uploadingLogo || !hasChanges
+          }
           type="submit"
         >
           {submitting ? "Salvando…" : "Salvar configurações"}

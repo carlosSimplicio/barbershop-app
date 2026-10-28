@@ -31,3 +31,15 @@ export function patchEstablishmentSettings(
     signal,
   });
 }
+
+export function uploadEstablishmentLogo(file: File, signal?: AbortSignal) {
+  const body = new FormData();
+  body.append("file", file);
+
+  return apiFetch<void>("/api/v1/establishment/logo", {
+    body,
+    csrf: true,
+    method: "PUT",
+    signal,
+  });
+}

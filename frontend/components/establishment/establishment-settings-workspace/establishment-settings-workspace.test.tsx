@@ -12,6 +12,7 @@ const session = vi.hoisted(() => ({
 }));
 const getSettingsMock = vi.hoisted(() => vi.fn());
 const patchSettingsMock = vi.hoisted(() => vi.fn());
+const uploadLogoMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/components/session/auth-provider/auth-provider", () => ({
   useAuthSession: () => ({
@@ -31,6 +32,7 @@ vi.mock("@/components/session/auth-provider/auth-provider", () => ({
 vi.mock("@/lib/establishment/establishment-api", () => ({
   getEstablishmentSettings: getSettingsMock,
   patchEstablishmentSettings: patchSettingsMock,
+  uploadEstablishmentLogo: uploadLogoMock,
 }));
 
 beforeEach(() => {
@@ -38,6 +40,7 @@ beforeEach(() => {
   session.userId = "owner-id";
   getSettingsMock.mockReset();
   patchSettingsMock.mockReset();
+  uploadLogoMock.mockReset();
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -315,10 +318,346 @@ test("bloqueia escrita e alteração de fuso conforme as permissões do backend"
   ).toBeVisible();
   expect(screen.getByLabelText("Fuso horário")).toBeDisabled();
   expect(screen.getByLabelText("Descrição")).toBeDisabled();
+  expect(screen.getByLabelText("Selecionar logo")).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Salvar configurações" }),
   ).toBeDisabled();
   expect(patchSettingsMock).not.toHaveBeenCalled();
+});
+
+test("pré-visualiza e envia o logo, atualiza a publicação e limpa a seleção", async () => {
+  const createObjectURL = vi
+    .spyOn(URL, "createObjectURL")
+    .mockReturnValue("blob:logo-preview");
+  const revokeObjectURL = vi
+    .spyOn(URL, "revokeObjectURL")
+    .mockImplementation(() => {});
+  getSettingsMock
+    .mockResolvedValueOnce(successfulResult())
+    .mockResolvedValueOnce(
+      successfulResult(
+        successfulSettings({
+          logo: {
+            url: "/api/v1/public/establishments/estudio-aurora/logo",
+            content_type: "image/png",
+            byte_size: 4,
+            width: 1,
+            height: 1,
+          },
+          is_complete: true,
+          is_publishable: true,
+        }),
+      ),
+    );
+  uploadLogoMock.mockResolvedValue({ state: "empty", status: 204 });
+
+  render(<EstablishmentSettingsWorkspace />);
+  const file = new File(["png!"], "logo.png", { type: "image/png" });
+  const input = await screen.findByLabelText("Selecionar logo");
+  fireEvent.change(input, { target: { files: [file] } });
+
+  expect(screen.getByText("logo.png")).toBeVisible();
+  expect(createObjectURL).toHaveBeenCalledWith(file);
+  expect(
+    screen.getByRole("img", { name: "Pré-visualização do logo" }),
+  ).toHaveAttribute("src", "blob:logo-preview");
+  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+
+  expect(await screen.findByText("Logo atualizado com sucesso.")).toBeVisible();
+  expect(uploadLogoMock).toHaveBeenCalledWith(file, expect.any(AbortSignal));
+  expect(
+    screen.getByRole("link", { name: "Abrir página pública" }),
+  ).toHaveAttribute("href", "/estudio-aurora");
+  expect(
+    screen.getByRole("img", { name: "Logo de Estúdio Aurora" }),
+  ).toHaveAttribute(
+    "src",
+    "/api/v1/public/establishments/estudio-aurora/logo?version=1",
+  );
+  expect(input).toHaveValue("");
+  expect(revokeObjectURL).toHaveBeenCalledWith("blob:logo-preview");
+});
+
+test("limpa o arquivo selecionado sem remover o logo publicado", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:temporary-logo");
+  const revokeObjectURL = vi
+    .spyOn(URL, "revokeObjectURL")
+    .mockImplementation(() => {});
+  getSettingsMock.mockResolvedValue(
+    successfulResult(
+      successfulSettings({
+        logo: {
+          url: "/api/v1/public/establishments/estudio-aurora/logo",
+          content_type: "image/png",
+          byte_size: 4,
+          width: 1,
+          height: 1,
+        },
+        is_complete: true,
+        is_publishable: true,
+      }),
+    ),
+  );
+
+  render(<EstablishmentSettingsWorkspace />);
+  const input = await screen.findByLabelText("Escolher novo logo");
+  fireEvent.change(input, {
+    target: {
+      files: [new File(["new!"], "replacement.png", { type: "image/png" })],
+    },
+  });
+
+  expect(
+    screen.getByRole("img", { name: "Pré-visualização do logo" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Limpar arquivo selecionado" })
+      .parentElement,
+  ).toContainElement(
+    screen.getByRole("img", { name: "Pré-visualização do logo" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Limpar arquivo selecionado" }),
+  );
+
+  expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible();
+  expect(
+    screen.queryByRole("img", { name: "Pré-visualização do logo" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("img", { name: "Logo de Estúdio Aurora" }),
+  ).toHaveAttribute("src", "/api/v1/public/establishments/estudio-aurora/logo");
+  expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
+  expect(uploadLogoMock).not.toHaveBeenCalled();
+  expect(revokeObjectURL).toHaveBeenCalledWith("blob:temporary-logo");
+});
+
+test("mantém o logo publicado após falha e permite tentar novamente", async () => {
+  getSettingsMock.mockResolvedValue(
+    successfulResult(
+      successfulSettings({
+        logo: {
+          url: "/api/v1/public/establishments/estudio-aurora/logo",
+          content_type: "image/png",
+          byte_size: 4,
+          width: 1,
+          height: 1,
+        },
+        is_complete: true,
+        is_publishable: true,
+      }),
+    ),
+  );
+  uploadLogoMock
+    .mockResolvedValueOnce({
+      error: {
+        code: "validation_failed",
+        fields: [
+          {
+            code: "invalid_logo",
+            field: "file",
+            message: "backend internal message",
+          },
+        ],
+        message: "backend internal message",
+        request_id: "request-id",
+      },
+      state: "error",
+      status: 400,
+    })
+    .mockResolvedValueOnce({ state: "empty", status: 204 });
+
+  render(<EstablishmentSettingsWorkspace />);
+  const input = await screen.findByLabelText("Escolher novo logo");
+  const file = new File(["png!"], "replacement.png", { type: "image/png" });
+  fireEvent.change(input, { target: { files: [file] } });
+  expect(
+    screen.getByRole("img", { name: "Pré-visualização do logo" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("img", { name: "Logo de Estúdio Aurora" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getAllByRole("img")).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+
+  expect(
+    await screen.findByText("Escolha uma imagem PNG, JPEG ou WebP válida."),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("img", { name: "Logo de Estúdio Aurora" }),
+  ).toHaveAttribute("src", "/api/v1/public/establishments/estudio-aurora/logo");
+  expect(
+    screen.queryByRole("img", { name: "Pré-visualização do logo" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
+  expect(
+    screen.queryByText("backend internal message"),
+  ).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Escolher novo logo"), {
+    target: { files: [file] },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+  expect(await screen.findByText("Logo atualizado com sucesso.")).toBeVisible();
+  expect(uploadLogoMock).toHaveBeenCalledTimes(2);
+});
+
+test("mostra o endereço quando o upload confirma mas a atualização falha", async () => {
+  getSettingsMock
+    .mockResolvedValueOnce(successfulResult())
+    .mockRejectedValueOnce(new Error("temporary refresh failure"));
+  uploadLogoMock.mockResolvedValue({ state: "empty", status: 204 });
+
+  render(<EstablishmentSettingsWorkspace />);
+  const input = await screen.findByLabelText("Selecionar logo");
+  const file = new File(["png!"], "logo.png", { type: "image/png" });
+  fireEvent.change(input, { target: { files: [file] } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+
+  expect(
+    await screen.findByText(
+      "Logo enviado. Não foi possível atualizar as configurações agora.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "Abrir página pública" }),
+  ).toHaveAttribute("href", "/estudio-aurora");
+  expect(
+    screen.getByRole("img", { name: "Logo de Estúdio Aurora" }),
+  ).toHaveAttribute(
+    "src",
+    "/api/v1/public/establishments/estudio-aurora/logo?version=1",
+  );
+});
+
+test("reconcilia um erro interno do upload antes de limpar a seleção", async () => {
+  const refreshedSettings = successfulSettings({
+    logo: {
+      url: "/api/v1/public/establishments/estudio-aurora/logo",
+      content_type: "image/webp",
+      byte_size: 8,
+      width: 2,
+      height: 2,
+    },
+    is_complete: true,
+    is_publishable: true,
+  });
+  getSettingsMock
+    .mockResolvedValueOnce(
+      successfulResult(
+        successfulSettings({
+          logo: {
+            url: "/api/v1/public/establishments/estudio-aurora/logo",
+            content_type: "image/png",
+            byte_size: 4,
+            width: 1,
+            height: 1,
+          },
+          is_complete: true,
+          is_publishable: true,
+        }),
+      ),
+    )
+    .mockResolvedValueOnce(successfulResult(refreshedSettings));
+  uploadLogoMock.mockResolvedValue({
+    error: {
+      code: "internal_error",
+      message: "Não foi possível enviar o logo.",
+      request_id: "request-id",
+    },
+    state: "error",
+    status: 500,
+  });
+
+  render(<EstablishmentSettingsWorkspace />);
+  const input = await screen.findByLabelText("Escolher novo logo");
+  fireEvent.change(input, {
+    target: {
+      files: [
+        new File(["new logo"], "replacement.webp", { type: "image/webp" }),
+      ],
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+
+  expect(
+    await screen.findByText(
+      "Confira o logo exibido antes de iniciar outro envio.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("img", { name: "Logo de Estúdio Aurora" }),
+  ).toHaveAttribute(
+    "src",
+    "/api/v1/public/establishments/estudio-aurora/logo?version=1",
+  );
+  expect(
+    screen.queryByRole("img", { name: "Pré-visualização do logo" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible();
+});
+
+test("mantém a seleção incerta e oferece reconciliação quando a consulta também falha", async () => {
+  const currentSettings = successfulSettings({
+    logo: {
+      url: "/api/v1/public/establishments/estudio-aurora/logo",
+      content_type: "image/png",
+      byte_size: 4,
+      width: 1,
+      height: 1,
+    },
+    is_complete: true,
+    is_publishable: true,
+  });
+  getSettingsMock
+    .mockResolvedValueOnce(successfulResult(currentSettings))
+    .mockRejectedValueOnce(new Error("settings temporarily unavailable"))
+    .mockResolvedValueOnce(successfulResult(currentSettings));
+  uploadLogoMock.mockResolvedValue({
+    error: {
+      code: "internal_error",
+      message: "Não foi possível enviar o logo.",
+      request_id: "request-id",
+    },
+    state: "error",
+    status: 500,
+  });
+
+  render(<EstablishmentSettingsWorkspace />);
+  fireEvent.change(await screen.findByLabelText("Escolher novo logo"), {
+    target: {
+      files: [
+        new File(["new logo"], "replacement.webp", { type: "image/webp" }),
+      ],
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+
+  expect(
+    await screen.findByText(
+      "A consulta das configurações também falhou. Atualize o estado do logo antes de enviar novamente.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("img", { name: "Pré-visualização do logo" }),
+  ).toBeVisible();
+  expect(screen.getByText("replacement.webp")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Atualizar estado do logo" }),
+  );
+  expect(
+    await screen.findByText(
+      "Confira o logo exibido antes de iniciar outro envio.",
+    ),
+  ).toBeVisible();
+  expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible();
+  expect(
+    screen.queryByRole("img", { name: "Pré-visualização do logo" }),
+  ).not.toBeInTheDocument();
 });
 
 test("mantém o fuso bloqueado sem impedir a edição dos demais dados", async () => {
