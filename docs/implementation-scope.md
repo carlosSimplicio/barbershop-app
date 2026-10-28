@@ -489,7 +489,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar interface pequena de envio desacoplada do provedor.
 - [x] Versionar o template de confirmação de e-mail em `pt-BR`.
 - [x] Versionar o template de solicitação de recuperação de senha em `pt-BR`.
-- [x] Integrar Mailpit por SMTP somente no ambiente local.
+- [x] Integrar Mailpit por SMTP somente no ambiente local, com deadline total de 10 segundos incluindo conexão e interrupção por cancelamento.
 - [x] Não registrar endereço completo, token, link ou credencial nas falhas dos fluxos de onboarding entregues.
 - [x] Não registrar endereço completo, token ou link nas falhas de solicitação de recuperação.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros de e-mail transacional.

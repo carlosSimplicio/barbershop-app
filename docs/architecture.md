@@ -181,7 +181,7 @@
 
 - O provedor ainda não foi definido.
 - Isole envio atrás de uma interface pequena; não adicione SDK de SMTP, SES, Resend ou outro provedor antes da decisão.
-- Em desenvolvimento local, use SMTP com Mailpit para inspecionar mensagens de confirmação e recuperação sem enviar e-mails reais.
+- Em desenvolvimento local, use SMTP com Mailpit para inspecionar mensagens de confirmação e recuperação sem enviar e-mails reais. O transporte usa um orçamento total de 10 segundos desde DNS/conexão até o encerramento SMTP, respeita um deadline anterior do chamador e fecha a conexão quando o contexto é cancelado.
 - O Mailpit é uma dependência exclusiva de desenvolvimento e nunca é fallback para produção.
 - Em produção, falhe de forma segura se o envio de e-mail necessário estiver habilitado sem um provedor real configurado.
 - Não registre endereço completo, token, link de recuperação ou credenciais ao tratar falhas.
