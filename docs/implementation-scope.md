@@ -180,6 +180,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
 - [x] Persistir descrição, endereço, telefone de contato, links sociais ordenados e limites opcionais de agenda por estabelecimento; aplicação das configurações aos fluxos de agenda permanece pendente no escopo 7.
+- [x] Consultar perfil, logo e links das configurações no mesmo snapshot SQL, com regressão HTTP sob atualização concorrente.
 - [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a alteração de fuso já usa esse bloqueio; a integração atômica com futuros agendamentos, bloqueios e lançamentos permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
 - [ ] Criar persistência para serviços.

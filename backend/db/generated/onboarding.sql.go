@@ -466,7 +466,12 @@ SELECT
     e.minimum_booking_notice_minutes, e.booking_horizon_days, e.customer_change_deadline_minutes,
     e.operational_data_started_at,
     l.content_type AS logo_content_type, l.byte_size AS logo_byte_size,
-    l.width AS logo_width, l.height AS logo_height
+    l.width AS logo_width, l.height AS logo_height,
+    COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('label', links.label, 'url', links.url) ORDER BY links.position)
+        FROM establishment_social_links AS links
+        WHERE links.establishment_id = e.id
+    ), '[]'::jsonb)::text AS social_links
 FROM establishments AS e
 LEFT JOIN establishment_logos AS l ON l.establishment_id = e.id AND l.id = e.logo_id
 WHERE e.id = $1
@@ -488,6 +493,7 @@ type GetEstablishmentSettingsByIDRow struct {
 	LogoByteSize                  pgtype.Int8        `json:"logo_byte_size"`
 	LogoWidth                     pgtype.Int4        `json:"logo_width"`
 	LogoHeight                    pgtype.Int4        `json:"logo_height"`
+	SocialLinks                   string             `json:"social_links"`
 }
 
 func (q *Queries) GetEstablishmentSettingsByID(ctx context.Context, id pgtype.UUID) (GetEstablishmentSettingsByIDRow, error) {
@@ -509,6 +515,7 @@ func (q *Queries) GetEstablishmentSettingsByID(ctx context.Context, id pgtype.UU
 		&i.LogoByteSize,
 		&i.LogoWidth,
 		&i.LogoHeight,
+		&i.SocialLinks,
 	)
 	return i, err
 }

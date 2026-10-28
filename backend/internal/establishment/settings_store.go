@@ -2,6 +2,7 @@ package establishment
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	db "barbershop-app/backend/db/generated"
@@ -13,7 +14,6 @@ import (
 
 type establishmentSettingsQueries interface {
 	GetEstablishmentSettingsByID(context.Context, pgtype.UUID) (db.GetEstablishmentSettingsByIDRow, error)
-	ListEstablishmentSocialLinks(context.Context, pgtype.UUID) ([]db.EstablishmentSocialLink, error)
 }
 
 type PostgresSettingsStore struct {
@@ -92,9 +92,9 @@ func (store *PostgresSettingsStore) GetSettingsByID(ctx context.Context, establi
 	if err != nil {
 		return EstablishmentSettings{}, fmt.Errorf("query establishment settings: %w", err)
 	}
-	links, err := store.queries.ListEstablishmentSocialLinks(ctx, queryID)
-	if err != nil {
-		return EstablishmentSettings{}, fmt.Errorf("query establishment social links: %w", err)
+	links := make([]SocialLink, 0)
+	if err := json.Unmarshal([]byte(row.SocialLinks), &links); err != nil {
+		return EstablishmentSettings{}, fmt.Errorf("decode establishment social links: %w", err)
 	}
 	result := EstablishmentSettings{
 		Establishment: Establishment{ID: uuid.UUID(row.ID.Bytes).String(), Name: row.Name, Slug: row.Slug, TimeZone: row.TimeZone},
@@ -103,10 +103,7 @@ func (store *PostgresSettingsStore) GetSettingsByID(ctx context.Context, establi
 		BookingHorizonDays:            nullableInt32(row.BookingHorizonDays),
 		CustomerChangeDeadlineMinutes: nullableInt32(row.CustomerChangeDeadlineMinutes),
 		OperationalDataStarted:        row.OperationalDataStartedAt.Valid,
-		SocialLinks:                   make([]SocialLink, 0, len(links)),
-	}
-	for _, link := range links {
-		result.SocialLinks = append(result.SocialLinks, SocialLink{Label: link.Label, URL: link.Url})
+		SocialLinks:                   links,
 	}
 	logoFields := []bool{row.LogoContentType.Valid, row.LogoByteSize.Valid, row.LogoWidth.Valid, row.LogoHeight.Valid}
 	logoCount := 0
