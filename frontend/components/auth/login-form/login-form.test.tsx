@@ -82,7 +82,7 @@ test.each([
     );
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith(
-        role === "owner" ? "/painel/profissionais" : "/testes",
+        role === "owner" ? "/painel" : "/testes",
       ),
     );
   },
@@ -228,9 +228,7 @@ test("impede dois envios enquanto o login está pendente", async () => {
       password_change_required: false,
     },
   });
-  await waitFor(() =>
-    expect(replace).toHaveBeenCalledWith("/painel/profissionais"),
-  );
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/painel"));
 });
 
 function fillForm() {

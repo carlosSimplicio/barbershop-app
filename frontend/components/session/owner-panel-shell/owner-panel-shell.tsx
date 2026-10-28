@@ -7,7 +7,7 @@ export function OwnerPanelShell({
   activePage = "professionals",
   children,
 }: {
-  activePage?: "professionals" | "settings";
+  activePage?: "professionals" | "settings" | "none";
   children: ReactNode;
 }) {
   return (

@@ -27,7 +27,7 @@ export function SessionGuard({
     if (state.status === "authenticated" && !allowed) {
       router.replace(
         require === "anonymous" && state.principal.role === "owner"
-          ? "/painel/profissionais"
+          ? "/painel"
           : "/testes",
       );
     }

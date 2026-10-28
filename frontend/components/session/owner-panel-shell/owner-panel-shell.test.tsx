@@ -50,3 +50,18 @@ test("does not mark the professionals page current on the settings page", () => 
     "page",
   );
 });
+
+test("does not mark a navigation link current on the panel entry page", () => {
+  render(
+    <OwnerPanelShell activePage="none">
+      <h1>Painel</h1>
+    </OwnerPanelShell>,
+  );
+
+  expect(
+    screen.getByRole("link", { name: "Profissionais" }),
+  ).not.toHaveAttribute("aria-current");
+  expect(
+    screen.getByRole("link", { name: "Configurações" }),
+  ).not.toHaveAttribute("aria-current");
+});

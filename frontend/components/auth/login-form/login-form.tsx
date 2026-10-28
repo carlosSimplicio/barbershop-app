@@ -65,9 +65,7 @@ export function LoginForm() {
         "authenticated",
       );
       if (result.status === 200 && result.state === "success") {
-        router.replace(
-          result.data.role === "owner" ? "/painel/profissionais" : "/testes",
-        );
+        router.replace(result.data.role === "owner" ? "/painel" : "/testes");
         return;
       }
       if (result.state === "error") {

@@ -43,9 +43,7 @@ export function EmailVerification({ token }: { token: string | null }) {
         if (!active) return;
         if (result.status === 200 && result.state === "success") {
           setStatus("success");
-          router.replace(
-            result.data.role === "owner" ? "/painel/profissionais" : "/testes",
-          );
+          router.replace(result.data.role === "owner" ? "/painel" : "/testes");
         } else if (
           result.state === "error" &&
           result.error.code === "invalid_email_confirmation"
