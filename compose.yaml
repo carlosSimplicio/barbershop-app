@@ -112,6 +112,7 @@ services:
     restart: unless-stopped
     environment:
       API_INTERNAL_URL: ${API_INTERNAL_URL}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL}
     depends_on:
       backend:
         condition: service_healthy

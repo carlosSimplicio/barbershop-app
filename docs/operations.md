@@ -48,7 +48,8 @@
 - Segredos nunca usam `NEXT_PUBLIC_*`.
 - Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
 - Configure `JWT_ACTIVE_KEY_ID`, `JWT_PRIVATE_KEY_BASE64`, `JWT_PUBLIC_KEYS_JSON`, `CSRF_SIGNING_KEY_BASE64`, `RATE_LIMIT_HMAC_KEY_BASE64`, `TRUSTED_ORIGINS` e `TRUSTED_PROXY_CIDRS`. A chave JWT privada é um seed Ed25519 em base64 sem padding; o keyring público é um objeto JSON de `kid` para chave pública.
-- Configure `PUBLIC_APP_URL` como a origem HTTPS usada nos links transacionais. No ambiente local, `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT` e `SMTP_FROM` apontam exclusivamente para o Mailpit interno. O modo desabilitado é aceito somente em testes; produção recusa a inicialização enquanto não houver um provedor real suportado e explicitamente configurado.
+- O frontend recebe `API_INTERNAL_URL` (origem HTTP/HTTPS interna da API) e `PUBLIC_APP_URL` (origem HTTPS canônica) em runtime pelo Compose. A inicialização Node valida origens sem credenciais, caminho, query ou fragmento; valores inválidos impedem o startup sem expor seus conteúdos. Essas variáveis são exclusivas ao servidor e não usam `NEXT_PUBLIC_*`.
+- Configure `PUBLIC_APP_URL` como a origem HTTPS usada nos links transacionais e nos metadados da página pública. No ambiente local, `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT` e `SMTP_FROM` apontam exclusivamente para o Mailpit interno. O modo desabilitado é aceito somente em testes; produção recusa a inicialização enquanto não houver um provedor real suportado e explicitamente configurado.
 - `PUBLIC_APP_URL` e cada item de `TRUSTED_ORIGINS` devem ser origens HTTPS sem path, query ou fragmento. `SMTP_HOST` não inclui porta; `SMTP_PORT` aceita de 1 a 65535; `SMTP_FROM` precisa ser um endereço válido. `EMAIL_PROVIDER=disabled` é exclusivo de testes.
 - Ao adicionar configuração obrigatória, atualize `.env.example` e a documentação operacional.
 
@@ -61,6 +62,13 @@
 - No painel, use Tab para percorrer os links “Profissionais”, “Configurações” e “Área de testes”; Configurações abre `/painel/configuracoes` e o último link abre `/testes`, onde é possível consultar novamente a sessão por `GET /auth/me` e o estabelecimento. Confira que o link da página atual recebe `aria-current`, e que a entrada `/painel` não marca Profissionais como atual. Verifique a navegação em desktop e tela estreita, incluindo acesso direto a `/painel/profissionais` quando o logo estiver ausente. Saia e entre outra vez por `/login`: o proprietário deve voltar a `/painel` e seguir o destino pelo logo. Inspecione os dois cookies e confirme `Secure`, `SameSite=Strict`, `Max-Age` de 15 dias e os caminhos documentados em `docs/architecture.md`; somente o access é `HttpOnly`, e somente o CSRF é legível pelo JavaScript.
 - Para recuperação, mantenha uma segunda sessão de teste aberta para verificar a revogação, saia da sessão usada para o fluxo e use “Esqueci minha senha” em `/login` com o e-mail confirmado do proprietário. Abra o link mais recente no Mailpit e confira que `/redefinir-senha` remove fragmento e query antes de mostrar o formulário; defina uma senha diferente da atual, volte ao login e entre com a nova senha. Confira que o link usado não pode ser reutilizado e que a segunda sessão anterior retorna `401`. Não copie token ou senha para logs, URL query ou capturas públicas.
 - Para validar a restrição de papel, entre com a conta profissional criada no painel: o login deve abrir `/testes`, exibir a troca obrigatória e não permitir acesso a `/painel/profissionais`. Use somente contas e senhas fictícias e não exponha a senha em comandos ou logs.
+
+### Validação local da página pública
+
+- Depois do cadastro, confirmação e envio do logo, abra `/{slug}` sem sessão e confira nome, logo, título e URL canônica no HTML recebido. Verifique descrição, endereço, telefone e redes quando preenchidos; limpe os opcionais no painel e confirme que as seções desaparecem.
+- Substitua o logo e recarregue o endereço estável: o navegador deve revalidar a imagem. Estabelecimento incompleto ou slug ausente retorna página não encontrada; uma indisponibilidade da API mostra falha com nova tentativa, sem afirmar inexistência.
+- Confira a identificação após expirar o trial, os links por teclado, o foco visível e o layout em tela estreita. Não há controles de disponibilidade nem agendamento nesta entrega. Confira também `/`, `/cadastro`, `/login`, `/painel`, `/testes` e a política existente de `/design-system`.
+- Reinicie o backend e confirme que o logo permanece disponível, preservando os volumes. Nunca use `down -v` neste procedimento.
 
 ### Validação local do onboarding pela API
 

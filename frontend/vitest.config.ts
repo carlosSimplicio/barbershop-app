@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      "server-only": new URL(
+        "./node_modules/next/dist/compiled/server-only/empty.js",
+        import.meta.url,
+      ).pathname,
       "@": new URL(".", import.meta.url).pathname,
     },
   },

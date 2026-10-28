@@ -212,7 +212,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
-- [ ] Manter página pública e agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
+- [x] Manter a página pública informativa mobile-first.
+- [ ] Manter agenda operacional mobile-first; painel administrativo e financeiro desktop-first e responsivo.
 - [x] Usar Server Components para cascas e conteúdo estático e Client Components somente nas fronteiras interativas necessárias.
 - [x] Consumir `/api/v1` diretamente; não criar BFF, Server Actions de negócio ou Route Handlers intermediários.
 - [x] Criar home deslogada responsiva em `pt-BR`, com proposta da plataforma e links para cadastro e login, sem chamadas à API.
@@ -271,12 +272,12 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 7. Cadastro e administração do estabelecimento
 
-- [ ] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
-- [ ] Tornar nome e logo obrigatórios; descrição, endereço, telefone de contato e redes sociais são opcionais.
+- [x] Criar onboarding do proprietário com nome, logo, slug e fuso do estabelecimento.
+- [x] Tornar nome e logo obrigatórios para publicação; descrição, endereço, telefone de contato e redes sociais são opcionais.
 - [x] Validar slug único com 3 a 63 caracteres, letras ASCII minúsculas, números e hífens, sem hífen nas extremidades.
 - [x] Reservar slugs que colidem com rotas da plataforma (`admin`, `api`, `assets`, `cadastro`, `confirmar-email`, `design-system`, `login`, `painel`, `recuperar-senha`, `redefinir-senha` e `testes`); preservar legados em conflito e diagnosticá-los sem renomeação automática.
 - [x] Manter o slug imutável nos endpoints atualmente entregues.
-- [ ] Publicar a URL canônica `/{establishment_slug}` no MVP.
+- [x] Publicar a URL canônica `/{establishment_slug}` no MVP.
 - [x] Validar e persistir somente identificadores IANA informados ao backend.
 - [x] Na interface de cadastro, detectar o fuso do dispositivo, usar `America/Sao_Paulo` como fallback e permitir confirmação ou alteração antes do envio.
 - [x] Consultar em `/testes` o estabelecimento da sessão sem enviar ID de tenant, exibindo nome, slug, fuso e trial ausente, ativo ou expirado; bloquear a consulta durante troca obrigatória de senha.
@@ -356,8 +357,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 13. Página pública e agendamento do cliente
 
-- [ ] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas.
-- [ ] Não renderizar seções vazias para informações públicas opcionais.
+- [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas.
+- [x] Não renderizar seções vazias para informações públicas opcionais.
 - [ ] Criar fluxo interativo para escolher serviço, profissional associado, dia e horário.
 - [ ] Coletar somente nome e telefone para criar o agendamento.
 - [ ] Criar agendamento com exatamente um serviço e um profissional.
@@ -371,7 +372,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Reagendar atomicamente o mesmo registro, preservar histórico e manter o horário original em caso de falha.
 - [ ] Preservar snapshots originais de preço e duração no reagendamento.
 - [ ] Não expor histórico concluído, cancelado, `no_show` ou passado pela consulta pública.
-- [ ] Quando assinatura ou trial estiver expirado, manter página identificável e remover consulta de disponibilidade e criação/mutação de agendamentos.
+- [x] Manter a página informativa identificável após expiração do trial, sem controles de agendamento nesta entrega.
+- [ ] Quando assinatura ou trial estiver expirado, bloquear consulta de disponibilidade e criação/mutação nos futuros fluxos de agendamento.
 
 ## 14. Agenda autenticada
 
