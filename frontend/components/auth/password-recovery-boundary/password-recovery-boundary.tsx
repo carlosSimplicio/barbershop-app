@@ -1,48 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useTransactionalLinkToken } from "@/lib/auth/use-transactional-link-token/use-transactional-link-token";
 
 import { ActionLink, Feedback } from "@/components/ui";
 
 import { PasswordRecoveryResetForm } from "../password-recovery-reset-form/password-recovery-reset-form";
 
-type Capture =
-  | { status: "capturing" }
-  | { status: "error" }
-  | { status: "ready"; token: string | null };
-
 export function PasswordRecoveryBoundary() {
-  const [capture, setCapture] = useState<Capture>({ status: "capturing" });
-  const token = useRef<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (token.current === null) {
-      const fragment = window.location.hash;
-      try {
-        window.history.replaceState(
-          window.history.state,
-          "",
-          window.location.pathname,
-        );
-      } catch {
-        void Promise.resolve().then(() => {
-          if (active) setCapture({ status: "error" });
-        });
-        return () => {
-          active = false;
-        };
-      }
-      token.current = new URLSearchParams(fragment.slice(1)).get("token") || "";
-    }
-
-    void Promise.resolve().then(() => {
-      if (active) setCapture({ status: "ready", token: token.current || null });
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const capture = useTransactionalLinkToken();
 
   if (capture.status === "capturing") {
     return <div role="status">Preparando redefinição…</div>;

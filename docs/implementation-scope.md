@@ -501,6 +501,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Tratar nome do estabelecimento, e-mail, tokens e credenciais como sensíveis nos fluxos de onboarding entregues.
 - [ ] Estender o tratamento de dados sensíveis aos futuros fluxos de clientes e financeiro.
+- [x] Compartilhar a captura segura de tokens transacionais entre confirmação e recuperação, com testes de limpeza prévia da URL, falha segura e Strict Mode.
 - [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; a interface de confirmação remove o token do fragmento antes de qualquer chamada de API e não o persiste.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros.
 - [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
