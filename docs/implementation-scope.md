@@ -153,7 +153,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Criar `backend/` e `frontend/` como aplicações separadas no mesmo repositório.
 - [x] Selecionar as versões estáveis atuais das tecnologias e fixá-las explicitamente, sem tags `latest` ou intervalos flutuantes.
-- [x] Configurar arquivos ignorados, `.editorconfig` e comandos de desenvolvimento sem incluir segredos.
+- [x] Configurar arquivos ignorados, `.editorconfig` e comandos de desenvolvimento sem incluir segredos; proteger por regressão a exclusão de arquivos de ambiente dos contextos Docker.
 - [x] Criar `.env.example` completo e validar toda configuração obrigatória na inicialização.
 - [x] Documentar comandos locais para instalar, gerar código, migrar banco, testar, executar e construir o projeto.
 - [x] Garantir que código, schema, endpoints e identificadores técnicos usem inglês e que a interface use `pt-BR`.

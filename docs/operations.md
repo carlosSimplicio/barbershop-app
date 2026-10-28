@@ -42,7 +42,7 @@
 
 - Produção usa `.env` somente na VPS, com permissões restritas.
 - Versione `.env.example` com todas as chaves, sem valores sensíveis.
-- Ignore arquivos `.env` reais e nunca os copie para imagens ou logs.
+- Ignore arquivos `.env` reais e nunca os copie para imagens ou logs. Os contextos Docker de backend e frontend excluem `.env` e `.env.*`, inclusive em subdiretórios, e preservam somente exemplos `.env.example`. Um teste com o parser de padrões do Docker protege essa exclusão; variáveis reais são fornecidas em runtime.
 - Cada aplicação valida configuração obrigatória na inicialização e falha claramente se estiver ausente ou inválida.
 - `LOGO_STORAGE_DIR` é um caminho absoluto interno ao container, sem `..` e diferente da raiz do filesystem. No Compose use `/var/lib/barbershop/logos`; não configure um caminho do host nem publique esse diretório pelo Caddy.
 - Segredos nunca usam `NEXT_PUBLIC_*`.
