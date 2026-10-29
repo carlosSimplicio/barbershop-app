@@ -1,5 +1,9 @@
 import { expect, test } from "vitest";
-import { validateServiceValues } from "./service-form-model";
+import {
+  validateServiceValues,
+  recordToServiceValues,
+  buildServicePatch,
+} from "./service-form-model";
 test("converte centavos sem arredondar e aplica duração vazia", () => {
   for (const [price, cents] of [
     ["0,00", 0],
@@ -47,4 +51,23 @@ test("recusa vazio, frações excedentes e limites sem arredondamento", () => {
     validateServiceValues({ name: "á".repeat(121), price: "0", duration: "" })
       .errors.name,
   ).toBeDefined();
+});
+
+test("edição preserva centavos e envia somente campos alterados", () => {
+  const record = {
+    id: "id",
+    name: "Corte",
+    price_cents: 1,
+    duration_minutes: 17,
+    active: false,
+  };
+  const values = recordToServiceValues(record);
+  expect(values).toEqual({ name: "Corte", price: "0,01", duration: "17" });
+  expect(
+    buildServicePatch({ ...values, price: "1,01" }, record).request,
+  ).toEqual({ price_cents: 101 });
+  expect(
+    buildServicePatch({ ...values, duration: "" }, record).request,
+  ).toEqual({ duration_minutes: null });
+  expect(buildServicePatch(values, record).request).toEqual({});
 });

@@ -71,3 +71,62 @@ export function focusServiceError(
   const control = first ? form?.elements.namedItem(first) : null;
   if (control instanceof HTMLElement) control.focus();
 }
+
+export function recordToServiceValues(
+  record: components["schemas"]["ServiceResponse"],
+): ServiceValues {
+  const cents = BigInt(record.price_cents);
+  return {
+    name: record.name,
+    price: `${cents / 100n},${String(cents % 100n).padStart(2, "0")}`,
+    duration: String(record.duration_minutes),
+  };
+}
+export function buildServicePatch(
+  values: ServiceValues,
+  record: components["schemas"]["ServiceResponse"],
+): {
+  errors: FieldErrors;
+  request?: components["schemas"]["UpdateServiceRequest"];
+} {
+  const checked = validateServiceValues(values);
+  if (!checked.request) return { errors: checked.errors };
+  const request: components["schemas"]["UpdateServiceRequest"] = {};
+  if (checked.request.name !== record.name) request.name = checked.request.name;
+  if (checked.request.price_cents !== record.price_cents)
+    request.price_cents = checked.request.price_cents;
+  if (
+    checked.request.duration_minutes === null ||
+    checked.request.duration_minutes !== record.duration_minutes
+  )
+    request.duration_minutes = checked.request.duration_minutes;
+  return { errors: {}, request };
+}
+
+export function reconcileServiceValues(
+  values: ServiceValues,
+  previous: components["schemas"]["ServiceResponse"],
+  current: components["schemas"]["ServiceResponse"],
+): ServiceValues {
+  const baseline = recordToServiceValues(previous);
+  const refreshed = recordToServiceValues(current);
+  const price = validateServiceValues({
+    ...baseline,
+    price: values.price,
+  }).request;
+  const duration = validateServiceValues({
+    ...baseline,
+    duration: values.duration,
+  }).request;
+  return {
+    name: values.name.trim() !== previous.name ? values.name : refreshed.name,
+    price:
+      price?.price_cents !== previous.price_cents
+        ? values.price
+        : refreshed.price,
+    duration:
+      duration?.duration_minutes !== previous.duration_minutes
+        ? values.duration
+        : refreshed.duration,
+  };
+}

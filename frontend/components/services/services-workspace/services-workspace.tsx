@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import { Button, Feedback, RecordList } from "@/components/ui";
 import { listServices, type ServicePage } from "@/lib/services/services-api";
 import { formatServicePrice } from "@/lib/services/money";
 import { CreateServiceForm } from "../create-service-form/create-service-form";
+import { EditServicePanel } from "../edit-service-panel/edit-service-panel";
 import styles from "./services-workspace.module.css";
 
 type View =
@@ -24,10 +25,17 @@ export function ServicesWorkspace() {
 }
 
 function ServicesRequest() {
+  const editOrigin = useRef<HTMLButtonElement | null>(null);
+  const catalog = useRef<HTMLElement>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
   const [offset, setOffset] = useState(0);
   const [version, setVersion] = useState(0);
   const [view, setView] = useState<View>({ status: "loading" });
+  const onUnauthorized = useCallback(
+    () => setView({ status: "unauthorized" }),
+    [],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,7 +72,7 @@ function ServicesRequest() {
           refresh();
         }}
         onReadOnly={() => setReadOnly(true)}
-        onUnauthorized={() => setView({ status: "unauthorized" })}
+        onUnauthorized={onUnauthorized}
       />
       {readOnly || (view.status === "success" && !view.page.can_write) ? (
         <Feedback variant="warning" title="Modo somente leitura">
@@ -72,7 +80,26 @@ function ServicesRequest() {
           acesso ativo.
         </Feedback>
       ) : null}
+      {selected ? (
+        <EditServicePanel
+          key={selected}
+          serviceId={selected}
+          canWrite={
+            !readOnly && view.status === "success" && view.page.can_write
+          }
+          onSaved={() => refresh()}
+          onClose={() => {
+            setSelected(null);
+            if (editOrigin.current?.isConnected) editOrigin.current.focus();
+            else catalog.current?.focus();
+          }}
+          onReadOnly={() => setReadOnly(true)}
+          onUnauthorized={onUnauthorized}
+        />
+      ) : null}
       <section
+        ref={catalog}
+        tabIndex={-1}
         aria-label="Catálogo de serviços"
         aria-busy={view.status === "loading"}
         className={styles.panel}
@@ -111,7 +138,19 @@ function ServicesRequest() {
                     <span>{formatServicePrice(item.price_cents)}</span>
                     <span>{item.duration_minutes} minutos</span>
                   </div>
-                  <span>{item.active ? "Ativo" : "Inativo"}</span>
+                  <div className={styles.recordActions}>
+                    <span>{item.active ? "Ativo" : "Inativo"}</span>
+                    <Button
+                      disabled={readOnly || !view.page.can_write}
+                      onClick={(event) => {
+                        editOrigin.current = event.currentTarget;
+                        setSelected(item.id);
+                      }}
+                      aria-label={`Editar ${item.name}`}
+                    >
+                      Editar
+                    </Button>
+                  </div>
                 </div>
               )}
             />

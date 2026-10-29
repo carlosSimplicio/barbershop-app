@@ -30,3 +30,15 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
+
+.recordActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (max-width: 32rem) {
+  .record {
+    flex-direction: column;
+  }
+}

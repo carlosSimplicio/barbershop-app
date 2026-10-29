@@ -33,3 +33,24 @@ export function createService(
     signal,
   });
 }
+
+export type UpdateServiceRequest =
+  components["schemas"]["UpdateServiceRequest"];
+export function getService(id: string, signal?: AbortSignal) {
+  return apiFetch<ServiceRecord>(`/api/v1/services/${encodeURIComponent(id)}`, {
+    signal,
+  });
+}
+export function updateService(
+  id: string,
+  request: UpdateServiceRequest,
+  signal?: AbortSignal,
+) {
+  return apiFetch<ServiceRecord>(`/api/v1/services/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    csrf: true,
+    signal,
+  });
+}

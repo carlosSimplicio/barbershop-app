@@ -4,10 +4,12 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import {
+  getService,
   createService,
   listServices,
   type ServiceRecord,
@@ -18,6 +20,8 @@ vi.mock("@/components/session/auth-provider/auth-provider", () => ({
   useAuthSession: vi.fn(),
 }));
 vi.mock("@/lib/services/services-api", () => ({
+  getService: vi.fn(),
+  updateService: vi.fn(),
   listServices: vi.fn(),
   createService: vi.fn(),
 }));
@@ -155,4 +159,22 @@ test("mantém criação confirmada quando a recarga da lista falha", async () =>
     await screen.findByText("Não foi possível consultar os serviços"),
   ).toBeVisible();
   expect(screen.getByText("Serviço cadastrado")).toBeVisible();
+});
+
+test("retorna foco à ação do registro ao cancelar edição", async () => {
+  vi.mocked(listServices).mockResolvedValue(page());
+  vi.mocked(getService).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  render(<ServicesWorkspace />);
+  const action = await screen.findByRole("button", { name: "Editar Corte" });
+  fireEvent.click(action);
+  const editor = await screen.findByRole("region", { name: "Editar serviço" });
+  await within(editor).findByLabelText("Nome do serviço");
+  fireEvent.click(
+    within(editor).getByRole("button", { name: "Cancelar edição" }),
+  );
+  expect(action).toHaveFocus();
 });

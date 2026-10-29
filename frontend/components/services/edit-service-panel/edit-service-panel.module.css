@@ -1,0 +1,28 @@
+.panel {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.panel h2,
+.form p {
+  margin: 0;
+}
+.form {
+  display: grid;
+  max-width: 38rem;
+  gap: var(--space-4);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+@media (max-width: 32rem) {
+  .panel {
+    padding: var(--space-4);
+  }
+}
