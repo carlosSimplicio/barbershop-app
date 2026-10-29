@@ -38,6 +38,15 @@ outro terminal:
 make migrate-up
 ```
 
+Se o ambiente já estava ligado, atualize também o binário do backend:
+
+```sh
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build --no-deps backend
+```
+
+O hot reload do frontend não aplica migrations nem recompila o backend. Depois
+da atualização, recarregue a página ou use a ação de nova tentativa.
+
 O Caddy usa uma CA interna no ambiente local. Depois do primeiro `make dev`,
 use outro terminal para copiar o certificado e instale-o manualmente como
 autoridade confiável no sistema ou navegador:

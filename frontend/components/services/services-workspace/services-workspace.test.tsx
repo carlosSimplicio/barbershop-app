@@ -57,6 +57,37 @@ function owner(id = "owner") {
     },
   } as ReturnType<typeof useAuthSession>);
 }
+
+test("libera cadastro quando a consulta volta a responder com catálogo vazio e escrita ativa", async () => {
+  vi.mocked(listServices)
+    .mockResolvedValueOnce({
+      state: "error",
+      status: 500,
+      error: {
+        code: "internal_error",
+        message: "raw internal message",
+        request_id: "test",
+      },
+    })
+    .mockResolvedValueOnce(page([], 0, false, true));
+
+  render(<ServicesWorkspace />);
+  await screen.findByText("Não foi possível consultar os serviços");
+  expect(screen.getByLabelText("Nome do serviço")).toBeDisabled();
+  expect(screen.getByLabelText("Preço")).toBeDisabled();
+  expect(screen.getByLabelText("Duração (minutos)")).toBeDisabled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+  await screen.findByText("Nenhum serviço cadastrado.");
+  expect(screen.getByLabelText("Nome do serviço")).toBeEnabled();
+  expect(screen.getByLabelText("Preço")).toBeEnabled();
+  expect(screen.getByLabelText("Duração (minutos)")).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Cadastrar serviço" }),
+  ).toBeEnabled();
+  expect(screen.queryByText("Modo somente leitura")).not.toBeInTheDocument();
+});
 function page(items = records, offset = 0, has_more = false, can_write = true) {
   return {
     state: "success" as const,
