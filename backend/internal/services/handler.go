@@ -71,6 +71,10 @@ func writeServiceError(c *gin.Context, err error) {
 		writeError(c, 403, "forbidden", "Você não pode administrar serviços.")
 	case errors.Is(err, entitlements.ErrReadOnly):
 		writeError(c, 403, "read_only", "O estabelecimento está em modo somente leitura.")
+	case errors.Is(err, ErrInvalidLimit):
+		writeFieldError(c, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+	case errors.Is(err, ErrInvalidOffset):
+		writeFieldError(c, "offset", "invalid_offset", "Informe um deslocamento válido.")
 	case errors.Is(err, ErrInvalidName):
 		writeFieldError(c, "name", "invalid_name", "Informe um nome com até 120 caracteres.")
 	case errors.Is(err, ErrInvalidPrice):
@@ -90,4 +94,25 @@ func writeError(c *gin.Context, status int, code, message string) {
 func writeFieldError(c *gin.Context, field, code, message string) {
 	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
 	c.JSON(400, api.ErrorResponse{Code: "validation_failed", Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(c), Fields: &fields})
+}
+
+func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
+	p, ok := auth.PrincipalFromContext(c)
+	if !ok {
+		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	limit, offset := int64(20), int64(0)
+	if params.Limit != nil {
+		limit = int64(*params.Limit)
+	}
+	if params.Offset != nil {
+		offset = int64(*params.Offset)
+	}
+	page, err := h.service.List(c.Request.Context(), p, limit, offset)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(200, page)
 }

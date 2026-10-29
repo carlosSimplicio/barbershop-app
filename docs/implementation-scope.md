@@ -322,7 +322,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 10. Administração de serviços
 
 - [x] Criar serviço ativo pela API exclusiva ao proprietário, com tenant da sessão, CSRF e direito centralizado de escrita.
-- [ ] Listar serviços pela API com paginação.
+- [x] Listar serviços pela API com paginação, ativos e inativos e direito de escrita atual, com leitura após expiração.
 - [ ] Consultar individualmente serviço pela API.
 - [ ] Editar serviço pela API.
 - [ ] Ativar e desativar serviço pela API.

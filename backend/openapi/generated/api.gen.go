@@ -290,6 +290,15 @@ type RegisterRequest struct {
 	TimeZone string `json:"time_zone"`
 }
 
+// ServiceListResponse defines model for ServiceListResponse.
+type ServiceListResponse struct {
+	CanWrite bool              `json:"can_write"`
+	HasMore  bool              `json:"has_more"`
+	Items    []ServiceResponse `json:"items"`
+	Limit    int               `json:"limit"`
+	Offset   int               `json:"offset"`
+}
+
 // ServiceResponse defines model for ServiceResponse.
 type ServiceResponse struct {
 	Active          bool               `json:"active"`
@@ -336,6 +345,12 @@ type GetProfessionalsParams struct {
 type GetPublicEstablishmentLogoParams struct {
 	// IfNoneMatch ETag do logo previamente recebido para revalidar o cache.
 	IfNoneMatch *string `json:"If-None-Match,omitempty"`
+}
+
+// GetServicesParams defines parameters for GetServices.
+type GetServicesParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
@@ -427,6 +442,9 @@ type ServerInterface interface {
 	// GetPublicEstablishmentLogo Consulta o logo atual de um estabelecimento publicável
 	// (GET /public/establishments/{slug}/logo)
 	GetPublicEstablishmentLogo(c *gin.Context, slug string, params GetPublicEstablishmentLogoParams)
+	// GetServices Lista serviços do estabelecimento do proprietário
+	// (GET /services)
+	GetServices(c *gin.Context, params GetServicesParams)
 	// PostServices Cadastra serviço no estabelecimento do proprietário
 	// (POST /services)
 	PostServices(c *gin.Context)
@@ -745,6 +763,41 @@ func (siw *ServerInterfaceWrapper) GetPublicEstablishmentLogo(c *gin.Context) {
 	siw.Handler.GetPublicEstablishmentLogo(c, slug, params)
 }
 
+// GetServices operation middleware
+func (siw *ServerInterfaceWrapper) GetServices(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetServicesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetServices(c, params)
+}
+
 // PostServices operation middleware
 func (siw *ServerInterfaceWrapper) PostServices(c *gin.Context) {
 
@@ -802,6 +855,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/public/establishments/:slug", wrapper.GetPublicEstablishment)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
+	router.GET(options.BaseURL+"/services", wrapper.GetServices)
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

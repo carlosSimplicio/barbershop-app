@@ -97,3 +97,7 @@ func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessio
 }
 
 func (h *Handler) PostServices(c *gin.Context) { h.services.PostServices(c) }
+
+func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
+	h.services.GetServices(c, params)
+}

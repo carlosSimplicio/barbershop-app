@@ -2,6 +2,7 @@ package services
 
 import (
 	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/entitlements"
 	"context"
 	"errors"
 )
@@ -22,6 +23,7 @@ type CreateInput struct {
 }
 type Store interface {
 	Create(context.Context, string, string, int32, int32) (Record, error)
+	List(context.Context, string, int32, int32) ([]Record, error)
 }
 type WriteEntitlements interface {
 	RequireWrite(context.Context, string) error
@@ -56,4 +58,43 @@ func (s *Service) Create(ctx context.Context, p auth.Principal, in CreateInput) 
 		return Record{}, err
 	}
 	return s.store.Create(ctx, p.EstablishmentID, name, int32(*in.PriceCents), duration)
+}
+
+var ErrInvalidLimit = errors.New("invalid service limit")
+var ErrInvalidOffset = errors.New("invalid service offset")
+
+type ListResult struct {
+	Items    []Record `json:"items"`
+	Limit    int64    `json:"limit"`
+	Offset   int64    `json:"offset"`
+	HasMore  bool     `json:"has_more"`
+	CanWrite bool     `json:"can_write"`
+}
+
+func (s *Service) List(ctx context.Context, p auth.Principal, limit, offset int64) (ListResult, error) {
+	if p.Role != "owner" {
+		return ListResult{}, ErrForbidden
+	}
+	if limit < 1 || limit > 100 {
+		return ListResult{}, ErrInvalidLimit
+	}
+	if offset < 0 || offset > 2147483647 {
+		return ListResult{}, ErrInvalidOffset
+	}
+	writeErr := s.writes.RequireWrite(ctx, p.EstablishmentID)
+	if writeErr != nil && !errors.Is(writeErr, entitlements.ErrReadOnly) {
+		return ListResult{}, writeErr
+	}
+	items, err := s.store.List(ctx, p.EstablishmentID, int32(limit+1), int32(offset))
+	if err != nil {
+		return ListResult{}, err
+	}
+	more := len(items) > int(limit)
+	if more {
+		items = items[:limit]
+	}
+	if items == nil {
+		items = []Record{}
+	}
+	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: more, CanWrite: writeErr == nil}, nil
 }

@@ -28,3 +28,19 @@ func (s *PostgresStore) Create(ctx context.Context, tenant, name string, price, 
 	row, err := s.queries.CreateService(ctx, db.CreateServiceParams{EstablishmentID: id, Name: name, PriceCents: price, DurationMinutes: duration})
 	return recordFromRow(row), err
 }
+
+func (s *PostgresStore) List(ctx context.Context, tenant string, limit, offset int32) ([]Record, error) {
+	id, err := tenantUUID(tenant)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.queries.ListServices(ctx, db.ListServicesParams{EstablishmentID: id, Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]Record, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, recordFromRow(row))
+	}
+	return items, nil
+}

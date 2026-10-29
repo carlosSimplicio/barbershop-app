@@ -56,3 +56,36 @@ func TestServiceCreateRefusesInvalidOrUnauthorizedWrites(t *testing.T) {
 		}
 	}
 }
+
+func (s *testStore) List(_ context.Context, tenant string, limit, offset int32) ([]Record, error) {
+	s.tenant = tenant
+	s.called = true
+	return []Record{{ID: "first"}, {ID: "second"}, {ID: "third"}}, s.err
+}
+func TestServiceListReturnsBoundedPageAndWriteRights(t *testing.T) {
+	for _, tc := range []struct {
+		err      error
+		canWrite bool
+	}{{nil, true}, {entitlements.ErrReadOnly, false}} {
+		store := &testStore{}
+		page, err := NewService(store, testWrites{tc.err}).List(context.Background(), auth.Principal{Role: "owner", EstablishmentID: "tenant"}, 2, 0)
+		if err != nil || len(page.Items) != 2 || !page.HasMore || page.CanWrite != tc.canWrite || store.tenant != "tenant" {
+			t.Fatalf("page=%+v err=%v", page, err)
+		}
+	}
+	failure := errors.New("storage failure")
+	if _, err := NewService(&testStore{}, testWrites{failure}).List(context.Background(), auth.Principal{Role: "owner"}, 20, 0); !errors.Is(err, failure) {
+		t.Fatalf("entitlement failure=%v", err)
+	}
+	for _, tc := range []struct {
+		role          string
+		limit, offset int64
+		want          error
+	}{{"professional", 20, 0, ErrForbidden}, {"owner", 0, 0, ErrInvalidLimit}, {"owner", 101, 0, ErrInvalidLimit}, {"owner", 20, -1, ErrInvalidOffset}, {"owner", 20, 2147483648, ErrInvalidOffset}} {
+		store := &testStore{}
+		_, err := NewService(store, testWrites{}).List(context.Background(), auth.Principal{Role: tc.role}, tc.limit, tc.offset)
+		if !errors.Is(err, tc.want) || store.called {
+			t.Fatalf("error=%v called=%v", err, store.called)
+		}
+	}
+}

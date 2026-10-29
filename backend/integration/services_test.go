@@ -115,3 +115,65 @@ func TestServiceCreationUsesOnlyOwnerTenant(t *testing.T) {
 		t.Fatalf("null duration=%d", record.DurationMinutes)
 	}
 }
+
+type servicePage struct {
+	Items    []serviceRecord `json:"items"`
+	Limit    int             `json:"limit"`
+	Offset   int             `json:"offset"`
+	HasMore  bool            `json:"has_more"`
+	CanWrite bool            `json:"can_write"`
+}
+
+func getCatalogPage(t *testing.T, app *testApplication, query string) servicePage {
+	t.Helper()
+	r := app.request(t, "GET", "/api/v1/services"+query, nil)
+	assertStatus(t, r, 200)
+	var page servicePage
+	decodeJSON(t, r, &page)
+	return page
+}
+func TestServiceListPaginationTenantAndExpiredRead(t *testing.T) {
+	app := newTestApplication(t)
+	assertStatus(t, app.request(t, "GET", "/api/v1/services", nil), 401)
+	registerAndConfirmOwner(t, app, defaultOwnerRegistration())
+	if page := getCatalogPage(t, app, ""); page.Items == nil || len(page.Items) != 0 || !page.CanWrite {
+		t.Fatalf("empty=%+v", page)
+	}
+	records := []serviceRecord{createCatalogService(t, app, "Corte", 0), createCatalogService(t, app, "Barba", 100), createCatalogService(t, app, "Penteado", 200)}
+	if _, err := integrationPool.Exec(context.Background(), `UPDATE services SET created_at='2026-10-20T12:00:00Z', active=false`); err != nil {
+		t.Fatal(err)
+	}
+	page := getCatalogPage(t, app, "?limit=2&offset=0")
+	next := getCatalogPage(t, app, "?limit=2&offset=2")
+	if len(page.Items) != 2 || !page.HasMore || len(next.Items) != 1 || next.HasMore || page.Items[0].Active || !(page.Items[0].ID > page.Items[1].ID && page.Items[1].ID > next.Items[0].ID) {
+		t.Fatalf("page=%+v next=%+v", page, next)
+	}
+	for _, query := range []string{"?limit=0", "?limit=101", "?offset=-1", "?offset=2147483648", "?limit=invalid"} {
+		assertStatus(t, app.request(t, "GET", "/api/v1/services"+query, nil), 400)
+	}
+	other := defaultOwnerRegistration()
+	other.Email = "list-other@example.test"
+	other.Slug = "list-other"
+	registerAndConfirmOwner(t, app, other)
+	own := createCatalogService(t, app, "Outro serviço", 1)
+	page = getCatalogPage(t, app, "")
+	if len(page.Items) != 1 || page.Items[0].ID != own.ID {
+		t.Fatalf("cross-tenant page=%+v old=%+v", page, records)
+	}
+	createProfessionalForList(t, app, "Ana", "list-prof@example.test")
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/login", map[string]string{"email": "list-prof@example.test", "password": "senha-temporaria"}), 200)
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/password/change", map[string]string{"new_password": "senha-definitiva"}), 204)
+	assertStatus(t, app.request(t, "GET", "/api/v1/services", nil), 403)
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/login", map[string]string{"email": other.Email, "password": other.Password}), 200)
+	expireServiceTrial(t)
+	page = getCatalogPage(t, app, "")
+	if page.CanWrite || len(page.Items) != 1 {
+		t.Fatalf("expired=%+v", page)
+	}
+	if _, err := integrationPool.Exec(context.Background(), `DELETE FROM establishment_trials`); err != nil {
+		t.Fatal(err)
+	}
+	if getCatalogPage(t, app, "").CanWrite {
+		t.Fatal("absent trial can write")
+	}
+}

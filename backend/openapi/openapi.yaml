@@ -488,6 +488,42 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
   /services:
+    get:
+      operationId: getServices
+      summary: Lista serviços do estabelecimento do proprietário
+      tags: [services]
+      security:
+        - accessCookie: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
+      responses:
+        "200":
+          description: Página de serviços ativos e inativos, com direito atual de escrita
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     post:
       operationId: postServices
       summary: Cadastra serviço no estabelecimento do proprietário
@@ -546,6 +582,22 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    ServiceListResponse:
+      type: object
+      required: [items, limit, offset, has_more, can_write]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceResponse"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        has_more:
+          type: boolean
+        can_write:
+          type: boolean
     CreateServiceRequest:
       type: object
       additionalProperties: false

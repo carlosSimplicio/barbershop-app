@@ -271,7 +271,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Lista serviços do estabelecimento do proprietário */
+        get: operations["getServices"];
         put?: never;
         /** Cadastra serviço no estabelecimento do proprietário */
         post: operations["postServices"];
@@ -302,6 +303,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ServiceListResponse: {
+            items: components["schemas"]["ServiceResponse"][];
+            limit: number;
+            offset: number;
+            has_more: boolean;
+            can_write: boolean;
+        };
         CreateServiceRequest: {
             /** @description Trimmed before validation; at most 120 Unicode code points. Duplicate names are allowed. */
             name: string;
@@ -1049,6 +1057,33 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getServices: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de serviços ativos e inativos, com direito atual de escrita */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalServerError"];
         };
     };
