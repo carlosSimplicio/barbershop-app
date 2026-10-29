@@ -1,0 +1,16 @@
+.action,
+.confirmation {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--space-3);
+}
+.confirmation p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

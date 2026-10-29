@@ -26,6 +26,8 @@ export type EditServiceProps = {
   onClose: () => void;
   onReadOnly: () => void;
   onUnauthorized: () => void;
+  onBusyChange?: (busy: boolean) => void;
+  reloadVersion?: number;
 };
 type Load = "loading" | "ready" | "error" | "missing" | "unauthorized";
 type Notice = {
@@ -41,10 +43,13 @@ export function EditServicePanel({
   onClose,
   onReadOnly,
   onUnauthorized,
+  onBusyChange,
+  reloadVersion = 0,
 }: EditServiceProps) {
   const [record, setRecord] = useState<ServiceRecord | null>(null);
   const [values, setValues] = useState(emptyServiceValues);
   const [load, setLoad] = useState<Load>("loading");
+  const [loadedVersion, setLoadedVersion] = useState(reloadVersion);
   const [version, setVersion] = useState(0);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -87,6 +92,7 @@ export function EditServicePanel({
           setLoad("error");
           return;
         }
+        setLoadedVersion(reloadVersion);
         setRecord(result.data);
         const previous = baseline.current;
         setValues((current) =>
@@ -109,7 +115,7 @@ export function EditServicePanel({
         if (!controller.signal.aborted) setLoad("error");
       });
     return () => controller.abort();
-  }, [serviceId, version, onUnauthorized]);
+  }, [serviceId, version, reloadVersion, onUnauthorized]);
 
   function reload() {
     if (pending.current) return;
@@ -132,7 +138,8 @@ export function EditServicePanel({
       !canWrite ||
       pending.current ||
       uncertain ||
-      load !== "ready"
+      load !== "ready" ||
+      loadedVersion !== reloadVersion
     )
       return;
     const checked = buildServicePatch(values, record);
@@ -150,6 +157,7 @@ export function EditServicePanel({
       return;
     }
     pending.current = true;
+    onBusyChange?.(true);
     setSubmitting(true);
     setNotice(null);
     const controller = new AbortController();
@@ -208,6 +216,7 @@ export function EditServicePanel({
     } catch {
       if (!controller.signal.aborted) markUncertain();
     } finally {
+      onBusyChange?.(false);
       if (!controller.signal.aborted) {
         pending.current = false;
         setSubmitting(false);
@@ -215,7 +224,12 @@ export function EditServicePanel({
     }
   }
   if (load === "unauthorized") return null;
-  const disabled = !canWrite || submitting || uncertain || load !== "ready";
+  const disabled =
+    !canWrite ||
+    submitting ||
+    uncertain ||
+    load !== "ready" ||
+    loadedVersion !== reloadVersion;
   return (
     <section
       ref={panel}

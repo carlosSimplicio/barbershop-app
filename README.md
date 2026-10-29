@@ -60,10 +60,16 @@ permanecem nas redes internas do Compose.
 
 ## Catálogo de serviços
 
-O proprietário pode consultar serviços ativos e inativos em `/painel/servicos`,
-com preço em BRL, duração e paginação. A leitura permanece disponível após
-expiração do trial. A API já permite cadastro, edição e mudança de estado;
-os respectivos controles do painel serão entregues nas etapas seguintes.
+O proprietário administra o catálogo em `/painel/servicos`: cadastro, listagem
+paginada, consulta, edição, ativação e desativação. Preços usam BRL com centavos
+exatos; duração aceita minutos inteiros e usa 30 quando vazia. Serviços inativos
+permanecem no catálogo, e o painel continua consultável após expiração do trial.
+
+Alterações pedem confirmação quando necessário e respostas incertas exigem
+conferência antes de novo envio. Os passos de validação estão em
+[docs/operations.md](docs/operations.md#validação-local-do-catálogo-de-serviços).
+Associação a profissionais, agenda e contagem de agendamentos afetados permanecem
+nos próximos escopos documentados.
 
 ## Onboarding local
 

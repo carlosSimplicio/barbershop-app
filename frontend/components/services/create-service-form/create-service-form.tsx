@@ -24,11 +24,13 @@ export function CreateServiceForm({
   onCreated,
   onReadOnly,
   onUnauthorized,
+  onBusyChange,
 }: {
   canWrite: boolean;
   onCreated: () => void;
   onReadOnly: () => void;
   onUnauthorized: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [values, setValues] = useState<ServiceValues>(emptyServiceValues);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -56,6 +58,7 @@ export function CreateServiceForm({
       return;
     }
     pending.current = true;
+    onBusyChange?.(true);
     setSubmitting(true);
     setFeedback(null);
     const request = new AbortController();
@@ -112,6 +115,7 @@ export function CreateServiceForm({
     } catch {
       if (!request.signal.aborted) uncertain();
     } finally {
+      onBusyChange?.(false);
       if (!request.signal.aborted) {
         pending.current = false;
         setSubmitting(false);

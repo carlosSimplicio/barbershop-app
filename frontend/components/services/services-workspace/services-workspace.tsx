@@ -3,10 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import { Button, Feedback, RecordList } from "@/components/ui";
-import { listServices, type ServicePage } from "@/lib/services/services-api";
+import {
+  listServices,
+  type ServiceRecord,
+  type ServicePage,
+} from "@/lib/services/services-api";
 import { formatServicePrice } from "@/lib/services/money";
 import { CreateServiceForm } from "../create-service-form/create-service-form";
 import { EditServicePanel } from "../edit-service-panel/edit-service-panel";
+import { ServiceStatusAction } from "../service-status-action/service-status-action";
 import styles from "./services-workspace.module.css";
 
 type View =
@@ -25,6 +30,12 @@ export function ServicesWorkspace() {
 }
 
 function ServicesRequest() {
+  const [pendingOperations, setPendingOperations] = useState(0);
+  const writing = pendingOperations > 0;
+  const trackOperation = useCallback((busy: boolean) => {
+    setPendingOperations((count) => count + (busy ? 1 : -1));
+  }, []);
+  const [editorVersion, setEditorVersion] = useState(0);
   const editOrigin = useRef<HTMLButtonElement | null>(null);
   const catalog = useRef<HTMLElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -62,11 +73,32 @@ function ServicesRequest() {
     setVersion((value) => value + 1);
   }
 
+  function acceptRecord(record: ServiceRecord) {
+    setView((current) =>
+      current.status === "success"
+        ? {
+            ...current,
+            page: {
+              ...current.page,
+              items: current.page.items.map((item) =>
+                item.id === record.id ? record : item,
+              ),
+            },
+          }
+        : current,
+    );
+  }
   if (view.status === "unauthorized") return null;
   return (
     <div className={styles.workspace}>
       <CreateServiceForm
-        canWrite={!readOnly && view.status === "success" && view.page.can_write}
+        canWrite={
+          !writing &&
+          !readOnly &&
+          view.status === "success" &&
+          view.page.can_write
+        }
+        onBusyChange={trackOperation}
         onCreated={() => {
           setOffset(0);
           refresh();
@@ -85,9 +117,14 @@ function ServicesRequest() {
           key={selected}
           serviceId={selected}
           canWrite={
-            !readOnly && view.status === "success" && view.page.can_write
+            !writing &&
+            !readOnly &&
+            view.status === "success" &&
+            view.page.can_write
           }
-          onSaved={() => refresh()}
+          reloadVersion={editorVersion}
+          onBusyChange={trackOperation}
+          onSaved={acceptRecord}
           onClose={() => {
             setSelected(null);
             if (editOrigin.current?.isConnected) editOrigin.current.focus();
@@ -105,7 +142,10 @@ function ServicesRequest() {
         className={styles.panel}
       >
         <h2>Serviços cadastrados</h2>
-        <Button onClick={refresh} disabled={view.status === "loading"}>
+        <Button
+          onClick={refresh}
+          disabled={writing || view.status === "loading"}
+        >
           Atualizar lista
         </Button>
         {view.status === "loading" ? (
@@ -141,7 +181,7 @@ function ServicesRequest() {
                   <div className={styles.recordActions}>
                     <span>{item.active ? "Ativo" : "Inativo"}</span>
                     <Button
-                      disabled={readOnly || !view.page.can_write}
+                      disabled={writing || readOnly || !view.page.can_write}
                       onClick={(event) => {
                         editOrigin.current = event.currentTarget;
                         setSelected(item.id);
@@ -150,6 +190,18 @@ function ServicesRequest() {
                     >
                       Editar
                     </Button>
+                    <ServiceStatusAction
+                      record={item}
+                      canWrite={!writing && !readOnly && view.page.can_write}
+                      onBusyChange={trackOperation}
+                      onChanged={(record) => {
+                        acceptRecord(record);
+                        if (selected === record.id)
+                          setEditorVersion((value) => value + 1);
+                      }}
+                      onReadOnly={() => setReadOnly(true)}
+                      onUnauthorized={onUnauthorized}
+                    />
                   </div>
                 </div>
               )}
@@ -159,14 +211,14 @@ function ServicesRequest() {
               className={styles.pagination}
             >
               <Button
-                disabled={offset === 0}
+                disabled={writing || offset === 0}
                 onClick={() => changePage(Math.max(0, offset - 20))}
               >
                 Anterior
               </Button>
               <span>Página {Math.floor(offset / 20) + 1}</span>
               <Button
-                disabled={!view.page.has_more || offset > 2147483627}
+                disabled={writing || !view.page.has_more || offset > 2147483627}
                 onClick={() => changePage(offset + 20)}
               >
                 Próxima

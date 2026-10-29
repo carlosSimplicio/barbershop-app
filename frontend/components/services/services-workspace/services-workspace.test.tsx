@@ -10,6 +10,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import {
   getService,
+  setServiceStatus,
   createService,
   listServices,
   type ServiceRecord,
@@ -21,6 +22,7 @@ vi.mock("@/components/session/auth-provider/auth-provider", () => ({
 }));
 vi.mock("@/lib/services/services-api", () => ({
   getService: vi.fn(),
+  setServiceStatus: vi.fn(),
   updateService: vi.fn(),
   listServices: vi.fn(),
   createService: vi.fn(),
@@ -63,6 +65,8 @@ function page(items = records, offset = 0, has_more = false, can_write = true) {
   };
 }
 beforeEach(() => {
+  vi.mocked(getService).mockReset();
+  vi.mocked(setServiceStatus).mockReset();
   vi.mocked(listServices).mockReset();
   vi.mocked(createService).mockReset();
   owner();
@@ -177,4 +181,120 @@ test("retorna foco à ação do registro ao cancelar edição", async () => {
     within(editor).getByRole("button", { name: "Cancelar edição" }),
   );
   expect(action).toHaveFocus();
+});
+
+test("estado confirmado atualiza lista e editor aberto, bloqueando ações enquanto aguarda", async () => {
+  let finish!: (value: Awaited<ReturnType<typeof setServiceStatus>>) => void;
+  vi.mocked(listServices).mockResolvedValue(page());
+  vi.mocked(getService)
+    .mockResolvedValueOnce({ state: "success", status: 200, data: records[0] })
+    .mockResolvedValueOnce({
+      state: "success",
+      status: 200,
+      data: { ...records[0], active: false },
+    });
+  vi.mocked(setServiceStatus).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<ServicesWorkspace />);
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
+  const editor = await screen.findByRole("region", { name: "Editar serviço" });
+  await within(editor).findByLabelText("Preço");
+  fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmar desativação" }),
+  );
+  expect(
+    within(editor).getByRole("button", { name: "Salvar alterações" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Cadastrar serviço" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Atualizar lista" }),
+  ).toBeDisabled();
+  await act(async () =>
+    finish({
+      state: "success",
+      status: 200,
+      data: { ...records[0], active: false },
+    }),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Ativar Corte" }),
+  ).toBeVisible();
+  await waitFor(() =>
+    expect(within(editor).getByText("Estado: Inativo")).toBeVisible(),
+  );
+});
+
+test("mantém bloqueio global até concluir todas as consultas de estado pendentes", async () => {
+  vi.mocked(listServices).mockResolvedValue(page());
+  vi.mocked(setServiceStatus).mockRejectedValue(new Error("network"));
+  let first!: (value: Awaited<ReturnType<typeof getService>>) => void;
+  let second!: (value: Awaited<ReturnType<typeof getService>>) => void;
+  vi.mocked(getService)
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          first = resolve;
+        }),
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          second = resolve;
+        }),
+    );
+  render(<ServicesWorkspace />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Desativar Corte" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmar desativação" }),
+  );
+  await screen.findByText("Não foi possível confirmar a alteração de estado");
+  fireEvent.click(screen.getByRole("button", { name: "Ativar Barba" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar ativação" }));
+  await waitFor(() =>
+    expect(
+      screen.getAllByText("Não foi possível confirmar a alteração de estado"),
+    ).toHaveLength(2),
+  );
+  const consult = screen.getAllByRole("button", {
+    name: "Consultar estado do serviço",
+  });
+  fireEvent.click(consult[0]);
+  fireEvent.click(consult[1]);
+  expect(getService).toHaveBeenCalledTimes(2);
+  await act(async () =>
+    first({
+      state: "success",
+      status: 200,
+      data: { ...records[0], active: false },
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Cadastrar serviço" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Atualizar lista" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+  await act(async () =>
+    second({
+      state: "success",
+      status: 200,
+      data: { ...records[1], active: true },
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Cadastrar serviço" }),
+    ).toBeEnabled(),
+  );
+  expect(screen.getByRole("button", { name: "Atualizar lista" })).toBeEnabled();
 });

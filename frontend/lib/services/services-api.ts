@@ -54,3 +54,20 @@ export function updateService(
     signal,
   });
 }
+
+export function setServiceStatus(
+  id: string,
+  active: boolean,
+  signal?: AbortSignal,
+) {
+  return apiFetch<ServiceRecord>(
+    `/api/v1/services/${encodeURIComponent(id)}/status`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active }),
+      csrf: true,
+      signal,
+    },
+  );
+}
