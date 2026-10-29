@@ -104,8 +104,9 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - Cada profissional possui jornada semanal recorrente própria, editável por ele ou pelo proprietário.
 - Permita vários períodos no mesmo dia, como `08:00–12:00` e `13:00–18:00`, sem sobreposição entre períodos.
 - Proprietário e profissional podem criar bloqueios pontuais para compromissos, folgas ou outras indisponibilidades.
-- Cada serviço possui um preço padrão obrigatório, armazenado com precisão monetária; aceite zero para serviços gratuitos e rejeite valores negativos.
-- O proprietário define a duração do serviço; quando vazia, use 30 minutos.
+- Serviço exige nome não vazio após remover espaços nas extremidades, com até 120 pontos de código Unicode; nomes repetidos são permitidos no mesmo estabelecimento.
+- Cada serviço possui preço obrigatório de R$ 0,00 a R$ 99.999,99, com até duas casas decimais, representado em centavos inteiros; aceite zero para serviços gratuitos.
+- O proprietário define a duração do serviço entre 1 e 1.440 minutos inteiros, sem exigir múltiplos de 15; quando vazia, use 30 minutos. As validações puras de nome, preço e duração já estão implementadas; os fluxos de API e painel do catálogo são entregues nas etapas seguintes.
 - Ofereça inícios em intervalos de 15 minutos. Não existe buffer antes ou depois do serviço no MVP.
 - A duração integral do serviço define o fim do atendimento; o slot define apenas possíveis horários de início.
 - Calcule disponibilidade com jornada, duração, agendamentos e bloqueios.
