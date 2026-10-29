@@ -114,7 +114,7 @@ type CreateServiceRequest struct {
 	// DurationMinutes Omitted or null uses 30 minutes; any whole minute is accepted.
 	DurationMinutes *int64 `json:"duration_minutes,omitempty"`
 
-	// Name Trimmed before validation; at most 120 Unicode code points. Duplicate names are allowed.
+	// Name Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character. Duplicate names are allowed.
 	Name       string `json:"name"`
 	PriceCents int64  `json:"price_cents"`
 }
@@ -321,7 +321,7 @@ type UpdateServiceRequest struct {
 	// DurationMinutes Omitted preserves duration; null resets to 30 minutes.
 	DurationMinutes *int64 `json:"duration_minutes,omitempty"`
 
-	// Name Trimmed before validation; nonempty and at most 120 Unicode code points.
+	// Name Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character.
 	Name       *string `json:"name,omitempty"`
 	PriceCents *int64  `json:"price_cents,omitempty"`
 }

@@ -14,6 +14,7 @@ func TestServiceNameUsesTrimmedUnicodeLength(t *testing.T) {
 		{"  Corte  ", "Corte", false}, {"   ", "", true},
 		{" " + strings.Repeat("á", 120) + " ", strings.Repeat("á", 120), false},
 		{strings.Repeat("á", 121), "", true}, {string([]byte{0xff}), "", true},
+		{"Corte\x00", "", true}, {"\x00Corte", "", true}, {"Cor\x00te", "", true},
 	} {
 		got, err := normalizeName(tc.input)
 		if tc.invalid {

@@ -14,7 +14,7 @@ var (
 
 func normalizeName(value string) (string, error) {
 	value = strings.TrimSpace(value)
-	if !utf8.ValidString(value) || value == "" || utf8.RuneCountInString(value) > 120 {
+	if !utf8.ValidString(value) || value == "" || strings.ContainsRune(value, 0) || utf8.RuneCountInString(value) > 120 {
 		return "", ErrInvalidName
 	}
 	return value, nil

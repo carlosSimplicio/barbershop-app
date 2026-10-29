@@ -697,7 +697,7 @@ components:
       properties:
         name:
           type: string
-          description: Trimmed before validation; nonempty and at most 120 Unicode code points.
+          description: Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character.
         price_cents:
           type: integer
           format: int64
@@ -733,7 +733,7 @@ components:
       properties:
         name:
           type: string
-          description: Trimmed before validation; at most 120 Unicode code points. Duplicate names are allowed.
+          description: Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character. Duplicate names are allowed.
         price_cents:
           type: integer
           format: int64

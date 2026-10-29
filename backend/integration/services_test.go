@@ -28,6 +28,38 @@ func createCatalogService(t *testing.T, app *testApplication, name string, price
 	decodeJSON(t, r, &record)
 	return record
 }
+
+func TestServiceNamesRejectNULBeforePersistence(t *testing.T) {
+	app := newTestApplication(t)
+	registerAndConfirmOwner(t, app, defaultOwnerRegistration())
+	invalid := map[string]any{"name": "Corte\x00", "price_cents": 200}
+	response := app.request(t, "POST", "/api/v1/services", invalid)
+	assertStatus(t, response, 400)
+	var failure struct {
+		Code   string `json:"code"`
+		Fields []struct {
+			Field string `json:"field"`
+			Code  string `json:"code"`
+		} `json:"fields"`
+	}
+	decodeJSON(t, response, &failure)
+	if failure.Code != "validation_failed" || len(failure.Fields) != 1 || failure.Fields[0].Field != "name" || failure.Fields[0].Code != "invalid_name" {
+		t.Fatalf("invalid name error=%+v", failure)
+	}
+	record := createCatalogService(t, app, "Corte", 100)
+	path := "/api/v1/services/" + record.ID
+	assertStatus(t, app.request(t, "PATCH", path, invalid), 400)
+	response = app.request(t, "GET", path, nil)
+	assertStatus(t, response, 200)
+	var got serviceRecord
+	decodeJSON(t, response, &got)
+	if got != record {
+		t.Fatalf("invalid name changed service: got=%+v want=%+v", got, record)
+	}
+	if page := getCatalogPage(t, app, ""); len(page.Items) != 1 {
+		t.Fatalf("invalid name created a service: %+v", page)
+	}
+}
 func expireServiceTrial(t *testing.T) {
 	t.Helper()
 	_, err := integrationPool.Exec(context.Background(), `UPDATE establishment_trials SET starts_at=$1,ends_at=$2`, time.Now().Add(-15*24*time.Hour), time.Now().Add(-24*time.Hour))

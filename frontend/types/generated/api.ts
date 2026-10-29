@@ -346,7 +346,7 @@ export interface components {
             active: boolean;
         };
         UpdateServiceRequest: {
-            /** @description Trimmed before validation; nonempty and at most 120 Unicode code points. */
+            /** @description Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character. */
             name?: string;
             /** Format: int64 */
             price_cents?: number;
@@ -364,7 +364,7 @@ export interface components {
             can_write: boolean;
         };
         CreateServiceRequest: {
-            /** @description Trimmed before validation; at most 120 Unicode code points. Duplicate names are allowed. */
+            /** @description Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character. Duplicate names are allowed. */
             name: string;
             /** Format: int64 */
             price_cents: number;

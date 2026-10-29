@@ -330,7 +330,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Cadastrar serviço no painel com preço decimal convertido exatamente em centavos, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
 - [x] Consultar e editar serviço no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento e reconciliação que preserva o rascunho e sincroniza o registro persistido na lista.
 - [x] Ativar e desativar serviço no painel com confirmação, coordenação dos envios e consulta após resultado ambíguo, atualizando lista e editor aberto.
-- [x] Validar nome obrigatório normalizado com até 120 pontos de código e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
+- [x] Validar nome obrigatório normalizado com até 120 pontos de código, sem caractere NUL, e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
 - [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.
 - [x] Preservar registro, identidade e dados do serviço após desativação, sem endpoint de exclusão física.
