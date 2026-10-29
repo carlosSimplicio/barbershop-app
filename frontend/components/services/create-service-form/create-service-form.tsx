@@ -12,7 +12,7 @@ import {
   type ServiceValues,
 } from "@/lib/services/service-form-model";
 import { ServiceFields } from "../service-fields/service-fields";
-import styles from "./create-service-form.module.css";
+import styles from "../service-form.module.css";
 
 type FeedbackState = {
   title: string;

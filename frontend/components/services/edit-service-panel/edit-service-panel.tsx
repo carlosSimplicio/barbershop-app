@@ -17,6 +17,7 @@ import {
   type FieldErrors,
 } from "@/lib/services/service-form-model";
 import { ServiceFields } from "../service-fields/service-fields";
+import formStyles from "../service-form.module.css";
 import styles from "./edit-service-panel.module.css";
 
 export type EditServiceProps = {
@@ -234,7 +235,7 @@ export function EditServicePanel({
       ref={panel}
       tabIndex={-1}
       aria-label="Editar serviço"
-      className={styles.panel}
+      className={formStyles.panel}
     >
       <h2>Editar serviço</h2>
       {load === "loading" ? <p role="status">Carregando serviço…</p> : null}
@@ -254,7 +255,12 @@ export function EditServicePanel({
         </Feedback>
       ) : null}
       {record && load !== "missing" ? (
-        <form ref={form} onSubmit={submit} noValidate className={styles.form}>
+        <form
+          ref={form}
+          onSubmit={submit}
+          noValidate
+          className={`${formStyles.form} ${styles.form}`}
+        >
           <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
           <ServiceFields
             values={values}
