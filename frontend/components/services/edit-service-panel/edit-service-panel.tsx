@@ -22,7 +22,7 @@ import styles from "./edit-service-panel.module.css";
 export type EditServiceProps = {
   serviceId: string;
   canWrite: boolean;
-  onSaved: (record: ServiceRecord) => void;
+  onRecordConfirmed: (record: ServiceRecord) => void;
   onClose: () => void;
   onReadOnly: () => void;
   onUnauthorized: () => void;
@@ -39,7 +39,7 @@ type Notice = {
 export function EditServicePanel({
   serviceId,
   canWrite,
-  onSaved,
+  onRecordConfirmed,
   onClose,
   onReadOnly,
   onUnauthorized,
@@ -94,6 +94,7 @@ export function EditServicePanel({
         }
         setLoadedVersion(reloadVersion);
         setRecord(result.data);
+        onRecordConfirmed(result.data);
         const previous = baseline.current;
         setValues((current) =>
           previous
@@ -115,7 +116,7 @@ export function EditServicePanel({
         if (!controller.signal.aborted) setLoad("error");
       });
     return () => controller.abort();
-  }, [serviceId, version, reloadVersion, onUnauthorized]);
+  }, [serviceId, version, reloadVersion, onUnauthorized, onRecordConfirmed]);
 
   function reload() {
     if (pending.current) return;
@@ -186,7 +187,7 @@ export function EditServicePanel({
           title: "Serviço atualizado",
           message: "As alterações foram salvas no catálogo.",
         });
-        onSaved(result.data);
+        onRecordConfirmed(result.data);
         return;
       }
       if (result.state === "error" && result.error.code === "read_only") {

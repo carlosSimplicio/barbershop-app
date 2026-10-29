@@ -30,7 +30,7 @@ function props() {
   return {
     serviceId: record.id,
     canWrite: true,
-    onSaved: vi.fn(),
+    onRecordConfirmed: vi.fn(),
     onClose: vi.fn(),
     onReadOnly: vi.fn(),
     onUnauthorized: vi.fn(),
@@ -57,7 +57,10 @@ test("carrega inativo e envia apenas preço alterado", async () => {
     { price_cents: 101 },
     expect.any(AbortSignal),
   );
-  expect(callbacks.onSaved).toHaveBeenCalledOnce();
+  expect(callbacks.onRecordConfirmed).toHaveBeenLastCalledWith({
+    ...record,
+    price_cents: 101,
+  });
 });
 test("limpar duração envia null e cancelar não grava", async () => {
   vi.mocked(updateService).mockResolvedValue(

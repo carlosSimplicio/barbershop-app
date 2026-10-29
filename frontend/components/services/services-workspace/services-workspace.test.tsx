@@ -13,6 +13,7 @@ import {
   setServiceStatus,
   createService,
   listServices,
+  updateService,
   type ServiceRecord,
 } from "@/lib/services/services-api";
 import { ServicesWorkspace } from "./services-workspace";
@@ -100,6 +101,7 @@ beforeEach(() => {
   vi.mocked(setServiceStatus).mockReset();
   vi.mocked(listServices).mockReset();
   vi.mocked(createService).mockReset();
+  vi.mocked(updateService).mockReset();
   owner();
 });
 test("exibe preço exato, duração, estado e paginação", async () => {
@@ -212,6 +214,40 @@ test("retorna foco à ação do registro ao cancelar edição", async () => {
     within(editor).getByRole("button", { name: "Cancelar edição" }),
   );
   expect(action).toHaveFocus();
+});
+
+test("reconciliação após edição ambígua atualiza também o catálogo", async () => {
+  const confirmed = { ...records[0], price_cents: 200 };
+  vi.mocked(listServices).mockResolvedValue(page());
+  vi.mocked(getService)
+    .mockResolvedValueOnce({ state: "success", status: 200, data: records[0] })
+    .mockResolvedValueOnce({ state: "success", status: 200, data: confirmed });
+  vi.mocked(updateService).mockRejectedValue(new Error("response lost"));
+  render(<ServicesWorkspace />);
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
+  const editor = screen.getByRole("region", { name: "Editar serviço" });
+  await within(editor).findByLabelText("Preço");
+  fireEvent.change(within(editor).getByLabelText("Preço"), {
+    target: { value: "2,00" },
+  });
+  fireEvent.click(
+    within(editor).getByRole("button", { name: "Salvar alterações" }),
+  );
+  await screen.findByText("Não foi possível confirmar a alteração");
+  fireEvent.click(
+    within(editor).getByRole("button", { name: "Recarregar serviço" }),
+  );
+  await waitFor(() =>
+    expect(
+      within(editor).getByRole("button", { name: "Salvar alterações" }),
+    ).toBeEnabled(),
+  );
+  expect(within(editor).getByLabelText("Preço")).toHaveValue("2,00");
+  expect(
+    screen.getByRole("list", { name: "Serviços cadastrados" }),
+  ).toHaveTextContent(/R\$\s2,00/);
+  expect(updateService).toHaveBeenCalledOnce();
+  expect(getService).toHaveBeenCalledTimes(2);
 });
 
 test("estado confirmado atualiza lista e editor aberto, bloqueando ações enquanto aguarda", async () => {

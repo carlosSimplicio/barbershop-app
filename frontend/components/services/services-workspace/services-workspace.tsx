@@ -73,7 +73,7 @@ function ServicesRequest() {
     setVersion((value) => value + 1);
   }
 
-  function acceptRecord(record: ServiceRecord) {
+  const acceptRecord = useCallback((record: ServiceRecord) => {
     setView((current) =>
       current.status === "success"
         ? {
@@ -87,7 +87,7 @@ function ServicesRequest() {
           }
         : current,
     );
-  }
+  }, []);
   if (view.status === "unauthorized") return null;
   return (
     <div className={styles.workspace}>
@@ -124,7 +124,7 @@ function ServicesRequest() {
           }
           reloadVersion={editorVersion}
           onBusyChange={trackOperation}
-          onSaved={acceptRecord}
+          onRecordConfirmed={acceptRecord}
           onClose={() => {
             setSelected(null);
             if (editOrigin.current?.isConnected) editOrigin.current.focus();
