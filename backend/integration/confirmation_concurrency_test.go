@@ -50,14 +50,19 @@ func TestConfirmationVerificationWaitsForOwnerBeforeLockingToken(t *testing.T) {
 
 func waitForBlockedDatabaseQuery(t *testing.T, ctx context.Context, name string) {
 	t.Helper()
+	waitForBlockedDatabaseQueryCount(t, ctx, name, 1)
+}
+
+func waitForBlockedDatabaseQueryCount(t *testing.T, ctx context.Context, name string, expected int) {
+	t.Helper()
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		var blocked bool
-		if err := integrationPool.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE query LIKE '%' || $1 || '%' AND wait_event_type='Lock')", name).Scan(&blocked); err != nil {
+		var blocked int
+		if err := integrationPool.QueryRow(ctx, "SELECT count(*) FROM pg_stat_activity WHERE query LIKE '%' || $1 || '%' AND wait_event_type='Lock'", name).Scan(&blocked); err != nil {
 			t.Fatal(err)
 		}
-		if blocked {
+		if blocked >= expected {
 			return
 		}
 		select {

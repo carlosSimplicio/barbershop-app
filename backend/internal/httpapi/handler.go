@@ -128,3 +128,7 @@ func (handler *Handler) PatchProfessional(httpContext *gin.Context, professional
 func (handler *Handler) PostProfessionalDeactivation(httpContext *gin.Context, professionalID uuid.UUID) {
 	handler.professionals.PostProfessionalDeactivation(httpContext, professionalID)
 }
+
+func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionals.PostProfessionalReactivation(httpContext, professionalID)
+}

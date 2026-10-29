@@ -22,6 +22,7 @@ import (
 )
 
 type Registry interface {
+	Reactivate(context.Context, auth.Principal, string, string) (Professional, error)
 	Deactivate(context.Context, auth.Principal, string) (Professional, error)
 	UpdateName(context.Context, auth.Principal, string, string) (Professional, error)
 	Get(context.Context, auth.Principal, string) (Professional, error)
@@ -224,6 +225,10 @@ func (handler *Handler) PatchProfessional(httpContext *gin.Context, professional
 
 func writeMutationError(httpContext *gin.Context, err error) {
 	switch {
+	case errors.Is(err, ErrAlreadyActive):
+		writeError(httpContext, http.StatusConflict, "professional_already_active", "O profissional já está ativo. A senha não foi alterada.")
+	case errors.Is(err, security.ErrInvalidPassword):
+		writeFieldError(httpContext, http.StatusBadRequest, "temporary_password", "invalid_password", auth.PasswordRequirementsMessage())
 	case errors.Is(err, ErrForbidden):
 		writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode alterar este profissional.")
 	case errors.Is(err, ErrNotFound):
@@ -249,6 +254,32 @@ func (handler *Handler) PostProfessionalDeactivation(httpContext *gin.Context, p
 		return
 	}
 	professional, err := handler.registry.Deactivate(httpContext.Request.Context(), principal, professionalID.String())
+	if err != nil {
+		writeMutationError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	var request struct {
+		TemporaryPassword *string `json:"temporary_password"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 8192))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	if request.TemporaryPassword == nil {
+		writeMutationError(httpContext, security.ErrInvalidPassword)
+		return
+	}
+	professional, err := handler.registry.Reactivate(httpContext.Request.Context(), principal, professionalID.String(), *request.TemporaryPassword)
 	if err != nil {
 		writeMutationError(httpContext, err)
 		return

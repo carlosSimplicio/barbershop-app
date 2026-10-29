@@ -192,6 +192,44 @@ func (q *Queries) LockProfessionalUser(ctx context.Context, arg LockProfessional
 	return id, err
 }
 
+const reactivateProfessionalUser = `-- name: ReactivateProfessionalUser :exec
+UPDATE users
+SET active = true, password_change_required = true,
+    credential_version = credential_version + 1, updated_at = $3
+WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = false
+`
+
+type ReactivateProfessionalUserParams struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ReactivateProfessionalUser(ctx context.Context, arg ReactivateProfessionalUserParams) error {
+	_, err := q.db.Exec(ctx, reactivateProfessionalUser, arg.ID, arg.EstablishmentID, arg.UpdatedAt)
+	return err
+}
+
+const replaceProfessionalCredential = `-- name: ReplaceProfessionalCredential :execrows
+UPDATE user_credentials
+SET password_hash = $2, updated_at = $3
+WHERE user_id = $1
+`
+
+type ReplaceProfessionalCredentialParams struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	PasswordHash string             `json:"password_hash"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ReplaceProfessionalCredential(ctx context.Context, arg ReplaceProfessionalCredentialParams) (int64, error) {
+	result, err := q.db.Exec(ctx, replaceProfessionalCredential, arg.UserID, arg.PasswordHash, arg.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateProfessionalName = `-- name: UpdateProfessionalName :one
 WITH professional_user AS MATERIALIZED (
     SELECT u.id, u.establishment_id, u.email, u.active

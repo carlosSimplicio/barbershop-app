@@ -171,7 +171,7 @@ O proprietário pode atualizar esses limites e os dados opcionais do perfil por 
 ## Serviços e profissionais inativos
 
 - Quando houver histórico, desative profissionais e serviços em vez de excluí-los.
-- A API permite ao proprietário com acesso gravável desativar profissionais do próprio estabelecimento. A transição preserva perfil, e-mail e hash, incrementa a versão da credencial e revoga imediatamente todas as sessões em uma transação, impedindo novos logins. Repetir a desativação de um inativo retorna seu registro sem novos efeitos. A interface de desativação permanece pendente.
+- A API permite ao proprietário com acesso gravável desativar profissionais do próprio estabelecimento. A transição preserva perfil, e-mail e hash, incrementa a versão da credencial e revoga imediatamente todas as sessões em uma transação, impedindo novos logins. Repetir a desativação de um inativo retorna seu registro sem novos efeitos. A interface de desativação permanece pendente. A API de reativação recebe senha temporária válida, inclusive igual ao valor anterior, mas gera novo hash com salt próprio, incrementa versão e revoga sessões anteriores atomicamente. A reativação exige nova troca pelo profissional após login restrito; tentar reativar ativo retorna conflito sem alterar credencial ou sessões. As interfaces de reativação permanecem pendentes.
 - Itens inativos não aparecem em novos agendamentos públicos, mas permanecem em consultas históricas.
 - Ao remover uma associação entre profissional e serviço, impeça somente novos agendamentos para esse par e preserve agendamentos existentes.
 - Preserve referências e snapshots necessários para interpretar agenda e financeiro antigos.

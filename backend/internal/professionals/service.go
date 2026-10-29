@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	ErrAlreadyActive    = errors.New("professional already active")
 	ErrNotFound         = errors.New("professional not found")
 	ErrForbidden        = errors.New("professional operation forbidden")
 	ErrInvalidName      = errors.New("invalid professional name")
@@ -53,6 +54,7 @@ type Creation struct {
 }
 
 type Store interface {
+	Reactivate(context.Context, string, string, string, time.Time) (Professional, error)
 	Deactivate(context.Context, string, string, time.Time) (Professional, error)
 	UpdateName(context.Context, string, string, string, time.Time) (Professional, error)
 	Get(context.Context, string, string) (Professional, error)
@@ -168,4 +170,21 @@ func (service *Service) Deactivate(ctx context.Context, principal auth.Principal
 		return Professional{}, err
 	}
 	return service.store.Deactivate(ctx, principal.EstablishmentID, professionalID, service.now().UTC())
+}
+
+func (service *Service) Reactivate(ctx context.Context, principal auth.Principal, professionalID, temporaryPassword string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	if err := security.ValidatePassword(temporaryPassword); err != nil {
+		return Professional{}, err
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Professional{}, err
+	}
+	passwordHash, err := service.passwords.Hash(temporaryPassword)
+	if err != nil {
+		return Professional{}, err
+	}
+	return service.store.Reactivate(ctx, principal.EstablishmentID, professionalID, passwordHash, service.now().UTC())
 }

@@ -136,3 +136,7 @@ func (*createStoreStub) UpdateName(context.Context, string, string, string, time
 func (*createStoreStub) Deactivate(context.Context, string, string, time.Time) (Professional, error) {
 	return Professional{}, nil
 }
+
+func (*createStoreStub) Reactivate(context.Context, string, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
+}

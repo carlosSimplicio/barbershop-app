@@ -52,3 +52,14 @@ FOR UPDATE OF u;
 UPDATE users
 SET active = false, credential_version = credential_version + 1, updated_at = $3
 WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = true;
+
+-- name: ReactivateProfessionalUser :exec
+UPDATE users
+SET active = true, password_change_required = true,
+    credential_version = credential_version + 1, updated_at = $3
+WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = false;
+
+-- name: ReplaceProfessionalCredential :execrows
+UPDATE user_credentials
+SET password_hash = $2, updated_at = $3
+WHERE user_id = $1;

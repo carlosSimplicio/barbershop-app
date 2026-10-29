@@ -249,7 +249,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [x] Permitir que o proprietário cadastre profissional pela API com senha temporária e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
-- [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
+- [x] Reativar profissional pela API com senha temporária válida inclusive igual ao valor anterior, novo hash, troca obrigatória e invalidação de sessões/tokens anteriores.
+- [ ] Oferecer reativação com senha temporária pelo painel.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
 - [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
 - [x] Estender a limitação progressiva à solicitação de recuperação por IP e e-mail normalizado.
@@ -314,7 +315,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Consultar individualmente pela API profissionais ativos e inativos do próprio estabelecimento, inclusive sem trial ativo.
 - [x] Editar somente o nome de profissional ativo ou inativo pela API, com validação compartilhada, CSRF parametrizado e direito de escrita, preservando identidade e credenciais.
 - [x] Desativar profissionais pela API atomicamente com revogação de acesso e repetição segura.
-- [ ] Reativar profissionais pela API.
+- [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
 - [ ] Consultar individualmente, editar, ativar e desativar profissionais pelo painel.
 - [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.

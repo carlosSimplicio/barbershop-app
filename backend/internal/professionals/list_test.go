@@ -120,3 +120,7 @@ func (*listStoreStub) UpdateName(context.Context, string, string, string, time.T
 func (*listStoreStub) Deactivate(context.Context, string, string, time.Time) (Professional, error) {
 	return Professional{}, nil
 }
+
+func (*listStoreStub) Reactivate(context.Context, string, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
+}

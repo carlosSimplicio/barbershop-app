@@ -281,6 +281,12 @@ type PublicEstablishmentProfileResponse struct {
 	SocialLinks  *[]EstablishmentSocialLink `json:"social_links,omitempty"`
 }
 
+// ReactivateProfessionalRequest defines model for ReactivateProfessionalRequest.
+type ReactivateProfessionalRequest struct {
+	// TemporaryPassword Sem espaços ou caracteres proibidos, sem normalização. Pode repetir o valor anterior; não é retornada nem recuperável.
+	TemporaryPassword string `json:"temporary_password"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
@@ -412,6 +418,9 @@ type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
 // PatchProfessionalJSONRequestBody defines body for PatchProfessional for application/json ContentType.
 type PatchProfessionalJSONRequestBody = UpdateProfessionalRequest
 
+// PostProfessionalReactivationJSONRequestBody defines body for PostProfessionalReactivation for application/json ContentType.
+type PostProfessionalReactivationJSONRequestBody = ReactivateProfessionalRequest
+
 // PostServicesJSONRequestBody defines body for PostServices for application/json ContentType.
 type PostServicesJSONRequestBody = CreateServiceRequest
 
@@ -480,6 +489,9 @@ type ServerInterface interface {
 	// PostProfessionalDeactivation Desativa profissional e revoga seu acesso atomicamente
 	// (POST /professionals/{professional_id}/deactivation)
 	PostProfessionalDeactivation(c *gin.Context, professionalId openapi_types.UUID)
+	// PostProfessionalReactivation Reativa profissional com senha temporária e troca obrigatória
+	// (POST /professionals/{professional_id}/reactivation)
+	PostProfessionalReactivation(c *gin.Context, professionalId openapi_types.UUID)
 	// GetPublicEstablishment Consulta o perfil informativo de um estabelecimento publicável
 	// (GET /public/establishments/{slug})
 	GetPublicEstablishment(c *gin.Context, slug string)
@@ -817,6 +829,31 @@ func (siw *ServerInterfaceWrapper) PostProfessionalDeactivation(c *gin.Context) 
 	siw.Handler.PostProfessionalDeactivation(c, professionalId)
 }
 
+// PostProfessionalReactivation operation middleware
+func (siw *ServerInterfaceWrapper) PostProfessionalReactivation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostProfessionalReactivation(c, professionalId)
+}
+
 // GetPublicEstablishment operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicEstablishment(c *gin.Context) {
 
@@ -1061,6 +1098,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/professionals/:professional_id", wrapper.GetProfessional)
 	router.PATCH(options.BaseURL+"/professionals/:professional_id", wrapper.PatchProfessional)
 	router.POST(options.BaseURL+"/professionals/:professional_id/deactivation", wrapper.PostProfessionalDeactivation)
+	router.POST(options.BaseURL+"/professionals/:professional_id/reactivation", wrapper.PostProfessionalReactivation)
 	router.GET(options.BaseURL+"/services", wrapper.GetServices)
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)
