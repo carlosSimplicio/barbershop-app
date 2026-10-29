@@ -183,7 +183,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Consultar perfil, logo e links das configurações no mesmo snapshot SQL, com regressão HTTP sob atualização concorrente.
 - [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a alteração de fuso já usa esse bloqueio; a integração atômica com futuros agendamentos, bloqueios e lançamentos permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
-- [ ] Criar persistência para serviços.
+- [x] Criar persistência para serviços, com preço exato em centavos, tenant e queries de catálogo; integração com API e painel consta no escopo 10.
 - [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries de criação e listagem, integradas aos fluxos entregues da API.
 - [ ] Criar persistência para associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
