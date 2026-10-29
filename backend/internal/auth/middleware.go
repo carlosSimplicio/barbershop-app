@@ -18,13 +18,13 @@ import (
 
 const principalContextKey = "auth_principal"
 
-type publicPathRule struct {
+type pathRule struct {
 	method  string
 	path    string
 	pattern *regexp.Regexp
 }
 
-var publicPaths = []publicPathRule{
+var publicPaths = []pathRule{
 	{path: "/api/v1/health"},
 	{path: "/api/v1/auth/register"},
 	{path: "/api/v1/auth/email-confirmation"},
@@ -43,15 +43,14 @@ var publicPaths = []publicPathRule{
 	},
 }
 
-var serviceResourceCSRFPath = regexp.MustCompile(`^/api/v1/services/[^/]+(?:/status)?$`)
-
-var csrfProtectedPaths = map[string]struct{}{
-	"/api/v1/services":               {},
-	"/api/v1/auth/logout":            {},
-	"/api/v1/auth/password/change":   {},
-	"/api/v1/establishment/settings": {},
-	"/api/v1/establishment/logo":     {},
-	"/api/v1/professionals":          {},
+var csrfProtectedPaths = []pathRule{
+	{path: "/api/v1/services"},
+	{pattern: regexp.MustCompile(`^/api/v1/services/[^/]+(?:/status)?$`)},
+	{path: "/api/v1/auth/logout"},
+	{path: "/api/v1/auth/password/change"},
+	{path: "/api/v1/establishment/settings"},
+	{path: "/api/v1/establishment/logo"},
+	{path: "/api/v1/professionals"},
 }
 
 type AccessTokenVerifier interface {
@@ -165,11 +164,7 @@ func requiresCSRF(method, path string) bool {
 	if !isUnsafeMethod(method) {
 		return false
 	}
-	if serviceResourceCSRFPath.MatchString(path) {
-		return true
-	}
-	_, protected := csrfProtectedPaths[path]
-	return protected
+	return matchesPathRules(csrfProtectedPaths, method, path)
 }
 
 func requiresAccessToken(method, path string) bool {
@@ -180,7 +175,11 @@ func requiresAccessToken(method, path string) bool {
 }
 
 func isPublicPath(method, path string) bool {
-	for _, rule := range publicPaths {
+	return matchesPathRules(publicPaths, method, path)
+}
+
+func matchesPathRules(rules []pathRule, method, path string) bool {
+	for _, rule := range rules {
 		if rule.method != "" && rule.method != method {
 			continue
 		}
