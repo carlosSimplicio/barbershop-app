@@ -163,37 +163,41 @@ func newTestApplication(t *testing.T) *testApplication {
 	messages := &messageCapture{}
 	confirmationMailer := emailconfirmation.NewConfirmationMailer(messages, trustedOrigin)
 	sessions := auth.NewSessionService(authStore, passwords, accessTokens, csrfTokens)
-	writeEntitlements := entitlements.NewService(entitlements.NewPostgresStore(integrationPool))
+	entitlementsStore := entitlements.NewPostgresStore(integrationPool)
+	writeEntitlements := entitlements.NewService(entitlementsStore)
 	logoStorage, err := storage.NewLocalStore(t.TempDir())
 	if err != nil {
 		t.Fatalf("create test logo storage: %v", err)
 	}
 	t.Cleanup(func() { _ = logoStorage.Close() })
+	confirmationService := emailconfirmation.NewConfirmationService(onboardingStore, confirmationMailer)
+	confirmationRequests := emailconfirmation.NewEmailConfirmationRequestService(onboardingStore, confirmationService, rateLimitStore, rateKeys)
+	registrations := registration.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys)
+	login := auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash)
+	confirmationVerification := emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions)
+	establishmentStore := establishment.NewPostgresStore(integrationPool)
+	establishments := establishment.NewService(establishmentStore)
+	establishmentSettingsStore := establishment.NewPostgresSettingsStore(integrationPool)
+	establishmentSettings := establishment.NewSettingsService(establishmentSettingsStore, writeEntitlements)
+	establishmentLogoUploadStore := establishment.NewPostgresLogoUploadStore(integrationPool)
+	establishmentLogoUploads := establishment.NewLogoUploadService(establishmentLogoUploadStore, logoStorage, writeEntitlements)
 	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(integrationPool)
+	publicEstablishmentResolver := establishment.NewPublicEstablishmentResolver(publicEstablishmentStore)
+	publicEstablishments := establishment.NewPublicEstablishmentService(publicEstablishmentResolver, publicEstablishmentStore)
+	publicLogoStore := establishment.NewPostgresPublicLogoStore(integrationPool)
+	publicEstablishmentLogos := establishment.NewPublicLogoService(publicEstablishmentResolver, publicLogoStore, logoStorage)
 	catalogStore := catalog.NewPostgresStore(integrationPool)
 	catalogService := catalog.NewService(catalogStore, writeEntitlements)
+	professionalStore := professionals.NewPostgresStore(integrationPool)
+	professionalService := professionals.NewService(professionalStore, passwords, writeEntitlements)
+	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, messages, trustedOrigin)
+	passwordRecoveryVerification := passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
-		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
-			passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, messages, trustedOrigin),
-			passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)),
-		onboarding.NewHandler(
-			registration.NewRegistrationService(onboardingStore, rateLimitStore, passwords, confirmationMailer, rateKeys),
-			emailconfirmation.NewEmailConfirmationRequestService(onboardingStore, emailconfirmation.NewConfirmationService(onboardingStore, confirmationMailer), rateLimitStore, rateKeys),
-			emailconfirmation.NewEmailConfirmationVerificationService(onboardingStore, sessions),
-		),
-		establishment.NewHandler(
-			establishment.NewService(establishment.NewPostgresStore(integrationPool)),
-			establishment.NewSettingsService(establishment.NewPostgresSettingsStore(integrationPool), writeEntitlements),
-			establishment.NewLogoUploadService(establishment.NewPostgresLogoUploadStore(integrationPool), logoStorage, writeEntitlements),
-			establishment.NewPublicEstablishmentService(
-				establishment.NewPublicEstablishmentResolver(publicEstablishmentStore), publicEstablishmentStore),
-			establishment.NewPublicLogoService(
-				establishment.NewPublicEstablishmentResolver(publicEstablishmentStore),
-				establishment.NewPostgresPublicLogoStore(integrationPool), logoStorage),
-		),
-		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
-			writeEntitlements)),
+		auth.NewHandler(login, sessions, passwordRecovery, passwordRecoveryVerification),
+		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
+		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads, publicEstablishments, publicEstablishmentLogos),
+		professionals.NewHandler(professionalService),
 		catalog.NewHandler(catalogService),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
