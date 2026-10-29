@@ -67,7 +67,7 @@
 - Use transações quando uma operação precisar preservar invariantes entre múltiplas escritas.
 - Use constraints do PostgreSQL para integridade estrutural, como nulabilidade, referências, unicidade, cardinalidade, isolamento relacional e ordenação temporal genérica. Regras de negócio que podem evoluir — formatos e palavras reservadas, limites de produto, papéis permitidos, durações exatas e transições ou imutabilidade de domínio — pertencem ao backend Go e aos seus testes, não a `CHECK` constraints ou triggers.
 
-- A migration `00009_services.sql` persiste `services` com UUID, tenant, nome, centavos inteiros, duração em minutos, estado e datas. A FK preserva o estabelecimento e a chave composta permite referências futuras no mesmo tenant. Nome não é único, limites de produto pertencem ao Go e serviços não iniciam o marcador de dados operacionais.
+- A migration `00009_services.sql` persiste `services` com UUID, tenant, nome, centavos inteiros, duração em minutos, estado e datas. A FK preserva o estabelecimento e a chave composta permite referências futuras no mesmo tenant. Nome não é único, limites de produto pertencem ao Go e serviços não iniciam o marcador de dados operacionais. As queries do catálogo enumeram suas colunas em `SELECT` e `RETURNING`, preservando a projeção esperada pelos adaptadores quando o schema evoluir.
 
 ## Catálogo de serviços
 

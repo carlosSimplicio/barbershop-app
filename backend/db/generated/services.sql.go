@@ -46,7 +46,9 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 }
 
 const getService = `-- name: GetService :one
-SELECT id, establishment_id, name, price_cents, duration_minutes, active, created_at, updated_at FROM services WHERE id = $1 AND establishment_id = $2
+SELECT id, establishment_id, name, price_cents, duration_minutes, active, created_at, updated_at
+FROM services
+WHERE id = $1 AND establishment_id = $2
 `
 
 type GetServiceParams struct {
@@ -71,7 +73,8 @@ func (q *Queries) GetService(ctx context.Context, arg GetServiceParams) (Service
 }
 
 const listServices = `-- name: ListServices :many
-SELECT id, establishment_id, name, price_cents, duration_minutes, active, created_at, updated_at FROM services
+SELECT id, establishment_id, name, price_cents, duration_minutes, active, created_at, updated_at
+FROM services
 WHERE establishment_id = $1
 ORDER BY created_at DESC, id DESC
 LIMIT $2 OFFSET $3
