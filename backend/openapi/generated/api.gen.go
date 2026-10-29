@@ -477,6 +477,9 @@ type ServerInterface interface {
 	// PatchProfessional Altera somente o nome do profissional ativo ou inativo
 	// (PATCH /professionals/{professional_id})
 	PatchProfessional(c *gin.Context, professionalId openapi_types.UUID)
+	// PostProfessionalDeactivation Desativa profissional e revoga seu acesso atomicamente
+	// (POST /professionals/{professional_id}/deactivation)
+	PostProfessionalDeactivation(c *gin.Context, professionalId openapi_types.UUID)
 	// GetPublicEstablishment Consulta o perfil informativo de um estabelecimento publicável
 	// (GET /public/establishments/{slug})
 	GetPublicEstablishment(c *gin.Context, slug string)
@@ -789,6 +792,31 @@ func (siw *ServerInterfaceWrapper) PatchProfessional(c *gin.Context) {
 	siw.Handler.PatchProfessional(c, professionalId)
 }
 
+// PostProfessionalDeactivation operation middleware
+func (siw *ServerInterfaceWrapper) PostProfessionalDeactivation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostProfessionalDeactivation(c, professionalId)
+}
+
 // GetPublicEstablishment operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicEstablishment(c *gin.Context) {
 
@@ -1032,6 +1060,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/professionals/:professional_id", wrapper.GetProfessional)
 	router.PATCH(options.BaseURL+"/professionals/:professional_id", wrapper.PatchProfessional)
+	router.POST(options.BaseURL+"/professionals/:professional_id/deactivation", wrapper.PostProfessionalDeactivation)
 	router.GET(options.BaseURL+"/services", wrapper.GetServices)
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)

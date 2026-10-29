@@ -22,6 +22,7 @@ import (
 )
 
 type Registry interface {
+	Deactivate(context.Context, auth.Principal, string) (Professional, error)
 	UpdateName(context.Context, auth.Principal, string, string) (Professional, error)
 	Get(context.Context, auth.Principal, string) (Professional, error)
 	Create(context.Context, auth.Principal, CreateInput) (Professional, error)
@@ -235,4 +236,22 @@ func writeMutationError(httpContext *gin.Context, err error) {
 		slog.Error("professional_mutation_failed", "request_id", httpserver.RequestID(httpContext))
 		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível alterar o profissional.")
 	}
+}
+
+func (handler *Handler) PostProfessionalDeactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	// This transition has no input body; reject even an empty JSON object.
+	if _, err := io.ReadAll(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 0)); err != nil {
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Esta operação não recebe corpo.")
+		return
+	}
+	professional, err := handler.registry.Deactivate(httpContext.Request.Context(), principal, professionalID.String())
+	if err != nil {
+		writeMutationError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
 }

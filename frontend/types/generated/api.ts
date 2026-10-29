@@ -284,6 +284,28 @@ export interface paths {
         patch: operations["patchProfessional"];
         trace?: never;
     };
+    "/professionals/{professional_id}/deactivation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desativa profissional e revoga seu acesso atomicamente
+         * @description Sem corpo. Repetir para inativo retorna o registro sem novo incremento de versão ou alteração de credencial. Preserva o perfil e suas referências.
+         */
+        post: operations["postProfessionalDeactivation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/services": {
         parameters: {
             query?: never;
@@ -1199,6 +1221,41 @@ export interface operations {
         };
         responses: {
             /** @description Registro persistido; identidade, e-mail, estado e credenciais preservados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Profissional inexistente ou de outro estabelecimento */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    postProfessionalDeactivation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Profissional inativo, com acesso revogado */
             200: {
                 headers: {
                     [name: string]: unknown;

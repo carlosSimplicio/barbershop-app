@@ -53,6 +53,7 @@ type Creation struct {
 }
 
 type Store interface {
+	Deactivate(context.Context, string, string, time.Time) (Professional, error)
 	UpdateName(context.Context, string, string, string, time.Time) (Professional, error)
 	Get(context.Context, string, string) (Professional, error)
 	Create(context.Context, Creation) (string, error)
@@ -157,4 +158,14 @@ func (service *Service) UpdateName(ctx context.Context, principal auth.Principal
 		return Professional{}, err
 	}
 	return service.store.UpdateName(ctx, principal.EstablishmentID, professionalID, strings.TrimSpace(name), service.now().UTC())
+}
+
+func (service *Service) Deactivate(ctx context.Context, principal auth.Principal, professionalID string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Professional{}, err
+	}
+	return service.store.Deactivate(ctx, principal.EstablishmentID, professionalID, service.now().UTC())
 }

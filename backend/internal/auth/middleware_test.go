@@ -268,3 +268,13 @@ func TestServiceStatusPathRequiresCSRF(t *testing.T) {
 		t.Fatal("read requires CSRF")
 	}
 }
+
+func TestProfessionalDeactivationRequiresCSRF(t *testing.T) {
+	path := "/api/v1/professionals/00000000-0000-4000-8000-000000000001/deactivation"
+	if !requiresCSRF(http.MethodPost, path) {
+		t.Fatal("professional deactivation bypasses CSRF")
+	}
+	if requiresCSRF(http.MethodGet, path) {
+		t.Fatal("read unexpectedly requires CSRF")
+	}
+}

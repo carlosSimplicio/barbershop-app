@@ -51,7 +51,7 @@ var csrfProtectedPaths = []pathRule{
 	{path: "/api/v1/establishment/settings"},
 	{path: "/api/v1/establishment/logo"},
 	{path: "/api/v1/professionals"},
-	{pattern: regexp.MustCompile(`^/api/v1/professionals/[^/]+$`)},
+	{pattern: regexp.MustCompile(`^/api/v1/professionals/[^/]+(?:/deactivation)?$`)},
 }
 
 type AccessTokenVerifier interface {

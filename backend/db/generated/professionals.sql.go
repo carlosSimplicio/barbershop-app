@@ -77,6 +77,23 @@ func (q *Queries) CreateProfessionalUser(ctx context.Context, arg CreateProfessi
 	return id, err
 }
 
+const deactivateProfessionalUser = `-- name: DeactivateProfessionalUser :exec
+UPDATE users
+SET active = false, credential_version = credential_version + 1, updated_at = $3
+WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = true
+`
+
+type DeactivateProfessionalUserParams struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) DeactivateProfessionalUser(ctx context.Context, arg DeactivateProfessionalUserParams) error {
+	_, err := q.db.Exec(ctx, deactivateProfessionalUser, arg.ID, arg.EstablishmentID, arg.UpdatedAt)
+	return err
+}
+
 const getProfessional = `-- name: GetProfessional :one
 SELECT p.user_id, p.name, u.email, u.active
 FROM professionals AS p
@@ -154,6 +171,25 @@ func (q *Queries) ListProfessionalsByEstablishment(ctx context.Context, arg List
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockProfessionalUser = `-- name: LockProfessionalUser :one
+SELECT u.id
+FROM users AS u
+WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
+FOR UPDATE OF u
+`
+
+type LockProfessionalUserParams struct {
+	ID              pgtype.UUID `json:"id"`
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) LockProfessionalUser(ctx context.Context, arg LockProfessionalUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, lockProfessionalUser, arg.ID, arg.EstablishmentID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const updateProfessionalName = `-- name: UpdateProfessionalName :one

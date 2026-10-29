@@ -557,6 +557,44 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}/deactivation:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: postProfessionalDeactivation
+      summary: Desativa profissional e revoga seu acesso atomicamente
+      description: Sem corpo. Repetir para inativo retorna o registro sem novo incremento de versão ou alteração de credencial. Preserva o perfil e suas referências.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Profissional inativo, com acesso revogado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Profissional inexistente ou de outro estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /services:
     get:
       operationId: getServices

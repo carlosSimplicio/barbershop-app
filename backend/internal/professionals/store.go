@@ -127,3 +127,48 @@ func (store *PostgresStore) UpdateName(ctx context.Context, establishmentID, pro
 	}
 	return Professional{ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active}, nil
 }
+
+func (store *PostgresStore) Deactivate(ctx context.Context, establishmentID, professionalID string, at time.Time) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	tenantID := pgtype.UUID{Bytes: tenant, Valid: true}
+	userID := pgtype.UUID{Bytes: professionalUUID, Valid: true}
+	transaction, err := store.pool.Begin(ctx)
+	if err != nil {
+		return Professional{}, fmt.Errorf("begin deactivation: %w", err)
+	}
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := db.New(transaction)
+	// Serialize state transitions with login and password changes before reading
+	// the profile or writing credentials and session revocations.
+	if _, err = queries.LockProfessionalUser(ctx, db.LockProfessionalUserParams{ID: userID, EstablishmentID: tenantID}); errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	} else if err != nil {
+		return Professional{}, fmt.Errorf("lock professional: %w", err)
+	}
+	row, err := queries.GetProfessional(ctx, db.GetProfessionalParams{UserID: userID, EstablishmentID: tenantID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("read professional for deactivation: %w", err)
+	}
+	if row.Active {
+		if err = queries.DeactivateProfessionalUser(ctx, db.DeactivateProfessionalUserParams{ID: userID, EstablishmentID: tenantID, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}}); err != nil {
+			return Professional{}, fmt.Errorf("deactivate professional: %w", err)
+		}
+		if err = queries.RevokeAllUserSessions(ctx, db.RevokeAllUserSessionsParams{UserID: userID, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}}); err != nil {
+			return Professional{}, fmt.Errorf("revoke professional sessions: %w", err)
+		}
+	}
+	if err = transaction.Commit(ctx); err != nil {
+		return Professional{}, fmt.Errorf("commit deactivation: %w", err)
+	}
+	return Professional{ID: professionalID, Name: row.Name, Email: row.Email, Active: false}, nil
+}

@@ -41,3 +41,14 @@ SET name = $3, updated_at = $4
 FROM professional_user AS u
 WHERE p.user_id = u.id AND p.establishment_id = u.establishment_id
 RETURNING p.user_id, p.name, u.email, u.active;
+
+-- name: LockProfessionalUser :one
+SELECT u.id
+FROM users AS u
+WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
+FOR UPDATE OF u;
+
+-- name: DeactivateProfessionalUser :exec
+UPDATE users
+SET active = false, credential_version = credential_version + 1, updated_at = $3
+WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = true;
