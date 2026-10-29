@@ -4,6 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import { Button, Feedback, RecordList } from "@/components/ui";
 import {
+  DEFAULT_PAGE_SIZE,
+  FIRST_PAGE_OFFSET,
+  MAX_PAGE_OFFSET,
+} from "@/lib/api/pagination";
+import {
   listOfferings,
   type Offering,
   type CatalogPage,
@@ -13,9 +18,6 @@ import { CreateOfferingForm } from "../create-offering-form/create-offering-form
 import { EditOfferingPanel } from "../edit-offering-panel/edit-offering-panel";
 import { OfferingStatusAction } from "../offering-status-action/offering-status-action";
 import styles from "./catalog-workspace.module.css";
-
-const PAGE_SIZE = 20;
-const MAX_OFFSET = 2_147_483_647;
 
 type View =
   | { status: "loading" | "error" | "unauthorized" }
@@ -43,7 +45,7 @@ function CatalogRequest() {
   const catalog = useRef<HTMLElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(FIRST_PAGE_OFFSET);
   const [version, setVersion] = useState(0);
   const [view, setView] = useState<View>({ status: "loading" });
   const onUnauthorized = useCallback(
@@ -53,7 +55,11 @@ function CatalogRequest() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void listOfferings({ limit: PAGE_SIZE, offset, signal: controller.signal })
+    void listOfferings({
+      limit: DEFAULT_PAGE_SIZE,
+      offset,
+      signal: controller.signal,
+    })
       .then((result) => {
         if (controller.signal.aborted) return;
         if (result.status === 401) setView({ status: "unauthorized" });
@@ -103,7 +109,7 @@ function CatalogRequest() {
         }
         onBusyChange={trackOperation}
         onCreated={() => {
-          setOffset(0);
+          setOffset(FIRST_PAGE_OFFSET);
           refresh();
         }}
         onReadOnly={() => setReadOnly(true)}
@@ -214,19 +220,23 @@ function CatalogRequest() {
               className={styles.pagination}
             >
               <Button
-                disabled={writing || offset === 0}
-                onClick={() => changePage(Math.max(0, offset - PAGE_SIZE))}
+                disabled={writing || offset === FIRST_PAGE_OFFSET}
+                onClick={() =>
+                  changePage(
+                    Math.max(FIRST_PAGE_OFFSET, offset - DEFAULT_PAGE_SIZE),
+                  )
+                }
               >
                 Anterior
               </Button>
-              <span>Página {Math.floor(offset / PAGE_SIZE) + 1}</span>
+              <span>Página {Math.floor(offset / DEFAULT_PAGE_SIZE) + 1}</span>
               <Button
                 disabled={
                   writing ||
                   !view.page.has_more ||
-                  offset > MAX_OFFSET - PAGE_SIZE
+                  offset > MAX_PAGE_OFFSET - DEFAULT_PAGE_SIZE
                 }
-                onClick={() => changePage(offset + PAGE_SIZE)}
+                onClick={() => changePage(offset + DEFAULT_PAGE_SIZE)}
               >
                 Próxima
               </Button>

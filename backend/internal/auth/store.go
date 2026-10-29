@@ -105,12 +105,12 @@ func (store *Store) ChangeTemporaryPassword(ctx context.Context, userID string, 
 	if err != nil {
 		return ErrInvalidSession
 	}
-	tx, err := store.pool.Begin(ctx)
+	transaction, err := store.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin password change transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	queries := store.queries.WithTx(tx)
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := store.queries.WithTx(transaction)
 	user, err := queries.GetAuthUserByIDForUpdate(ctx, parsedUserID)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (!user.Active || !user.PasswordChangeRequired || user.CredentialVersion != expectedCredentialVersion)) {
 		return ErrPasswordChangeDenied
@@ -134,7 +134,7 @@ func (store *Store) ChangeTemporaryPassword(ctx context.Context, userID string, 
 	if err != nil {
 		return fmt.Errorf("create post-password session: %w", err)
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := transaction.Commit(ctx); err != nil {
 		return fmt.Errorf("commit password change transaction: %w", err)
 	}
 	return nil

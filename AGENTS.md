@@ -40,8 +40,23 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 - Contrato: OpenAPI contract-first em `backend/openapi/openapi.yaml`, com `oapi-codegen` no backend e `openapi-typescript` no frontend.
 - Produção: Docker Compose em uma VPS, com Caddy como único ponto público de entrada.
 
+## Convenções de implementação
+
+Aplique estas convenções às próximas features e ao código alterado no escopo da tarefa. A adoção em código legado deve preservar os contratos existentes.
+
+- Use nomes que expressem intenção e distingam conceitos do domínio de camadas técnicas. Prefira `principal`, `input` e `offeringID` a abreviações ambíguas; abreviações convencionais como `ctx` e `err` continuam adequadas.
+- Use constantes com significado para limites e parâmetros repetidos; derive delas valores relacionados. No backend Go, expresse status HTTP com as constantes `http.Status...`.
+- Defina limites e padrões de negócio no respectivo domínio e reutilize-os nas validações e nos textos que apresentem esses valores. O backend permanece autoritativo; constantes do frontend espelham o contrato para conveniência. Valores numericamente iguais de regras distintas mantêm nomes e definições próprios.
+- Na raiz de composição, instancie stores e casos de uso em variáveis próprias antes de compor handlers, deixando as dependências explícitas.
+- Em módulos TypeScript escritos manualmente, declare tipos e interfaces após os imports e antes das funções.
+- Compartilhe validações puras entre operações que tenham o mesmo contrato de negócio. Preserve validadores próprios quando regras, normalização ou limites forem diferentes entre domínios.
+- Centralize mecanismos transversais já compartilhados, como extração da identidade autenticada e correspondência de rotas, mantendo regras e erros específicos no respectivo domínio.
+- Explique em comentários técnicos em inglês a intenção e o requisito protegido por decisões não evidentes, como uma decodificação em etapas; evite comentários que apenas repitam o código.
+- Ao definir campos opcionais, mutações e seus estados no frontend, siga os contratos de ausência, `null`, resultado incerto, sessão e coordenação de requisições descritos em `docs/architecture.md`.
+
 ## Código gerado e banco de dados
 
+- Enumere colunas em `SELECT` e `RETURNING`, preservando a projeção esperada quando o schema evoluir. `COUNT(*)` continua válido para contagem de registros.
 - Não edite manualmente arquivos gerados por `sqlc`, `oapi-codegen` ou `openapi-typescript`.
 - Após alterar SQL ou OpenAPI, regenere os artefatos afetados e verifique backend e frontend.
 - Toda mudança de schema exige uma migration Goose nova. Não reescreva migrations que possam ter sido aplicadas.

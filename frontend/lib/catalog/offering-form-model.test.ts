@@ -30,6 +30,12 @@ test("converte centavos sem arredondar e aplica duração vazia", () => {
       duration: "17",
     }).request?.duration_minutes,
   ).toBe(17);
+  for (const duration of ["1", "1440"]) {
+    expect(
+      validateOfferingValues({ name: "Corte", price: "0", duration }).request
+        ?.duration_minutes,
+    ).toBe(Number(duration));
+  }
 });
 test("recusa vazio, frações excedentes e limites sem arredondamento", () => {
   for (const price of ["", "-1", "0,001", "100000,00", "1e2", "1.234,56"]) {

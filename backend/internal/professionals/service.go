@@ -10,6 +10,7 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/platform/pagination"
 )
 
 var (
@@ -77,7 +78,7 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 	if principal.Role != "owner" {
 		return Professional{}, ErrForbidden
 	}
-	if !utf8.ValidString(input.Name) || strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > 120 {
+	if !utf8.ValidString(input.Name) || strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > MaxNameCodePoints {
 		return Professional{}, ErrInvalidName
 	}
 	if err := auth.ValidateEmail(input.Email); err != nil {
@@ -96,24 +97,24 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 
 	name := strings.TrimSpace(input.Name)
 	email := strings.TrimSpace(input.Email)
-	id, err := service.store.Create(ctx, Creation{
+	professionalID, err := service.store.Create(ctx, Creation{
 		EstablishmentID: principal.EstablishmentID, Name: name, Email: email,
 		NormalizedEmail: auth.NormalizeEmail(input.Email), PasswordHash: passwordHash, CreatedAt: service.now().UTC(),
 	})
 	if err != nil {
 		return Professional{}, err
 	}
-	return Professional{ID: id, Name: name, Email: email, Active: true}, nil
+	return Professional{ID: professionalID, Name: name, Email: email, Active: true}, nil
 }
 
 func (service *Service) List(ctx context.Context, principal auth.Principal, limit, offset int32) (ListResult, error) {
 	if principal.Role != "owner" {
 		return ListResult{}, ErrForbidden
 	}
-	if limit < 1 || limit > 100 {
+	if limit < pagination.MinLimit || limit > pagination.MaxLimit {
 		return ListResult{}, ErrInvalidLimit
 	}
-	if offset < 0 {
+	if offset < pagination.MinOffset {
 		return ListResult{}, ErrInvalidOffset
 	}
 	items, err := service.store.List(ctx, principal.EstablishmentID, limit+1, offset)

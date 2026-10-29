@@ -1,8 +1,11 @@
 package establishment
 
-import "regexp"
+import (
+	"fmt"
+	"regexp"
+)
 
-var publicSlugPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`)
+var publicSlugPattern = regexp.MustCompile(fmt.Sprintf(`^[a-z0-9](?:[a-z0-9-]{%d,%d}[a-z0-9])$`, MinPublicSlugLength-2, MaxPublicSlugLength-2))
 
 var reservedPublicSlugs = map[string]struct{}{
 	"admin": {}, "api": {}, "assets": {},

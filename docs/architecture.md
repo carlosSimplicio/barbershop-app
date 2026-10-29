@@ -17,6 +17,7 @@
 - Mantenha um wrapper pequeno sobre `fetch`; não adicione outro cliente HTTP sem necessidade demonstrada.
 - Código gerado não é editado manualmente. A automação deve detectar artefatos desatualizados.
 - Geração não substitui validação em runtime, autenticação, autorização ou regras de negócio.
+- Catálogo e profissionais compartilham os padrões de paginação declarados no OpenAPI: `limit` de 1 a 100, com padrão 20, e `offset` de 0 a 2.147.483.647, com padrão 0. O backend nomeia esses valores em `internal/platform/pagination`, usando `math.MaxInt32` para o teto de offset; handlers, validações e mensagens de limite reutilizam essas constantes. Os painéis reutilizam tamanho padrão e primeiro offset de `frontend/lib/api/pagination.ts`; o catálogo também usa o teto de offset desse módulo. Valores de outros contratos, como limites de agenda, permanecem no respectivo domínio.
 
 ### Erros
 
@@ -26,16 +27,26 @@
 - Use status HTTP coerentes e documente respostas no OpenAPI.
 - Não exponha stack traces, SQL, segredos, nomes internos ou infraestrutura; detalhes técnicos ficam nos logs correlacionados.
 
+### Campos opcionais e atualizações parciais
+
+- Defina no OpenAPI o significado de campo omitido, `null`, zero, `false` e texto vazio para cada entrada. Defaults e operações de limpeza devem ser explícitos no contrato.
+- Em um PATCH, preserve os campos omitidos e valide todos os campos recebidos antes de persistir a alteração. A atualização deve afetar somente os campos enviados, preservando alterações concorrentes em outros campos.
+- Na borda Go, escolha a representação conforme as distinções necessárias. Um ponteiro simples permite representar um valor presente, inclusive zero ou `false`, mas a decodificação JSON usual reúne ausência e `null` em `nil`. Quando o contrato distinguir esses estados, preserve também a informação de presença; `json.RawMessage` é uma opção, como no catálogo, sem ser obrigatório para todo input.
+- Mantenha normalização e validação do valor no domínio e a leitura da presença e do tipo JSON na borda HTTP. Proteja nos testes os estados que tenham significados distintos para o contrato.
+
 ## Backend
 
 - Use Go, Gin, PostgreSQL, `pgx/v5`, `sqlc` e Goose.
 - Organize por Vertical Slice Architecture, agrupando cada capacidade ou caso de uso.
 - Quando um domínio reunir fluxos independentes com lógica própria, organize-os em subpacotes por fluxo, como `auth/password_recovery`, `onboarding/registration` e `onboarding/email_confirmation`. Mantenha contratos, handlers e adaptadores compartilhados no pacote raiz quando dependerem de tipos ou estado internos comuns.
 - Um slice pode conter handler, entrada/saída, validação, caso de uso e persistência necessários ao fluxo.
-- Cadastro e edição de estabelecimento compartilham as validações puras `establishment.IsNameValid` e `establishment.IsTimeZoneValid`; normalização e tradução para erros de cada fluxo permanecem nas suas bordas.
+- Na raiz de composição, crie stores e casos de uso em variáveis próprias antes de passá-los aos handlers. Essa composição explícita deve ser mantida também nos testes de integração.
+- Compartilhe validações puras entre cadastro, edição e outras operações quando as regras e a normalização forem as mesmas. Mantenha validadores próprios para contratos distintos, mesmo quando os campos tenham o mesmo nome.
+- Mantenha limites e padrões de negócio em constantes do domínio, reutilizadas por validações, defaults e mensagens. O frontend pode espelhar os valores em seu módulo de domínio para validação de conveniência e textos de ajuda, mantendo OpenAPI e testes sincronizados. A coincidência numérica entre regras de domínios diferentes não justifica uma constante global compartilhada.
+- Cadastro e edição de estabelecimento compartilham as validações puras `establishment.IsNameValid` e `establishment.IsTimeZoneValid`; normalização e tradução para erros de cada fluxo permanecem nas suas bordas. `internal/establishment/limits.go` centraliza os limites do perfil, dos links sociais e do slug; onboarding reutiliza os limites do estabelecimento. O espelho `frontend/lib/establishment/establishment-limits.ts` atende ao cadastro, às configurações, aos controles de links e às mensagens. O teto de campos de agenda continua associado à representação `int32`, sem reutilizar a política de paginação.
 - Evite grandes diretórios horizontais globais de handlers, services e repositories.
 - Mantenha regras testáveis sem Gin, `pgx`, rede ou banco reais. A verificação de recuperação de senha decide elegibilidade, expiração, uso único e diferença da nova senha no caso de uso `auth/password_recovery`; o store recebe um preparador de hash, executa-o após bloquear usuário e token nessa ordem e só então persiste consumo, credencial e revogações atomicamente. O adaptador não recebe a nova senha nem o gerenciador de criptografia.
-- Gin fica na borda HTTP; `pgx` e `sqlc`, na borda de persistência. Os handlers autenticados reutilizam `auth.RequirePrincipal` para obter a identidade já validada pelo middleware e emitir o mesmo `401` quando ela estiver ausente; papel, tenant e propriedade continuam sendo validados pelos casos de uso.
+- Gin fica na borda HTTP; `pgx` e `sqlc`, na borda de persistência. Nos adaptadores, nomes como `httpContext`, `transaction`, `establishmentUUID` e `offeringUUID` distinguem contexto HTTP, transação e identidade de cada recurso. Os handlers autenticados reutilizam `auth.RequirePrincipal` para obter a identidade já validada pelo middleware e emitir o mesmo `401` quando ela estiver ausente; papel, tenant e propriedade continuam sendo validados pelos casos de uso.
 - Compartilhe apenas abstrações de domínio estáveis ou necessidades transversais reais; evite utilitários genéricos.
 - Não adote CQRS formal, command/query bus, mediator ou event bus sem necessidade concreta.
 
@@ -51,6 +62,7 @@
 ## Banco de dados
 
 - Escreva SQL nos arquivos de entrada do `sqlc` e regenere o código Go após alterações.
+- Enumere as colunas de `SELECT` e `RETURNING`; a evolução da tabela deve exigir uma decisão explícita para ampliar a projeção. Agregações como `COUNT(*)` permanecem válidas.
 - Não introduza ORM ou outro driver PostgreSQL em paralelo.
 - A migration `00005_professionals.sql` cria `professionals` como perfil do usuário profissional. `user_id` é a identidade única; a chave estrangeira composta `(user_id, establishment_id)` impede associar o perfil a outro estabelecimento. As queries para inserir usuário, credencial e perfil e para listar por estabelecimento com paginação já existem; cadastro e listagem estão disponíveis pela API e pela página do painel.
 - A migration `00006_establishment_settings.sql` adiciona descrição, endereço, telefone de contato e limites opcionais ao estabelecimento, além de `establishment_social_links`, ordenada por `position` e pertencente ao tenant. Os limites são inteiros; `NULL` significa sem restrição. `GET` e `PATCH /establishment/settings` são exclusivos ao proprietário; o PATCH preserva campos omitidos, permite limpar campos opcionais com `null` e substitui links de forma transacional. Valide no backend os limites de texto, links, URLs e valores dos limites; não os replique como regras de negócio em `CHECK` constraints. A aplicação dos limites aos fluxos de agendamento e cancelamento permanece pendente.
@@ -67,13 +79,14 @@
 - Use transações quando uma operação precisar preservar invariantes entre múltiplas escritas.
 - Use constraints do PostgreSQL para integridade estrutural, como nulabilidade, referências, unicidade, cardinalidade, isolamento relacional e ordenação temporal genérica. Regras de negócio que podem evoluir — formatos e palavras reservadas, limites de produto, papéis permitidos, durações exatas e transições ou imutabilidade de domínio — pertencem ao backend Go e aos seus testes, não a `CHECK` constraints ou triggers.
 
-- A migration `00009_services.sql` persiste `services` com UUID, tenant, nome, centavos inteiros, duração em minutos, estado e datas. A FK preserva o estabelecimento e a chave composta permite referências futuras no mesmo tenant. Nome não é único, limites de produto pertencem ao Go e serviços não iniciam o marcador de dados operacionais. As queries do catálogo enumeram suas colunas em `SELECT` e `RETURNING`, preservando a projeção esperada pelos adaptadores quando o schema evoluir.
+- A migration `00009_services.sql` persiste `services` com UUID, tenant, nome, centavos inteiros, duração em minutos, estado e datas. A FK preserva o estabelecimento e a chave composta permite referências futuras no mesmo tenant. Nome não é único, limites de produto pertencem ao Go e serviços não iniciam o marcador de dados operacionais.
 
 ## Catálogo de serviços
 
 - Módulos do catálogo usam `catalog` e seu item de domínio usa `Offering`, distinguindo-o da camada de aplicação `Service`. Queries internas usam nomes como `CreateOffering`; a API `/services`, os schemas OpenAPI, a tabela `services` e migrations permanecem estáveis.
+- `internal/catalog/limits.go` concentra tamanho máximo do nome, faixa de preço em centavos e duração mínima, máxima e padrão. Validações e mensagens HTTP usam esses valores; `frontend/lib/catalog/offering-limits.ts` os espelha para o modelo do formulário, erros e textos de ajuda compartilhados entre cadastro e edição. Valores esperados permanecem explícitos no OpenAPI, nos testes e na documentação do produto.
 
-- O slice `internal/catalog` implementa cadastro, listagem, consulta individual, edição parcial e estado ativo. Na composição da API e da suíte de integração, store e caso de uso são instanciados em variáveis próprias antes de criar o handler. Todos os endpoints derivam o tenant do `Principal` e autorizam somente `owner`. Escritas exigem origem confiável, CSRF e `entitlements.Service.RequireWrite`; rotas públicas e protegidas por CSRF usam listas de regras com caminho exato ou regex e o mesmo matcher. A lista CSRF inclui os caminhos parametrizados com UUID e `/status`, aplicados somente a métodos de escrita.
+- O slice `internal/catalog` implementa cadastro, listagem, consulta individual, edição parcial e estado ativo. Todos os endpoints derivam o tenant do `Principal` e autorizam somente `owner`. Escritas exigem origem confiável, CSRF e `entitlements.Service.RequireWrite`. A lista CSRF inclui os caminhos parametrizados com UUID e `/status`, aplicados somente a métodos de escrita.
 - `POST /services` recebe nome, `price_cents` inteiro e duração opcional; omitida ou nula usa 30 minutos. Nome com caractere NUL é recusado pela validação compartilhada de cadastro e edição com `400` e `invalid_name`, antes de chegar ao PostgreSQL. Cria serviço ativo e retorna `201` com ID, nome normalizado, preço, duração e estado.
 - `GET /services` lista ativos e inativos por criação e ID decrescentes. `limit` padrão é 20, máximo 100; `offset` padrão é 0, máximo 2.147.483.647. O painel nomeia o tamanho da página e o limite de offset em constantes, derivando deles os avanços e recuos. A query busca `limit + 1` para `has_more`; resposta inclui `can_write`, calculado pelo componente central. Trial ausente ou expirado mantém leitura e retorna `false`; falha de infraestrutura permanece erro.
 - `GET /services/{service_id}` retorna ativo ou inativo no tenant da sessão. UUID inválido recebe `400`; ID ausente ou de outro tenant recebe o mesmo `404`. A leitura permanece disponível sem trial ativo.
@@ -143,6 +156,7 @@
 - Não use `localStorage` ou `sessionStorage` para tokens.
 - Cada access JWT identifica uma sessão persistida, que pode ser revogada imediatamente no backend.
 - Proteja mutações contra CSRF e valide origem e autorização.
+- Declare rotas públicas e rotas protegidas por CSRF em listas de regras com caminho exato ou regex, reutilizando o matcher `matchesPathRules`. Inclua os caminhos parametrizados reais nas regras e nos testes; a exigência de CSRF se aplica aos métodos de escrita.
 - JWT contém apenas claims necessárias: usuário, sessão, estabelecimento, papel, expiração e versão de credencial.
 - Reset de senha invalida credenciais previamente emitidas.
 - Desativar um usuário revoga suas sessões, incrementa sua versão de credencial e faz o backend rejeitar imediatamente access tokens ainda não expirados.
@@ -161,7 +175,7 @@
 - O rate limiting da solicitação de confirmação usa escopo próprio, IP e e-mail normalizado e é registrado antes de consultar a conta, preservando o mesmo tratamento de abuso independentemente de sua existência.
 - A proteção anti-enumeração atual uniformiza status e corpo, mas não garante tempo constante: o SMTP síncrono pode tornar solicitações elegíveis de confirmação ou recuperação mais lentas. Esse risco é aceito nesta etapa; não há outbox nem sessão restrita antes da confirmação, e eventual endurecimento de latência exige uma decisão arquitetural posterior.
 - `POST /auth/email-confirmation/verify` é público, exige `Origin` confiável e recebe o token somente no corpo. A transação bloqueia primeiro o owner e depois o token, na mesma ordem usada pelo reenvio, para evitar deadlock; então valida expiração e estado na aplicação, confirma o e-mail, consome o token e cria o único trial exato de 14 dias e uma sessão com prazo fixo de 15 dias. Replay, token substituído, expirado ou inexistente produzem o mesmo erro; access JWT e CSRF são preparados antes do commit, de modo que uma falha de emissão reverta a transação, e então são enviados nos cookies seguros.
-- Confirmações persistem apenas o hash SHA-256 do token aleatório de 256 bits, sua expiração e estados de consumo ou invalidação. Trials ficam separados de assinaturas e preservam proprietário, estabelecimento e a janela imutável `[confirmed_at, confirmed_at + 14×24h)` com unicidade para ambos.
+- Confirmações persistem apenas o hash SHA-256 do token aleatório de 256 bits, sua expiração e estados de consumo ou invalidação. Trials ficam separados de assinaturas e preservam proprietário, estabelecimento e a janela imutável `[confirmed_at, confirmed_at + 14×24h)` com unicidade para ambos. `onboarding.TrialDuration` deriva de `TrialDurationDays`; a home e o cadastro usam o espelho `frontend/lib/establishment/trial-policy.ts` para apresentar a duração.
 - Access JWTs usam Ed25519/EdDSA, incluem `kid` no header e são validados por um keyring de chaves públicas. A chave privada ativa e as chaves públicas anteriores são configuração exclusiva do backend.
 - As claims são limitadas a usuário, ID da sessão, estabelecimento, papel, expiração e versão da credencial. Em cada requisição autenticada, o backend consulta a sessão não revogada e não expirada junto ao usuário atual e compara usuário, estado, tenant, papel e versão. Tokens antigos sem ID da sessão são recusados.
 - A configuração inicial do Argon2id usa `m=19456 KiB`, `t=2`, `p=1`, salt aleatório de 16 bytes e saída de 32 bytes em formato PHC. Os limites configuráveis não podem ficar abaixo desse perfil.
@@ -186,6 +200,7 @@
 
 ### Proprietário e profissional
 
+- O limite de nome do profissional é definido em `internal/professionals/limits.go`, usado por validação e mensagens HTTP, e espelhado em `frontend/lib/professionals/professional-limits.ts` para o formulário. Ele permanece independente dos limites de nomes de estabelecimento e catálogo.
 - Proprietário confirma e-mail e recupera senha por link enviado por e-mail.
 - Tokens de confirmação e recuperação são aleatórios, expiram, são de uso único e não ficam armazenados de forma utilizável após vazamento do banco.
 - Respostas de recuperação não revelam se o e-mail existe; aplique rate limiting.
@@ -249,7 +264,7 @@
 - O componente de configurações envia ou substitui o logo por `PUT /establishment/logo` usando `apiFetch`, `FormData` e CSRF; não define `Content-Type`, deixando o navegador criar o boundary. A pré-visualização ocupa o lugar da imagem atual e usa uma URL `blob:` liberada ao limpar ou substituir a seleção, concluir o envio ou desmontar. O proprietário pode limpar um arquivo ainda não enviado, sem remover o logo associado. O cliente atualiza `GET /establishment/settings` após `204`. Em falha confirmada, limpa o arquivo e a pré-visualização mesmo quando não havia logo anterior, restaurando a imagem publicada quando existir; para `5xx`, respostas fora do contrato ou falha de rede, consulta as configurações antes de concluir o resultado. Se essa consulta também falhar, mantém arquivo e pré-visualização e oferece atualizar o estado, bloqueando outro envio até a reconciliação. O componente impede uploads e atualizações simultâneas e desabilita mutações quando `can_write` é falso. Não há ação de remoção do logo publicado. O endereço `/{slug}` aparece quando `is_publishable` é verdadeiro; se a consulta falhar após um `204`, pode ser derivado do upload confirmado quando nome e slug sem conflito já estão persistidos.
 - A interface de configurações separa o controle de sessão/consulta, o formulário de edição, o editor de redes sociais, o envio do logo e as transformações e validações puras do modelo do formulário.
 - As páginas do painel do proprietário usam `OwnerPanelPage` para compartilhar o cabeçalho, a introdução e o espaçamento do conteúdo. Cada página mantém seus próprios formulários e cartões dentro dessa composição.
-- Os formulários compartilham no frontend as validações de conveniência para e-mail e senha; mensagens de obrigatoriedade específicas de cada fluxo permanecem junto ao formulário. A validação do backend continua sendo a autoridade.
+- Os formulários compartilham no frontend as validações de conveniência para e-mail e senha; mensagens de obrigatoriedade específicas de cada fluxo permanecem junto ao formulário. A validação do backend continua sendo a autoridade. Os limites de senha ficam em `auth/security`, e o limite de bytes do e-mail, em `auth/email.go`; os validadores frontend espelham esses valores. As mensagens e dicas de senha derivam dos limites, inclusive nos fluxos de cadastro, profissionais, troca e recuperação.
 
 - Use Next.js App Router, React, TypeScript estrito e npm, com `package-lock.json` versionado.
 - Não adicione lockfiles de pnpm, Yarn ou Bun.
@@ -286,6 +301,15 @@
 - Não adicione TanStack Query, Redux, Zustand ou equivalente sem nova decisão.
 - O wrapper de `fetch` representa carregamento, sucesso, ausência e erro consistentemente.
 - Cancele requisições obsoletas e impeça respostas antigas de sobrescrever estado recente.
+- O cliente HTTP notifica o `AuthProvider` sobre sessão inválida; os componentes controlam a retirada imediata do conteúdo protegido e o estado local da operação. Tratar `401` localmente complementa a invalidação global, sem repetir logout ou consultar a sessão em cada componente. Falhas temporárias seguem os estados de erro do fluxo, preservando a distinção entre indisponibilidade e ausência de sessão.
+
+### Ciclo das mutações
+
+- Diferencie sucesso confirmado, recusa conhecida e resultado incerto. Falha de rede, `5xx` ou resposta de sucesso fora do contrato pode deixar desconhecido se a alteração foi persistida; essas respostas não comprovam ausência de efeito.
+- Após resultado incerto, preserve as entradas que o fluxo permita e ofereça uma forma de confirmar o estado persistido ou outro mecanismo de recuperação previsto no contrato antes de repetir uma operação que possa duplicar efeitos. O frontend não deve reenviar a mutação automaticamente sem uma garantia explícita de repetição segura.
+- Ao reconciliar, mantenha a distinção entre rascunho e registro confirmado. Preserve campos editados conforme o fluxo, atualize os demais com o estado consultado e propague somente dados persistidos às representações do mesmo recurso, como lista e editor.
+- Um sucesso confirmado permanece confirmado mesmo se a atualização posterior de uma lista ou consulta falhar. A nova tentativa deve recuperar a leitura pendente, preservando a confirmação da escrita.
+- Coordene operações que possam conflitar e bloqueie os controles correspondentes enquanto elas estiverem pendentes. Callbacks de atividade devem deixar claros o sinal enviado, o responsável pelo estado e o início e término da operação, inclusive em falhas. Quando várias operações contribuírem para o mesmo bloqueio, acompanhe todas elas; um contador é uma opção, sem obrigar o bloqueio de toda a página em qualquer requisição.
 
 ## Convenções
 

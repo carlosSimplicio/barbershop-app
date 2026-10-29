@@ -7,6 +7,8 @@ import (
 	"unicode/utf8"
 )
 
+const MaxEmailBytes = 254
+
 var ErrInvalidEmail = errors.New("invalid email")
 
 func NormalizeEmail(email string) string {
@@ -15,7 +17,7 @@ func NormalizeEmail(email string) string {
 
 func ValidateEmail(email string) error {
 	trimmed := strings.TrimSpace(email)
-	if trimmed == "" || !utf8.ValidString(trimmed) || len(trimmed) > 254 {
+	if trimmed == "" || !utf8.ValidString(trimmed) || len(trimmed) > MaxEmailBytes {
 		return ErrInvalidEmail
 	}
 

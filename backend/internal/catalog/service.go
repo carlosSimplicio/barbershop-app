@@ -6,6 +6,7 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
+	"barbershop-app/backend/internal/platform/pagination"
 )
 
 var ErrForbidden = errors.New("catalog operation forbidden")
@@ -80,10 +81,10 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, limi
 	if principal.Role != "owner" {
 		return ListResult{}, ErrForbidden
 	}
-	if limit < 1 || limit > 100 {
+	if limit < pagination.MinLimit || limit > pagination.MaxLimit {
 		return ListResult{}, ErrInvalidLimit
 	}
-	if offset < 0 || offset > 2147483647 {
+	if offset < pagination.MinOffset || offset > pagination.MaxOffset {
 		return ListResult{}, ErrInvalidOffset
 	}
 	writeErr := service.writes.RequireWrite(ctx, principal.EstablishmentID)

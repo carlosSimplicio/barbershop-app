@@ -50,7 +50,7 @@ FOR UPDATE OF u, c;
 -- name: CreateAuthSession :one
 INSERT INTO auth_sessions (id, user_id, expires_at)
 VALUES ($1, $2, $3)
-RETURNING *;
+RETURNING id, user_id, expires_at, revoked_at, created_at, updated_at;
 
 -- name: GetActiveSessionUser :one
 SELECT

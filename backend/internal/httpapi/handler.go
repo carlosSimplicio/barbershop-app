@@ -25,86 +25,94 @@ func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handl
 	return &Handler{catalog: catalogHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
 }
 
-func (handler *Handler) GetHealth(c *gin.Context) {
-	handler.health.GetHealth(c)
+func (handler *Handler) GetHealth(httpContext *gin.Context) {
+	handler.health.GetHealth(httpContext)
 }
 
-func (handler *Handler) PostAuthLogin(c *gin.Context) {
-	handler.authentication.PostAuthLogin(c)
+func (handler *Handler) PostAuthLogin(httpContext *gin.Context) {
+	handler.authentication.PostAuthLogin(httpContext)
 }
 
-func (handler *Handler) PostAuthPasswordRecovery(c *gin.Context) {
-	handler.authentication.PostAuthPasswordRecovery(c)
+func (handler *Handler) PostAuthPasswordRecovery(httpContext *gin.Context) {
+	handler.authentication.PostAuthPasswordRecovery(httpContext)
 }
 
-func (handler *Handler) PostAuthPasswordRecoveryVerify(c *gin.Context) {
-	handler.authentication.PostAuthPasswordRecoveryVerify(c)
+func (handler *Handler) PostAuthPasswordRecoveryVerify(httpContext *gin.Context) {
+	handler.authentication.PostAuthPasswordRecoveryVerify(httpContext)
 }
 
-func (handler *Handler) PostAuthRegister(c *gin.Context) {
-	handler.onboarding.PostAuthRegister(c)
+func (handler *Handler) PostAuthRegister(httpContext *gin.Context) {
+	handler.onboarding.PostAuthRegister(httpContext)
 }
 
-func (handler *Handler) PostAuthEmailConfirmation(c *gin.Context) {
-	handler.onboarding.PostAuthEmailConfirmation(c)
+func (handler *Handler) PostAuthEmailConfirmation(httpContext *gin.Context) {
+	handler.onboarding.PostAuthEmailConfirmation(httpContext)
 }
 
-func (handler *Handler) PostAuthEmailConfirmationVerify(c *gin.Context) {
-	handler.onboarding.PostAuthEmailConfirmationVerify(c)
+func (handler *Handler) PostAuthEmailConfirmationVerify(httpContext *gin.Context) {
+	handler.onboarding.PostAuthEmailConfirmationVerify(httpContext)
 }
 
-func (handler *Handler) PostAuthLogout(c *gin.Context) {
-	handler.authentication.PostAuthLogout(c)
+func (handler *Handler) PostAuthLogout(httpContext *gin.Context) {
+	handler.authentication.PostAuthLogout(httpContext)
 }
 
-func (handler *Handler) GetAuthMe(c *gin.Context) {
-	handler.authentication.GetAuthMe(c)
+func (handler *Handler) GetAuthMe(httpContext *gin.Context) {
+	handler.authentication.GetAuthMe(httpContext)
 }
 
-func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
-	handler.authentication.PostAuthPasswordChange(c)
+func (handler *Handler) PostAuthPasswordChange(httpContext *gin.Context) {
+	handler.authentication.PostAuthPasswordChange(httpContext)
 }
 
-func (handler *Handler) GetEstablishment(c *gin.Context) {
-	handler.establishment.GetEstablishment(c)
+func (handler *Handler) GetEstablishment(httpContext *gin.Context) {
+	handler.establishment.GetEstablishment(httpContext)
 }
 
-func (handler *Handler) GetEstablishmentSettings(c *gin.Context) {
-	handler.establishment.GetEstablishmentSettings(c)
+func (handler *Handler) GetEstablishmentSettings(httpContext *gin.Context) {
+	handler.establishment.GetEstablishmentSettings(httpContext)
 }
 
-func (handler *Handler) PatchEstablishmentSettings(c *gin.Context) {
-	handler.establishment.PatchEstablishmentSettings(c)
+func (handler *Handler) PatchEstablishmentSettings(httpContext *gin.Context) {
+	handler.establishment.PatchEstablishmentSettings(httpContext)
 }
 
-func (handler *Handler) PutEstablishmentLogo(c *gin.Context) {
-	handler.establishment.PutEstablishmentLogo(c)
+func (handler *Handler) PutEstablishmentLogo(httpContext *gin.Context) {
+	handler.establishment.PutEstablishmentLogo(httpContext)
 }
 
-func (handler *Handler) GetPublicEstablishmentLogo(c *gin.Context, slug string, _ api.GetPublicEstablishmentLogoParams) {
-	handler.establishment.GetPublicEstablishmentLogo(c, slug)
+func (handler *Handler) GetPublicEstablishmentLogo(httpContext *gin.Context, slug string, _ api.GetPublicEstablishmentLogoParams) {
+	handler.establishment.GetPublicEstablishmentLogo(httpContext, slug)
 }
 
-func (handler *Handler) GetPublicEstablishment(c *gin.Context, slug string) {
-	handler.establishment.GetPublicEstablishment(c, slug)
+func (handler *Handler) GetPublicEstablishment(httpContext *gin.Context, slug string) {
+	handler.establishment.GetPublicEstablishment(httpContext, slug)
 }
 
-func (handler *Handler) PostProfessionals(c *gin.Context) {
-	handler.professionals.PostProfessionals(c)
+func (handler *Handler) PostProfessionals(httpContext *gin.Context) {
+	handler.professionals.PostProfessionals(httpContext)
 }
 
-func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessionalsParams) {
-	handler.professionals.GetProfessionals(c, params)
+func (handler *Handler) GetProfessionals(httpContext *gin.Context, parameters api.GetProfessionalsParams) {
+	handler.professionals.GetProfessionals(httpContext, parameters)
 }
 
-func (h *Handler) PostServices(c *gin.Context) { h.catalog.PostServices(c) }
-
-func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
-	h.catalog.GetServices(c, params)
+func (handler *Handler) PostServices(httpContext *gin.Context) {
+	handler.catalog.PostServices(httpContext)
 }
 
-func (h *Handler) GetService(c *gin.Context, id uuid.UUID) { h.catalog.GetService(c, id) }
+func (handler *Handler) GetServices(httpContext *gin.Context, parameters api.GetServicesParams) {
+	handler.catalog.GetServices(httpContext, parameters)
+}
 
-func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) { h.catalog.PatchService(c, id) }
+func (handler *Handler) GetService(httpContext *gin.Context, offeringID uuid.UUID) {
+	handler.catalog.GetService(httpContext, offeringID)
+}
 
-func (h *Handler) PutServiceStatus(c *gin.Context, id uuid.UUID) { h.catalog.PutServiceStatus(c, id) }
+func (handler *Handler) PatchService(httpContext *gin.Context, offeringID uuid.UUID) {
+	handler.catalog.PatchService(httpContext, offeringID)
+}
+
+func (handler *Handler) PutServiceStatus(httpContext *gin.Context, offeringID uuid.UUID) {
+	handler.catalog.PutServiceStatus(httpContext, offeringID)
+}

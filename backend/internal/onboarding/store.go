@@ -27,25 +27,25 @@ type Store struct {
 func NewStore(pool *pgxpool.Pool) *Store {
 	store := &Store{pool: pool, queries: db.New(pool), now: time.Now}
 	store.beginRegistration = func(ctx context.Context) (registrationTransaction, error) {
-		tx, err := pool.Begin(ctx)
+		databaseTransaction, err := pool.Begin(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return &postgresRegistrationTransaction{tx: tx, queries: db.New(tx)}, nil
+		return &postgresRegistrationTransaction{tx: databaseTransaction, queries: db.New(databaseTransaction)}, nil
 	}
 	store.beginConfirmation = func(ctx context.Context) (confirmationTransaction, error) {
-		tx, err := pool.Begin(ctx)
+		databaseTransaction, err := pool.Begin(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return &postgresConfirmationTransaction{tx: tx, queries: db.New(tx)}, nil
+		return &postgresConfirmationTransaction{tx: databaseTransaction, queries: db.New(databaseTransaction)}, nil
 	}
 	store.beginVerification = func(ctx context.Context) (verificationTransaction, error) {
-		tx, err := pool.Begin(ctx)
+		databaseTransaction, err := pool.Begin(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return &postgresVerificationTransaction{tx: tx, queries: db.New(tx)}, nil
+		return &postgresVerificationTransaction{tx: databaseTransaction, queries: db.New(databaseTransaction)}, nil
 	}
 	return store
 }

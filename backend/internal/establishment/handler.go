@@ -53,59 +53,59 @@ func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUpload
 
 const maxLogoMultipartBodyBytes = MaxLogoBytes + 64*1024
 
-func (handler *Handler) PutEstablishmentLogo(c *gin.Context) {
-	principal, ok := auth.RequirePrincipal(c)
+func (handler *Handler) PutEstablishmentLogo(httpContext *gin.Context) {
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
 		return
 	}
 	if handler.logoUploader == nil {
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível enviar o logo.")
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível enviar o logo.")
 		return
 	}
-	if err := handler.logoUploader.CheckLogoUploadAccess(c.Request.Context(), principal); err != nil {
-		writeLogoUploadError(c, err)
+	if err := handler.logoUploader.CheckLogoUploadAccess(httpContext.Request.Context(), principal); err != nil {
+		writeLogoUploadError(httpContext, err)
 		return
 	}
-	logo, err := readLogoMultipart(c)
+	logo, err := readLogoMultipart(httpContext)
 	if err != nil {
 		var maxBytesError *http.MaxBytesError
 		if errors.As(err, &maxBytesError) || errors.Is(err, ErrLogoTooLarge) {
-			writeError(c, http.StatusRequestEntityTooLarge, "request_too_large", "O arquivo excede o limite de tamanho permitido.")
+			writeError(httpContext, http.StatusRequestEntityTooLarge, "request_too_large", "O arquivo excede o limite de tamanho permitido.")
 			return
 		}
-		writeFieldError(c, http.StatusBadRequest, "file", "invalid_logo", "Envie uma imagem PNG, JPEG ou WebP válida.")
+		writeFieldError(httpContext, http.StatusBadRequest, "file", "invalid_logo", "Envie uma imagem PNG, JPEG ou WebP válida.")
 		return
 	}
-	if err := handler.logoUploader.UploadLogo(c.Request.Context(), principal, logo); err != nil {
-		writeLogoUploadError(c, err)
+	if err := handler.logoUploader.UploadLogo(httpContext.Request.Context(), principal, logo); err != nil {
+		writeLogoUploadError(httpContext, err)
 		return
 	}
-	c.Status(http.StatusNoContent)
+	httpContext.Status(http.StatusNoContent)
 }
 
-func writeLogoUploadError(c *gin.Context, err error) {
+func writeLogoUploadError(httpContext *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrLogoUploadForbidden):
-		writeError(c, http.StatusForbidden, "forbidden", "Somente o proprietário pode enviar o logo.")
+		writeError(httpContext, http.StatusForbidden, "forbidden", "Somente o proprietário pode enviar o logo.")
 	case errors.Is(err, ErrInvalidLogo), errors.Is(err, ErrLogoDimensions):
-		writeFieldError(c, http.StatusBadRequest, "file", "invalid_logo", "Envie uma imagem PNG, JPEG ou WebP válida.")
+		writeFieldError(httpContext, http.StatusBadRequest, "file", "invalid_logo", "Envie uma imagem PNG, JPEG ou WebP válida.")
 	case errors.Is(err, ErrLogoTooLarge):
-		writeError(c, http.StatusRequestEntityTooLarge, "request_too_large", "O arquivo excede o limite de tamanho permitido.")
+		writeError(httpContext, http.StatusRequestEntityTooLarge, "request_too_large", "O arquivo excede o limite de tamanho permitido.")
 	case errors.Is(err, entitlements.ErrReadOnly):
-		writeError(c, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
+		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
 	default:
-		slog.Error("establishment_logo_upload_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível enviar o logo.")
+		slog.Error("establishment_logo_upload_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível enviar o logo.")
 	}
 }
 
-func readLogoMultipart(c *gin.Context) (ValidatedLogo, error) {
-	mediaType, parameters, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
+func readLogoMultipart(httpContext *gin.Context) (ValidatedLogo, error) {
+	mediaType, parameters, err := mime.ParseMediaType(httpContext.GetHeader("Content-Type"))
 	if err != nil || mediaType != "multipart/form-data" || parameters["boundary"] == "" {
 		return ValidatedLogo{}, ErrInvalidLogo
 	}
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxLogoMultipartBodyBytes)
-	body, err := io.ReadAll(c.Request.Body)
+	httpContext.Request.Body = http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, maxLogoMultipartBodyBytes)
+	body, err := io.ReadAll(httpContext.Request.Body)
 	if err != nil {
 		return ValidatedLogo{}, err
 	}
@@ -140,84 +140,84 @@ func readLogoMultipart(c *gin.Context) (ValidatedLogo, error) {
 	return ValidateLogo(bytes.NewReader(content))
 }
 
-func (handler *Handler) GetEstablishment(c *gin.Context) {
-	principal, ok := auth.RequirePrincipal(c)
+func (handler *Handler) GetEstablishment(httpContext *gin.Context) {
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
 		return
 	}
-	establishment, err := handler.finder.Get(c.Request.Context(), principal)
+	establishment, err := handler.finder.Get(httpContext.Request.Context(), principal)
 	if err != nil {
-		slog.Error("establishment_query_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
+		slog.Error("establishment_query_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
 		return
 	}
-	id, err := uuid.Parse(establishment.ID)
+	establishmentUUID, err := uuid.Parse(establishment.ID)
 	if err != nil {
-		slog.Error("establishment_response_invalid", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
+		slog.Error("establishment_response_invalid", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
 		return
 	}
 
 	response := api.EstablishmentResponse{
-		Id: id, Name: establishment.Name, Slug: establishment.Slug, TimeZone: establishment.TimeZone,
+		Id: establishmentUUID, Name: establishment.Name, Slug: establishment.Slug, TimeZone: establishment.TimeZone,
 	}
 	if establishment.Trial != nil {
 		response.Trial = &api.EstablishmentTrial{
 			Status: api.TrialStatus(establishment.Trial.Status), StartsAt: establishment.Trial.StartsAt.UTC(), EndsAt: establishment.Trial.EndsAt.UTC(),
 		}
 	}
-	c.JSON(http.StatusOK, response)
+	httpContext.JSON(http.StatusOK, response)
 }
 
-func (handler *Handler) GetPublicEstablishmentLogo(c *gin.Context, slug string) {
-	logo, content, err := handler.publicLogo.OpenPublicLogo(c.Request.Context(), slug)
+func (handler *Handler) GetPublicEstablishmentLogo(httpContext *gin.Context, slug string) {
+	logo, content, err := handler.publicLogo.OpenPublicLogo(httpContext.Request.Context(), slug)
 	if errors.Is(err, ErrPublicLogoNotFound) {
-		writeError(c, http.StatusNotFound, "not_found", "O logo do estabelecimento não foi encontrado.")
+		writeError(httpContext, http.StatusNotFound, "not_found", "O logo do estabelecimento não foi encontrado.")
 		return
 	}
 	if err != nil {
-		slog.Error("establishment_public_logo_open_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
+		slog.Error("establishment_public_logo_open_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
 		return
 	}
-	if matchesIfNoneMatch(c.Request.Header.Values("If-None-Match"), logo.ETag) {
+	if matchesIfNoneMatch(httpContext.Request.Header.Values("If-None-Match"), logo.ETag) {
 		if err := content.Close(); err != nil {
-			slog.Error("establishment_public_logo_close_failed", "request_id", httpserver.RequestID(c))
-			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
+			slog.Error("establishment_public_logo_close_failed", "request_id", httpserver.RequestID(httpContext))
+			writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
 			return
 		}
-		c.Header("Cache-Control", "public, no-cache")
-		c.Header("ETag", logo.ETag)
-		c.Header("X-Content-Type-Options", "nosniff")
-		c.Status(http.StatusNotModified)
+		httpContext.Header("Cache-Control", "public, no-cache")
+		httpContext.Header("ETag", logo.ETag)
+		httpContext.Header("X-Content-Type-Options", "nosniff")
+		httpContext.Status(http.StatusNotModified)
 		return
 	}
 
 	body, readErr := io.ReadAll(io.LimitReader(content, logo.ByteSize+1))
 	closeErr := content.Close()
 	if readErr != nil || closeErr != nil || int64(len(body)) != logo.ByteSize {
-		slog.Error("establishment_public_logo_read_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
+		slog.Error("establishment_public_logo_read_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o logo do estabelecimento.")
 		return
 	}
 
-	c.Header("Cache-Control", "public, no-cache")
-	c.Header("ETag", logo.ETag)
-	c.Header("X-Content-Type-Options", "nosniff")
-	c.Header("Content-Type", logo.ContentType)
-	c.Header("Content-Length", strconv.Itoa(len(body)))
-	c.Data(http.StatusOK, logo.ContentType, body)
+	httpContext.Header("Cache-Control", "public, no-cache")
+	httpContext.Header("ETag", logo.ETag)
+	httpContext.Header("X-Content-Type-Options", "nosniff")
+	httpContext.Header("Content-Type", logo.ContentType)
+	httpContext.Header("Content-Length", strconv.Itoa(len(body)))
+	httpContext.Data(http.StatusOK, logo.ContentType, body)
 }
 
-func (handler *Handler) GetPublicEstablishment(c *gin.Context, slug string) {
-	profile, err := handler.public.GetPublicEstablishment(c.Request.Context(), slug)
+func (handler *Handler) GetPublicEstablishment(httpContext *gin.Context, slug string) {
+	profile, err := handler.public.GetPublicEstablishment(httpContext.Request.Context(), slug)
 	if errors.Is(err, ErrPublicEstablishmentNotFound) {
-		writeError(c, http.StatusNotFound, "not_found", "O estabelecimento não foi encontrado.")
+		writeError(httpContext, http.StatusNotFound, "not_found", "O estabelecimento não foi encontrado.")
 		return
 	}
 	if err != nil {
-		slog.Error("establishment_public_profile_query_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
+		slog.Error("establishment_public_profile_query_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o estabelecimento.")
 		return
 	}
 	response := api.PublicEstablishmentProfileResponse{
@@ -231,7 +231,7 @@ func (handler *Handler) GetPublicEstablishment(c *gin.Context, slug string) {
 		}
 		response.SocialLinks = &links
 	}
-	c.JSON(http.StatusOK, response)
+	httpContext.JSON(http.StatusOK, response)
 }
 
 func matchesIfNoneMatch(values []string, etag string) bool {
@@ -250,25 +250,25 @@ func matchesIfNoneMatch(values []string, etag string) bool {
 	return false
 }
 
-func (handler *Handler) GetEstablishmentSettings(c *gin.Context) {
-	principal, ok := auth.RequirePrincipal(c)
+func (handler *Handler) GetEstablishmentSettings(httpContext *gin.Context) {
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
 		return
 	}
-	settings, err := handler.settings.GetSettings(c.Request.Context(), principal)
+	settings, err := handler.settings.GetSettings(httpContext.Request.Context(), principal)
 	if err != nil {
 		if errors.Is(err, ErrSettingsForbidden) {
-			writeError(c, http.StatusForbidden, "forbidden", "Você não pode consultar as configurações do estabelecimento.")
+			writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode consultar as configurações do estabelecimento.")
 			return
 		}
-		slog.Error("establishment_settings_query_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar as configurações do estabelecimento.")
+		slog.Error("establishment_settings_query_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar as configurações do estabelecimento.")
 		return
 	}
-	id, err := uuid.Parse(settings.ID)
+	establishmentUUID, err := uuid.Parse(settings.ID)
 	if err != nil {
-		slog.Error("establishment_settings_response_invalid", "request_id", httpserver.RequestID(c))
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível consultar as configurações do estabelecimento.")
+		slog.Error("establishment_settings_response_invalid", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar as configurações do estabelecimento.")
 		return
 	}
 	links := make([]api.EstablishmentSocialLink, 0, len(settings.SocialLinks))
@@ -282,8 +282,8 @@ func (handler *Handler) GetEstablishmentSettings(c *gin.Context) {
 			ByteSize: settings.Logo.ByteSize, Width: settings.Logo.Width, Height: settings.Logo.Height,
 		}
 	}
-	c.JSON(http.StatusOK, api.EstablishmentSettingsResponse{
-		Id: id, Name: settings.Name, Slug: settings.Slug, TimeZone: settings.TimeZone,
+	httpContext.JSON(http.StatusOK, api.EstablishmentSettingsResponse{
+		Id: establishmentUUID, Name: settings.Name, Slug: settings.Slug, TimeZone: settings.TimeZone,
 		Description: settings.Description, Address: settings.Address, ContactPhone: settings.ContactPhone,
 		SocialLinks: links, MinimumBookingNoticeMinutes: settings.MinimumBookingNoticeMinutes,
 		BookingHorizonDays: settings.BookingHorizonDays, CustomerChangeDeadlineMinutes: settings.CustomerChangeDeadlineMinutes,
@@ -304,49 +304,49 @@ type settingsPatchRequest struct {
 	CustomerChangeDeadlineMinutes json.RawMessage `json:"customer_change_deadline_minutes"`
 }
 
-func (handler *Handler) PatchEstablishmentSettings(c *gin.Context) {
-	principal, ok := auth.RequirePrincipal(c)
+func (handler *Handler) PatchEstablishmentSettings(httpContext *gin.Context) {
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
 		return
 	}
 	var request settingsPatchRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 65536))
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 65536))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
 	if decoder.Decode(&struct{}{}) != io.EOF {
-		writeError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
 	patch, fieldError := decodeSettingsPatch(request)
 	if fieldError != nil {
-		writeFieldError(c, http.StatusBadRequest, fieldError.Field, fieldError.Code, fieldError.Message)
+		writeFieldError(httpContext, http.StatusBadRequest, fieldError.Field, fieldError.Code, fieldError.Message)
 		return
 	}
-	if err := handler.settings.PatchSettings(c.Request.Context(), principal, patch); err != nil {
+	if err := handler.settings.PatchSettings(httpContext.Request.Context(), principal, patch); err != nil {
 		switch {
 		case errors.Is(err, ErrSettingsForbidden):
-			writeError(c, http.StatusForbidden, "forbidden", "Você não pode alterar as configurações do estabelecimento.")
+			writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode alterar as configurações do estabelecimento.")
 		case errors.Is(err, entitlements.ErrReadOnly):
-			writeError(c, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
+			writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
 		case errors.Is(err, ErrTimeZoneLocked):
-			writeFieldError(c, http.StatusConflict, "time_zone", "time_zone_locked", "O fuso não pode ser alterado após o primeiro dado operacional.")
+			writeFieldError(httpContext, http.StatusConflict, "time_zone", "time_zone_locked", "O fuso não pode ser alterado após o primeiro dado operacional.")
 		case errors.Is(err, ErrEmptySettingsPatch):
-			writeError(c, http.StatusBadRequest, "invalid_request", "Informe ao menos um campo para atualizar.")
+			writeError(httpContext, http.StatusBadRequest, "invalid_request", "Informe ao menos um campo para atualizar.")
 		default:
 			var validationError *SettingsFieldError
 			if errors.As(err, &validationError) {
-				writeFieldError(c, http.StatusBadRequest, validationError.Field, validationError.Code, validationError.Message)
+				writeFieldError(httpContext, http.StatusBadRequest, validationError.Field, validationError.Code, validationError.Message)
 				return
 			}
-			slog.Error("establishment_settings_update_failed", "request_id", httpserver.RequestID(c))
-			writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível atualizar as configurações do estabelecimento.")
+			slog.Error("establishment_settings_update_failed", "request_id", httpserver.RequestID(httpContext))
+			writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível atualizar as configurações do estabelecimento.")
 		}
 		return
 	}
-	c.Status(http.StatusNoContent)
+	httpContext.Status(http.StatusNoContent)
 }
 
 func decodeSettingsPatch(request settingsPatchRequest) (SettingsPatch, *SettingsFieldError) {
@@ -421,15 +421,15 @@ func decodeSettingsPatchField[T any](raw json.RawMessage, field string, nullable
 	return value, nil
 }
 
-func writeFieldError(c *gin.Context, status int, field, code, message string) {
+func writeFieldError(httpContext *gin.Context, status int, field, code, message string) {
 	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
 	topCode := "validation_failed"
 	if status == http.StatusConflict {
 		topCode = "conflict"
 	}
-	c.JSON(status, api.ErrorResponse{Code: topCode, Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(c), Fields: &fields})
+	httpContext.JSON(status, api.ErrorResponse{Code: topCode, Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(httpContext), Fields: &fields})
 }
 
-func writeError(c *gin.Context, status int, code, message string) {
-	c.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(c)})
+func writeError(httpContext *gin.Context, status int, code, message string) {
+	httpContext.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(httpContext)})
 }

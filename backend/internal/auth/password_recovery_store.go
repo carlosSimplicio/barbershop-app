@@ -40,12 +40,12 @@ func (store *Store) ReplacePasswordRecoveryToken(ctx context.Context, userID str
 	if err != nil {
 		return PasswordRecoveryToken{}, false, fmt.Errorf("parse password recovery user ID: %w", err)
 	}
-	tx, err := store.pool.Begin(ctx)
+	transaction, err := store.pool.Begin(ctx)
 	if err != nil {
 		return PasswordRecoveryToken{}, false, fmt.Errorf("begin password recovery transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	queries := store.queries.WithTx(tx)
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := store.queries.WithTx(transaction)
 	if _, err := queries.LockEligibleOwnerForPasswordRecovery(ctx, parsedUserID); errors.Is(err, pgx.ErrNoRows) {
 		return PasswordRecoveryToken{}, false, nil
 	} else if err != nil {
@@ -64,7 +64,7 @@ func (store *Store) ReplacePasswordRecoveryToken(ctx context.Context, userID str
 	}); err != nil {
 		return PasswordRecoveryToken{}, false, fmt.Errorf("create password recovery token: %w", err)
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := transaction.Commit(ctx); err != nil {
 		return PasswordRecoveryToken{}, false, fmt.Errorf("commit password recovery transaction: %w", err)
 	}
 	return token, true, nil

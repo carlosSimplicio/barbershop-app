@@ -1,4 +1,6 @@
 import type { components } from "@/types/generated/api";
+import { formatOfferingPrice } from "./money";
+import { OFFERING_LIMITS } from "./offering-limits";
 export type OfferingValues = { name: string; price: string; duration: string };
 export type FieldErrors = Partial<
   Record<"name" | "price_cents" | "duration_minutes", string>
@@ -8,11 +10,29 @@ export const emptyOfferingValues: OfferingValues = {
   price: "",
   duration: "",
 };
+
+const integers = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+const minPrice = formatOfferingPrice(OFFERING_LIMITS.priceCents.min).replaceAll(
+  "\u00a0",
+  " ",
+);
+const maxPrice = formatOfferingPrice(OFFERING_LIMITS.priceCents.max).replaceAll(
+  "\u00a0",
+  " ",
+);
+const minDuration = integers.format(OFFERING_LIMITS.durationMinutes.min);
+const maxDuration = integers.format(OFFERING_LIMITS.durationMinutes.max);
+
 export const offeringFieldMessages = {
-  invalid_name: "Informe um nome com até 120 caracteres.",
-  invalid_price:
-    "Informe um preço de R$ 0,00 a R$ 99.999,99, com até duas casas decimais.",
-  invalid_duration: "Informe de 1 a 1.440 minutos inteiros.",
+  invalid_name: `Informe um nome com até ${OFFERING_LIMITS.nameCodePoints.max} caracteres.`,
+  invalid_price: `Informe um preço de ${minPrice} a ${maxPrice}, com até duas casas decimais.`,
+  invalid_duration: `Informe de ${minDuration} a ${maxDuration} minutos inteiros.`,
+};
+
+export const offeringFieldHints = {
+  name: `Obrigatório, com até ${OFFERING_LIMITS.nameCodePoints.max} caracteres após remover os espaços nas extremidades.`,
+  price: `De ${minPrice} a ${maxPrice}. Use vírgula e até duas casas decimais. Zero indica serviço gratuito.`,
+  duration: `De ${minDuration} a ${maxDuration} minutos. Deixe vazio para usar ${integers.format(OFFERING_LIMITS.durationMinutes.default)} minutos.`,
 };
 export function validateOfferingValues(values: OfferingValues): {
   errors: FieldErrors;
@@ -20,13 +40,17 @@ export function validateOfferingValues(values: OfferingValues): {
 } {
   const errors: FieldErrors = {};
   const name = values.name.trim();
-  if (!name || Array.from(name).length > 120)
+  if (!name || Array.from(name).length > OFFERING_LIMITS.nameCodePoints.max)
     errors.name = offeringFieldMessages.invalid_name;
   const match = /^(\d+)(?:[,.](\d{1,2}))?$/.exec(values.price.trim());
   const cents = match
     ? BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0"))
     : null;
-  if (cents === null || cents > 9999999n)
+  if (
+    cents === null ||
+    cents < BigInt(OFFERING_LIMITS.priceCents.min) ||
+    cents > BigInt(OFFERING_LIMITS.priceCents.max)
+  )
     errors.price_cents = offeringFieldMessages.invalid_price;
   const duration = values.duration.trim();
   const minutes = duration === "" ? null : Number(duration);
@@ -35,8 +59,8 @@ export function validateOfferingValues(values: OfferingValues): {
     (!/^\d+$/.test(duration) ||
       !Number.isSafeInteger(minutes) ||
       minutes === null ||
-      minutes < 1 ||
-      minutes > 1440)
+      minutes < OFFERING_LIMITS.durationMinutes.min ||
+      minutes > OFFERING_LIMITS.durationMinutes.max)
   )
     errors.duration_minutes = offeringFieldMessages.invalid_duration;
   if (Object.keys(errors).length || cents === null) return { errors };

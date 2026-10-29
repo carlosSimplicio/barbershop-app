@@ -29,12 +29,12 @@ func (store *PostgresStore) Create(ctx context.Context, creation Creation) (stri
 	tenant := pgtype.UUID{Bytes: establishmentID, Valid: true}
 	at := pgtype.Timestamptz{Time: creation.CreatedAt, Valid: true}
 
-	tx, err := store.pool.Begin(ctx)
+	transaction, err := store.pool.Begin(ctx)
 	if err != nil {
 		return "", fmt.Errorf("begin professional transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	queries := db.New(tx)
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := db.New(transaction)
 
 	userID, err := queries.CreateProfessionalUser(ctx, db.CreateProfessionalUserParams{
 		EstablishmentID: tenant, Email: creation.Email, NormalizedEmail: creation.NormalizedEmail, CreatedAt: at,
@@ -56,7 +56,7 @@ func (store *PostgresStore) Create(ctx context.Context, creation Creation) (stri
 	}); err != nil {
 		return "", fmt.Errorf("create professional profile: %w", err)
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := transaction.Commit(ctx); err != nil {
 		return "", fmt.Errorf("commit professional transaction: %w", err)
 	}
 	return uuid.UUID(userID.Bytes).String(), nil

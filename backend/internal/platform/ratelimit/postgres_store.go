@@ -24,12 +24,12 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 }
 
 func (store *PostgresStore) ReserveRateLimitEvents(ctx context.Context, scope string, keys map[string][]byte, attemptedAt time.Time) ([]int64, time.Duration, error) {
-	tx, err := store.pool.Begin(ctx)
+	transaction, err := store.pool.Begin(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("begin rate limit event transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	queries := store.queries.WithTx(tx)
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := store.queries.WithTx(transaction)
 	dimensions := make([]string, 0, len(keys))
 	for dimension := range keys {
 		dimensions = append(dimensions, dimension)
@@ -37,7 +37,7 @@ func (store *PostgresStore) ReserveRateLimitEvents(ctx context.Context, scope st
 	sort.Strings(dimensions)
 
 	for _, dimension := range dimensions {
-		if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", advisoryLockID(scope, dimension, keys[dimension])); err != nil {
+		if _, err := transaction.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", advisoryLockID(scope, dimension, keys[dimension])); err != nil {
 			return nil, 0, fmt.Errorf("lock rate limit key: %w", err)
 		}
 	}
@@ -72,7 +72,7 @@ func (store *PostgresStore) ReserveRateLimitEvents(ctx context.Context, scope st
 		}
 		eventIDs = append(eventIDs, eventID)
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := transaction.Commit(ctx); err != nil {
 		return nil, 0, fmt.Errorf("commit rate limit event transaction: %w", err)
 	}
 	return eventIDs, 0, nil

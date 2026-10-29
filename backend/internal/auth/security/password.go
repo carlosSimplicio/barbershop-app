@@ -13,8 +13,13 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+const (
+	MinPasswordCodePoints = 8
+	MaxPasswordCodePoints = 32
+)
+
 var (
-	ErrInvalidPassword     = errors.New("password must contain 8 to 32 characters without whitespace, controls or invisible formatting characters")
+	ErrInvalidPassword     = fmt.Errorf("password must contain %d to %d characters without whitespace, controls or invisible formatting characters", MinPasswordCodePoints, MaxPasswordCodePoints)
 	ErrInvalidPasswordHash = errors.New("invalid password hash")
 )
 
@@ -56,7 +61,7 @@ func ValidatePassword(password string) error {
 		return ErrInvalidPassword
 	}
 	length := utf8.RuneCountInString(password)
-	if length < 8 || length > 32 {
+	if length < MinPasswordCodePoints || length > MaxPasswordCodePoints {
 		return ErrInvalidPassword
 	}
 	for _, character := range password {

@@ -3,13 +3,16 @@ package catalog
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/httpserver"
+	"barbershop-app/backend/internal/platform/pagination"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -78,15 +81,15 @@ func writeCatalogError(httpContext *gin.Context, err error) {
 	case errors.Is(err, entitlements.ErrReadOnly):
 		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
 	case errors.Is(err, ErrInvalidLimit):
-		writeFieldError(httpContext, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+		writeFieldError(httpContext, "limit", "invalid_limit", fmt.Sprintf("Informe um limite entre %d e %d.", pagination.MinLimit, pagination.MaxLimit))
 	case errors.Is(err, ErrInvalidOffset):
 		writeFieldError(httpContext, "offset", "invalid_offset", "Informe um deslocamento válido.")
 	case errors.Is(err, ErrInvalidName):
-		writeFieldError(httpContext, "name", "invalid_name", "Informe um nome com até 120 caracteres.")
+		writeFieldError(httpContext, "name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", MaxNameCodePoints))
 	case errors.Is(err, ErrInvalidPrice):
-		writeFieldError(httpContext, "price_cents", "invalid_price", "Informe um preço de R$ 0,00 a R$ 99.999,99.")
+		writeFieldError(httpContext, "price_cents", "invalid_price", fmt.Sprintf("Informe um preço de %s a %s.", formatBRLBound(MinPriceCents), formatBRLBound(MaxPriceCents)))
 	case errors.Is(err, ErrInvalidDuration):
-		writeFieldError(httpContext, "duration_minutes", "invalid_duration", "Informe de 1 a 1.440 minutos inteiros.")
+		writeFieldError(httpContext, "duration_minutes", "invalid_duration", fmt.Sprintf("Informe de %s a %s minutos inteiros.", formatIntegerBound(MinDurationMinutes), formatIntegerBound(MaxDurationMinutes)))
 	case errors.Is(err, ErrInvalidStatus):
 		writeFieldError(httpContext, "active", "invalid_status", "Informe o estado ativo do serviço.")
 	case errors.Is(err, ErrInvalidRequest):
@@ -95,6 +98,18 @@ func writeCatalogError(httpContext *gin.Context, err error) {
 		slog.Error("catalog_operation_failed", "request_id", httpserver.RequestID(httpContext))
 		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a operação.")
 	}
+}
+
+func formatIntegerBound(value int64) string {
+	digits := strconv.FormatInt(value, 10)
+	for position := len(digits) - 3; position > 0; position -= 3 {
+		digits = digits[:position] + "." + digits[position:]
+	}
+	return digits
+}
+
+func formatBRLBound(cents int64) string {
+	return fmt.Sprintf("R$ %s,%02d", formatIntegerBound(cents/100), cents%100)
 }
 
 func writeError(httpContext *gin.Context, status int, code, message string) {
@@ -111,7 +126,7 @@ func (handler *Handler) GetServices(httpContext *gin.Context, parameters api.Get
 	if !ok {
 		return
 	}
-	limit, offset := int64(20), int64(0)
+	limit, offset := int64(pagination.DefaultLimit), int64(pagination.DefaultOffset)
 	if parameters.Limit != nil {
 		limit = int64(*parameters.Limit)
 	}

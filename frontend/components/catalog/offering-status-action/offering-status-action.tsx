@@ -31,7 +31,7 @@ export function OfferingStatusAction({
   onUnauthorized,
   onBusyChange,
 }: OfferingStatusProps) {
-  const [target, setTarget] = useState<boolean | null>(null);
+  const [desiredActive, setDesiredActive] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -50,10 +50,11 @@ export function OfferingStatusAction({
     }
   }, [submitting, canWrite, notice]);
 
-  async function run(check: boolean) {
+  async function run(checkPersistedState: boolean) {
     if (
       pending.current ||
-      (!check && (!canWrite || target === null || uncertain || missing))
+      (!checkPersistedState &&
+        (!canWrite || desiredActive === null || uncertain || missing))
     )
       return;
     pending.current = true;
@@ -63,10 +64,15 @@ export function OfferingStatusAction({
     controller.current = request;
     try {
       let result;
-      if (check) result = await getOffering(record.id, request.signal);
+      if (checkPersistedState)
+        result = await getOffering(record.id, request.signal);
       else {
-        if (target === null) return;
-        result = await setOfferingStatus(record.id, target, request.signal);
+        if (desiredActive === null) return;
+        result = await setOfferingStatus(
+          record.id,
+          desiredActive,
+          request.signal,
+        );
       }
       if (request.signal.aborted) return;
       const outcome = classifyOfferingOperation(result, 200);
@@ -76,7 +82,7 @@ export function OfferingStatusAction({
       }
       if (outcome.state === "missing") {
         setMissing(true);
-        setTarget(null);
+        setDesiredActive(null);
         setNotice({
           variant: "warning",
           title: "Serviço não encontrado",
@@ -87,11 +93,11 @@ export function OfferingStatusAction({
       if (outcome.state === "confirmed") {
         setUncertain(false);
         setMissing(false);
-        setTarget(null);
+        setDesiredActive(null);
         focusAfter.current = true;
         setNotice({
           variant: "success",
-          title: check
+          title: checkPersistedState
             ? "Estado conferido"
             : outcome.record.active
               ? "Serviço ativado"
@@ -112,7 +118,7 @@ export function OfferingStatusAction({
         });
         return;
       }
-      if (check)
+      if (checkPersistedState)
         setNotice({
           variant: "error",
           title: "Não foi possível consultar o estado",
@@ -128,7 +134,7 @@ export function OfferingStatusAction({
         });
     } catch {
       if (!request.signal.aborted) {
-        if (check)
+        if (checkPersistedState)
           setNotice({
             variant: "error",
             title: "Não foi possível consultar o estado",
@@ -159,20 +165,20 @@ export function OfferingStatusAction({
         disabled={!canWrite || submitting || uncertain || missing}
         aria-label={`${record.active ? "Desativar" : "Ativar"} ${record.name}`}
         onClick={() => {
-          setTarget(!record.active);
+          setDesiredActive(!record.active);
           setNotice(null);
         }}
       >
         {record.active ? "Desativar" : "Ativar"}
       </Button>
-      {target !== null && !uncertain ? (
+      {desiredActive !== null && !uncertain ? (
         <div
           role="group"
           aria-label={`Confirmar alteração de ${record.name}`}
           className={styles.confirmation}
         >
           <p>
-            {target ? "Ativar" : "Desativar"} “{record.name}”? O serviço
+            {desiredActive ? "Ativar" : "Desativar"} “{record.name}”? O serviço
             permanecerá no catálogo.
           </p>
           <div className={styles.buttons}>
@@ -180,12 +186,12 @@ export function OfferingStatusAction({
               disabled={!canWrite || submitting}
               onClick={() => void run(false)}
             >
-              {target ? "Confirmar ativação" : "Confirmar desativação"}
+              {desiredActive ? "Confirmar ativação" : "Confirmar desativação"}
             </Button>
             <Button
               disabled={submitting}
               onClick={() => {
-                setTarget(null);
+                setDesiredActive(null);
                 if (canWrite) action.current?.focus();
                 else container.current?.focus();
               }}

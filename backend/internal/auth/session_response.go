@@ -16,25 +16,25 @@ const (
 	csrfCookieName   = "__Secure-barbershop_csrf"
 )
 
-func WriteSessionResponse(c *gin.Context, result LoginResult) error {
+func WriteSessionResponse(httpContext *gin.Context, result LoginResult) error {
 	response, err := principalResponse(result.Principal)
 	if err != nil {
 		return err
 	}
-	setSessionCookies(c, result.AccessToken, result.CSRFToken)
-	c.JSON(http.StatusOK, response)
+	setSessionCookies(httpContext, result.AccessToken, result.CSRFToken)
+	httpContext.JSON(http.StatusOK, response)
 	return nil
 }
 
-func setSessionCookies(c *gin.Context, accessToken, csrfToken string) {
-	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Value: accessToken, Path: "/api/v1", MaxAge: int(SessionLifetime / time.Second), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Value: csrfToken, Path: "/", MaxAge: int(SessionLifetime / time.Second), Secure: true, SameSite: http.SameSiteStrictMode})
+func setSessionCookies(httpContext *gin.Context, accessToken, csrfToken string) {
+	http.SetCookie(httpContext.Writer, &http.Cookie{Name: accessCookieName, Value: accessToken, Path: "/api/v1", MaxAge: int(SessionLifetime / time.Second), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(httpContext.Writer, &http.Cookie{Name: csrfCookieName, Value: csrfToken, Path: "/", MaxAge: int(SessionLifetime / time.Second), Secure: true, SameSite: http.SameSiteStrictMode})
 }
 
-func clearSessionCookies(c *gin.Context) {
+func clearSessionCookies(httpContext *gin.Context) {
 	expires := time.Unix(1, 0).UTC()
-	http.SetCookie(c.Writer, &http.Cookie{Name: accessCookieName, Path: "/api/v1", MaxAge: -1, Expires: expires, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
-	http.SetCookie(c.Writer, &http.Cookie{Name: csrfCookieName, Path: "/", MaxAge: -1, Expires: expires, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(httpContext.Writer, &http.Cookie{Name: accessCookieName, Path: "/api/v1", MaxAge: -1, Expires: expires, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(httpContext.Writer, &http.Cookie{Name: csrfCookieName, Path: "/", MaxAge: -1, Expires: expires, Secure: true, SameSite: http.SameSiteStrictMode})
 }
 
 func principalResponse(principal Principal) (api.AuthPrincipal, error) {

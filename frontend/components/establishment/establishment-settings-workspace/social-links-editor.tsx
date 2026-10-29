@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { AffixedInput, Button, Field, SelectField } from "@/components/ui";
+import { ESTABLISHMENT_LIMITS } from "@/lib/establishment/establishment-limits";
 import {
   ESTABLISHMENT_SOCIAL_NETWORKS,
   type EstablishmentSocialNetworkId,
@@ -113,7 +114,7 @@ export function SocialLinksEditor({
         <Button
           aria-label="Adicionar rede social"
           className={styles.addLink}
-          disabled={links.length >= 5}
+          disabled={links.length >= ESTABLISHMENT_LIMITS.socialLinksMaxCount}
           onClick={addLink}
         >
           +
@@ -184,7 +185,8 @@ export function SocialLinksEditor({
                 autoComplete="url"
                 id={`social_links.${index}.url`}
                 maxLength={
-                  2048 - (getSocialNetwork(link.network)?.urlPrefix.length ?? 0)
+                  ESTABLISHMENT_LIMITS.socialLinkURLMaxCodePoints -
+                  (getSocialNetwork(link.network)?.urlPrefix.length ?? 0)
                 }
                 onChange={(event) =>
                   updateURL(
