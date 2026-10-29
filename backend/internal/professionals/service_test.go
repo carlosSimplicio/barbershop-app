@@ -46,6 +46,7 @@ func TestCreateProfessionalRejectsInvalidFieldsBeforeWrite(t *testing.T) {
 		input CreateInput
 		want  error
 	}{
+		{name: "NUL name", input: CreateInput{Name: "Ana\x00", Email: "ana@example.test", TemporaryPassword: "senha-segura"}, want: ErrInvalidName},
 		{name: "blank name", input: CreateInput{Name: "  ", Email: "ana@example.test", TemporaryPassword: "senha-segura"}, want: ErrInvalidName},
 		{name: "long name", input: CreateInput{Name: strings.Repeat("a", 121), Email: "ana@example.test", TemporaryPassword: "senha-segura"}, want: ErrInvalidName},
 		{name: "invalid email", input: CreateInput{Name: "Ana", Email: "invalid", TemporaryPassword: "senha-segura"}, want: auth.ErrInvalidEmail},
@@ -125,5 +126,9 @@ func (stub *writeEntitlementsStub) RequireWrite(_ context.Context, establishment
 }
 
 func (*createStoreStub) Get(context.Context, string, string) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*createStoreStub) UpdateName(context.Context, string, string, string, time.Time) (Professional, error) {
 	return Professional{}, nil
 }

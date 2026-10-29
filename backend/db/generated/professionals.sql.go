@@ -155,3 +155,48 @@ func (q *Queries) ListProfessionalsByEstablishment(ctx context.Context, arg List
 	}
 	return items, nil
 }
+
+const updateProfessionalName = `-- name: UpdateProfessionalName :one
+WITH professional_user AS MATERIALIZED (
+    SELECT u.id, u.establishment_id, u.email, u.active
+    FROM users AS u
+    WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
+    FOR UPDATE OF u
+)
+UPDATE professionals AS p
+SET name = $3, updated_at = $4
+FROM professional_user AS u
+WHERE p.user_id = u.id AND p.establishment_id = u.establishment_id
+RETURNING p.user_id, p.name, u.email, u.active
+`
+
+type UpdateProfessionalNameParams struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	Name            string             `json:"name"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UpdateProfessionalNameRow struct {
+	UserID pgtype.UUID `json:"user_id"`
+	Name   string      `json:"name"`
+	Email  string      `json:"email"`
+	Active bool        `json:"active"`
+}
+
+func (q *Queries) UpdateProfessionalName(ctx context.Context, arg UpdateProfessionalNameParams) (UpdateProfessionalNameRow, error) {
+	row := q.db.QueryRow(ctx, updateProfessionalName,
+		arg.ID,
+		arg.EstablishmentID,
+		arg.Name,
+		arg.UpdatedAt,
+	)
+	var i UpdateProfessionalNameRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Active,
+	)
+	return i, err
+}

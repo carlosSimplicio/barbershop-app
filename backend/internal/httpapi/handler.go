@@ -120,3 +120,7 @@ func (handler *Handler) PutServiceStatus(httpContext *gin.Context, offeringID uu
 func (handler *Handler) GetProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
 	handler.professionals.GetProfessional(httpContext, professionalID)
 }
+
+func (handler *Handler) PatchProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionals.PatchProfessional(httpContext, professionalID)
+}

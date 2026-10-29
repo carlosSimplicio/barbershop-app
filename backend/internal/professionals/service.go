@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
@@ -54,6 +53,7 @@ type Creation struct {
 }
 
 type Store interface {
+	UpdateName(context.Context, string, string, string, time.Time) (Professional, error)
 	Get(context.Context, string, string) (Professional, error)
 	Create(context.Context, Creation) (string, error)
 	List(context.Context, string, int32, int32) ([]Professional, error)
@@ -82,7 +82,7 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 	if principal.Role != "owner" {
 		return Professional{}, ErrForbidden
 	}
-	if !utf8.ValidString(input.Name) || strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > MaxNameCodePoints {
+	if !IsNameValid(input.Name) {
 		return Professional{}, ErrInvalidName
 	}
 	if err := auth.ValidateEmail(input.Email); err != nil {
@@ -144,4 +144,17 @@ func (service *Service) Get(ctx context.Context, principal auth.Principal, profe
 		return Professional{}, ErrForbidden
 	}
 	return service.store.Get(ctx, principal.EstablishmentID, professionalID)
+}
+
+func (service *Service) UpdateName(ctx context.Context, principal auth.Principal, professionalID, name string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	if !IsNameValid(name) {
+		return Professional{}, ErrInvalidName
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Professional{}, err
+	}
+	return service.store.UpdateName(ctx, principal.EstablishmentID, professionalID, strings.TrimSpace(name), service.now().UTC())
 }

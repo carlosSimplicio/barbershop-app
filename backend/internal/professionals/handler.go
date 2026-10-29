@@ -22,6 +22,7 @@ import (
 )
 
 type Registry interface {
+	UpdateName(context.Context, auth.Principal, string, string) (Professional, error)
 	Get(context.Context, auth.Principal, string) (Professional, error)
 	Create(context.Context, auth.Principal, CreateInput) (Professional, error)
 	List(context.Context, auth.Principal, int32, int32) (ListResult, error)
@@ -192,4 +193,46 @@ func writeProfessionalResponse(httpContext *gin.Context, status int, professiona
 		return
 	}
 	httpContext.JSON(status, api.ProfessionalResponse{Id: professionalID, Name: professional.Name, Email: openapiTypes.Email(professional.Email), Active: professional.Active})
+}
+
+func (handler *Handler) PatchProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	var request struct {
+		Name *string `json:"name"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 8192))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return
+	}
+	if request.Name == nil {
+		writeMutationError(httpContext, ErrInvalidName)
+		return
+	}
+	professional, err := handler.registry.UpdateName(httpContext.Request.Context(), principal, professionalID.String(), *request.Name)
+	if err != nil {
+		writeMutationError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func writeMutationError(httpContext *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrForbidden):
+		writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode alterar este profissional.")
+	case errors.Is(err, ErrNotFound):
+		writeError(httpContext, http.StatusNotFound, "professional_not_found", "Profissional não encontrado.")
+	case errors.Is(err, entitlements.ErrReadOnly):
+		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
+	case errors.Is(err, ErrInvalidName):
+		writeFieldError(httpContext, http.StatusBadRequest, "name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", MaxNameCodePoints))
+	default:
+		slog.Error("professional_mutation_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível alterar o profissional.")
+	}
 }

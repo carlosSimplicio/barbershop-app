@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
@@ -109,5 +110,9 @@ func TestListProfessionalsDistinguishesReadOnlyFromInfrastructureFailure(t *test
 }
 
 func (*listStoreStub) Get(context.Context, string, string) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*listStoreStub) UpdateName(context.Context, string, string, string, time.Time) (Professional, error) {
 	return Professional{}, nil
 }

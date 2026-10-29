@@ -312,7 +312,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação, `can_write` centralizado e leitura após expiração do trial.
 - [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
 - [x] Consultar individualmente pela API profissionais ativos e inativos do próprio estabelecimento, inclusive sem trial ativo.
-- [ ] Editar, ativar e desativar profissionais pela API.
+- [x] Editar somente o nome de profissional ativo ou inativo pela API, com validação compartilhada, CSRF parametrizado e direito de escrita, preservando identidade e credenciais.
+- [ ] Ativar e desativar profissionais pela API.
 - [ ] Consultar individualmente, editar, ativar e desativar profissionais pelo painel.
 - [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.

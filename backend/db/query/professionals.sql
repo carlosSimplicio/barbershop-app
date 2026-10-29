@@ -28,3 +28,16 @@ SELECT p.user_id, p.name, u.email, u.active
 FROM professionals AS p
 JOIN users AS u ON u.id = p.user_id AND u.establishment_id = p.establishment_id
 WHERE p.user_id = $1 AND p.establishment_id = $2 AND u.role = 'professional';
+
+-- name: UpdateProfessionalName :one
+WITH professional_user AS MATERIALIZED (
+    SELECT u.id, u.establishment_id, u.email, u.active
+    FROM users AS u
+    WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
+    FOR UPDATE OF u
+)
+UPDATE professionals AS p
+SET name = $3, updated_at = $4
+FROM professional_user AS u
+WHERE p.user_id = u.id AND p.establishment_id = u.establishment_id
+RETURNING p.user_id, p.name, u.email, u.active;

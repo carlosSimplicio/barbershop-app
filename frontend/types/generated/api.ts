@@ -280,7 +280,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Altera somente o nome do profissional ativo ou inativo */
+        patch: operations["patchProfessional"];
         trace?: never;
     };
     "/services": {
@@ -409,6 +410,10 @@ export interface components {
             email: string;
             /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             temporary_password: string;
+        };
+        UpdateProfessionalRequest: {
+            /** @description Nome obrigatório, sem NUL; remove espaços nas extremidades. Omitido, nulo ou vazio é recusado. */
+            name: string;
         };
         ProfessionalResponse: {
             /** Format: uuid */
@@ -1155,6 +1160,45 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Cadastro do profissional, disponível inclusive sem trial ativo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Profissional inexistente ou de outro estabelecimento */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    patchProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfessionalRequest"];
+            };
+        };
+        responses: {
+            /** @description Registro persistido; identidade, e-mail, estado e credenciais preservados */
             200: {
                 headers: {
                     [name: string]: unknown;

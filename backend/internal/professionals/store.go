@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	db "barbershop-app/backend/db/generated"
 
@@ -100,6 +101,29 @@ func (store *PostgresStore) Get(ctx context.Context, establishmentID, profession
 	}
 	if err != nil {
 		return Professional{}, fmt.Errorf("get professional: %w", err)
+	}
+	return Professional{ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active}, nil
+}
+
+func (store *PostgresStore) UpdateName(ctx context.Context, establishmentID, professionalID, name string, at time.Time) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	// Lock the user before the profile so RETURNING cannot combine a new name
+	// with an active state from before a concurrent state transition.
+	row, err := db.New(store.pool).UpdateProfessionalName(ctx, db.UpdateProfessionalNameParams{
+		ID: pgtype.UUID{Bytes: professionalUUID, Valid: true}, EstablishmentID: pgtype.UUID{Bytes: tenant, Valid: true}, Name: name, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true},
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("update professional name: %w", err)
 	}
 	return Professional{ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active}, nil
 }
