@@ -17,7 +17,7 @@ export function ServiceFields({
   onChange: (field: keyof ServiceValues, value: string) => void;
 }) {
   const hint =
-    "Use vírgula e até duas casas decimais. Zero indica serviço gratuito.";
+    "De R$ 0,00 a R$ 99.999,99. Use vírgula e até duas casas decimais. Zero indica serviço gratuito.";
   const field = useFieldControl({ error: errors.price_cents, hint });
   return (
     <>
@@ -26,6 +26,7 @@ export function ServiceFields({
         name="name"
         value={values.name}
         error={errors.name}
+        hint="Obrigatório, com até 120 caracteres após remover os espaços nas extremidades."
         disabled={disabled}
         onChange={(e) => onChange("name", e.target.value)}
       />

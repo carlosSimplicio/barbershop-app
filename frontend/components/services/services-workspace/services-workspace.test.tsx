@@ -110,13 +110,14 @@ test("exibe preço exato, duração, estado e paginação", async () => {
     .mockResolvedValueOnce(page([records[1]], 20));
   render(<ServicesWorkspace />);
   expect(screen.getByRole("status")).toHaveTextContent("Carregando serviços");
-  expect(
+  const catalog = within(
     await screen.findByRole("list", { name: "Serviços cadastrados" }),
-  ).toHaveTextContent("Corte");
-  expect(screen.getByText(/R\$\s0,01/)).toBeVisible();
-  expect(screen.getByText(/R\$\s99.999,99/)).toBeVisible();
-  expect(screen.getByText(/17 minutos/)).toBeVisible();
-  expect(screen.getByText("Inativo")).toBeVisible();
+  );
+  expect(catalog.getByText("Corte")).toBeVisible();
+  expect(catalog.getByText(/R\$\s0,01/)).toBeVisible();
+  expect(catalog.getByText(/R\$\s99.999,99/)).toBeVisible();
+  expect(catalog.getByText(/17 minutos/)).toBeVisible();
+  expect(catalog.getByText("Inativo")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
   await waitFor(() =>
     expect(screen.queryByText("Corte")).not.toBeInTheDocument(),
