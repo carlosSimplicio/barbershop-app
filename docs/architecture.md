@@ -71,7 +71,7 @@
 
 ## Catálogo de serviços
 
-- O slice `internal/services` implementa cadastro, listagem, consulta individual, edição parcial e estado ativo. Todos os endpoints derivam o tenant do `Principal` e autorizam somente `owner`. Escritas exigem origem confiável, CSRF e `entitlements.Service.RequireWrite`; o matcher CSRF inclui os caminhos parametrizados com UUID e `/status`.
+- O slice `internal/services` implementa cadastro, listagem, consulta individual, edição parcial e estado ativo. Na composição da API e da suíte de integração, store e caso de uso são instanciados em variáveis próprias antes de criar o handler. Todos os endpoints derivam o tenant do `Principal` e autorizam somente `owner`. Escritas exigem origem confiável, CSRF e `entitlements.Service.RequireWrite`; o matcher CSRF inclui os caminhos parametrizados com UUID e `/status`.
 - `POST /services` recebe nome, `price_cents` inteiro e duração opcional; omitida ou nula usa 30 minutos. Nome com caractere NUL é recusado pela validação compartilhada de cadastro e edição com `400` e `invalid_name`, antes de chegar ao PostgreSQL. Cria serviço ativo e retorna `201` com ID, nome normalizado, preço, duração e estado.
 - `GET /services` lista ativos e inativos por criação e ID decrescentes. `limit` padrão é 20, máximo 100; `offset` padrão é 0, máximo 2.147.483.647. A query busca `limit + 1` para `has_more`; resposta inclui `can_write`, calculado pelo componente central. Trial ausente ou expirado mantém leitura e retorna `false`; falha de infraestrutura permanece erro.
 - `GET /services/{service_id}` retorna ativo ou inativo no tenant da sessão. UUID inválido recebe `400`; ID ausente ou de outro tenant recebe o mesmo `404`. A leitura permanece disponível sem trial ativo.

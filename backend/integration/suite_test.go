@@ -170,6 +170,8 @@ func newTestApplication(t *testing.T) *testApplication {
 	}
 	t.Cleanup(func() { _ = logoStorage.Close() })
 	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(integrationPool)
+	catalogStore := services.NewPostgresStore(integrationPool)
+	catalogService := services.NewService(catalogStore, writeEntitlements)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
@@ -192,7 +194,7 @@ func newTestApplication(t *testing.T) *testApplication {
 		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
 			writeEntitlements)),
-		services.NewHandler(services.NewService(services.NewPostgresStore(integrationPool), writeEntitlements)),
+		services.NewHandler(catalogService),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
