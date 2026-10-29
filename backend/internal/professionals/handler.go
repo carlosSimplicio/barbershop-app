@@ -39,9 +39,8 @@ func NewHandler(registry Registry) *Handler {
 }
 
 func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessionalsParams) {
-	principal, ok := auth.PrincipalFromContext(c)
+	principal, ok := auth.RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	limit, offset := int32(20), int32(0)
@@ -93,9 +92,8 @@ func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessio
 }
 
 func (handler *Handler) PostProfessionals(c *gin.Context) {
-	principal, ok := auth.PrincipalFromContext(c)
+	principal, ok := auth.RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request createRequest

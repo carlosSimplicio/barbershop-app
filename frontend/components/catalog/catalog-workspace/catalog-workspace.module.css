@@ -1,0 +1,44 @@
+.workspace,
+.panel {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+.panel h2 {
+  margin: 0;
+}
+.record {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.details {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+.details span {
+  color: var(--color-muted);
+}
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.recordActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (max-width: 32rem) {
+  .record {
+    flex-direction: column;
+  }
+}

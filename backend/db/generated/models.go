@@ -97,6 +97,17 @@ type Professional struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Service struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	Name            string             `json:"name"`
+	PriceCents      int32              `json:"price_cents"`
+	DurationMinutes int32              `json:"duration_minutes"`
+	Active          bool               `json:"active"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type User struct {
 	ID                     pgtype.UUID        `json:"id"`
 	EstablishmentID        pgtype.UUID        `json:"establishment_id"`

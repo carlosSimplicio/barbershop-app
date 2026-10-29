@@ -183,7 +183,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Consultar perfil, logo e links das configurações no mesmo snapshot SQL, com regressão HTTP sob atualização concorrente.
 - [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a alteração de fuso já usa esse bloqueio; a integração atômica com futuros agendamentos, bloqueios e lançamentos permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
-- [ ] Criar persistência para serviços.
+- [x] Criar persistência para serviços, com preço exato em centavos, tenant e queries de catálogo; integração com API e painel consta no escopo 10.
 - [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries de criação e listagem, integradas aos fluxos entregues da API.
 - [ ] Criar persistência para associações profissional-serviço.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
@@ -321,11 +321,20 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 10. Administração de serviços
 
-- [ ] Criar, listar, consultar, editar, ativar e desativar serviços do estabelecimento.
-- [ ] Exigir nome e preço não negativo; permitir serviços gratuitos.
-- [ ] Permitir duração configurável e usar 30 minutos quando não informada.
+- [x] Criar serviço ativo pela API exclusiva ao proprietário, com tenant da sessão, CSRF e direito centralizado de escrita.
+- [x] Listar serviços pela API com paginação, ativos e inativos e direito de escrita atual, com leitura após expiração.
+- [x] Consultar individualmente serviço ativo ou inativo pela API, com isolamento e leitura após expiração.
+- [x] Editar nome, preço e duração pela API com PATCH parcial, validação atômica, CSRF em rota parametrizada e preservação da identidade.
+- [x] Ativar e desativar serviço pela API com estado explícito idempotente, tenant, CSRF e direito de escrita.
+- [x] Listar serviços no painel com paginação, preço BRL exato, estados de consulta e somente leitura.
+- [x] Cadastrar serviço no painel com preço decimal convertido exatamente em centavos, limites visíveis de nome, preço e duração, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
+- [x] Consultar e editar serviço no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento e reconciliação que preserva o rascunho e sincroniza o registro persistido na lista.
+- [x] Ativar e desativar serviço no painel com confirmação, coordenação dos envios e consulta após resultado ambíguo, atualizando lista e editor aberto.
+- [x] Validar nome obrigatório normalizado com até 120 pontos de código, sem caractere NUL, e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
+- [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.
-- [ ] Preservar serviço e referências históricas após desativação.
+- [x] Preservar registro, identidade e dados do serviço após desativação, sem endpoint de exclusão física.
+- [ ] Preservar referências históricas e snapshots dos serviços nos futuros fluxos de agenda e financeiro.
 - [ ] Exibir quantidade de agendamentos futuros afetados antes da desativação.
 - [ ] Impedir novos agendamentos com serviço inativo sem alterar os já existentes.
 

@@ -27,6 +27,7 @@ import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/password_recovery"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/catalog"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
@@ -169,6 +170,8 @@ func newTestApplication(t *testing.T) *testApplication {
 	}
 	t.Cleanup(func() { _ = logoStorage.Close() })
 	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(integrationPool)
+	catalogStore := catalog.NewPostgresStore(integrationPool)
+	catalogService := catalog.NewService(catalogStore, writeEntitlements)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
@@ -191,6 +194,7 @@ func newTestApplication(t *testing.T) *testApplication {
 		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
 			writeEntitlements)),
+		catalog.NewHandler(catalogService),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -287,7 +291,7 @@ func requiresTestCSRF(method, path string) bool {
 	if method == http.MethodGet || method == http.MethodHead {
 		return false
 	}
-	return path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/establishment/settings" || path == "/api/v1/establishment/logo" || path == "/api/v1/professionals"
+	return path == "/api/v1/services" || strings.HasPrefix(path, "/api/v1/services/") || path == "/api/v1/auth/logout" || path == "/api/v1/auth/password/change" || path == "/api/v1/establishment/settings" || path == "/api/v1/establishment/logo" || path == "/api/v1/professionals"
 }
 
 func (application *testApplication) cookie(t *testing.T, name string) *http.Cookie {

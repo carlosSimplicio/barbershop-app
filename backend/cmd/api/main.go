@@ -14,6 +14,7 @@ import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/password_recovery"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/catalog"
 	"barbershop-app/backend/internal/config"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/establishment"
@@ -117,6 +118,8 @@ func run() error {
 	publicEstablishmentResolver := establishment.NewPublicEstablishmentResolver(publicEstablishmentStore)
 	publicEstablishments := establishment.NewPublicEstablishmentService(publicEstablishmentResolver, publicEstablishmentStore)
 	publicEstablishmentLogos := establishment.NewPublicLogoService(publicEstablishmentResolver, establishment.NewPostgresPublicLogoStore(pool), logoStorage)
+	catalogStore := catalog.NewPostgresStore(pool)
+	catalogService := catalog.NewService(catalogStore, writeEntitlements)
 	professionalService := professionals.NewService(professionals.NewPostgresStore(pool), passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
 	passwordRecoveryVerification := passwordrecovery.NewPasswordRecoveryVerificationService(authStore, passwords)
@@ -126,6 +129,7 @@ func run() error {
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
 		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads, publicEstablishments, publicEstablishmentLogos),
 		professionals.NewHandler(professionalService),
+		catalog.NewHandler(catalogService),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())

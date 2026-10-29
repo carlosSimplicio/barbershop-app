@@ -38,6 +38,15 @@ outro terminal:
 make migrate-up
 ```
 
+Se o ambiente já estava ligado, atualize também o binário do backend:
+
+```sh
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build --no-deps backend
+```
+
+O hot reload do frontend não aplica migrations nem recompila o backend. Depois
+da atualização, recarregue a página ou use a ação de nova tentativa.
+
 O Caddy usa uma CA interna no ambiente local. Depois do primeiro `make dev`,
 use outro terminal para copiar o certificado e instale-o manualmente como
 autoridade confiável no sistema ou navegador:
@@ -57,6 +66,19 @@ repositório próprio. Nunca versione a CA ou as chaves exibidas por
 O Caddy é o único ponto público da aplicação. Ele encaminha `/api/v1` para o
 backend e as demais rotas para o Next.js. PostgreSQL, backend, frontend e SMTP
 permanecem nas redes internas do Compose.
+
+## Catálogo de serviços
+
+O proprietário administra o catálogo em `/painel/servicos`: cadastro, listagem
+paginada, consulta, edição, ativação e desativação. Preços usam BRL com centavos
+exatos; duração aceita minutos inteiros e usa 30 quando vazia. Serviços inativos
+permanecem no catálogo, e o painel continua consultável após expiração do trial.
+
+Alterações pedem confirmação quando necessário e respostas incertas exigem
+conferência antes de novo envio. Os passos de validação estão em
+[docs/operations.md](docs/operations.md#validação-local-do-catálogo-de-serviços).
+Associação a profissionais, agenda e contagem de agendamentos afetados permanecem
+nos próximos escopos documentados.
 
 ## Onboarding local
 

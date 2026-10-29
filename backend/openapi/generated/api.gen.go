@@ -109,6 +109,16 @@ type CreateProfessionalRequest struct {
 	TemporaryPassword string `json:"temporary_password"`
 }
 
+// CreateServiceRequest defines model for CreateServiceRequest.
+type CreateServiceRequest struct {
+	// DurationMinutes Omitted or null uses 30 minutes; any whole minute is accepted.
+	DurationMinutes *int64 `json:"duration_minutes,omitempty"`
+
+	// Name Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character. Duplicate names are allowed.
+	Name       string `json:"name"`
+	PriceCents int64  `json:"price_cents"`
+}
+
 // EmailConfirmationRequest defines model for EmailConfirmationRequest.
 type EmailConfirmationRequest struct {
 	Email openapi_types.Email `json:"email"`
@@ -280,8 +290,41 @@ type RegisterRequest struct {
 	TimeZone string `json:"time_zone"`
 }
 
+// ServiceListResponse defines model for ServiceListResponse.
+type ServiceListResponse struct {
+	CanWrite bool              `json:"can_write"`
+	HasMore  bool              `json:"has_more"`
+	Items    []ServiceResponse `json:"items"`
+	Limit    int               `json:"limit"`
+	Offset   int               `json:"offset"`
+}
+
+// ServiceResponse defines model for ServiceResponse.
+type ServiceResponse struct {
+	Active          bool               `json:"active"`
+	DurationMinutes int64              `json:"duration_minutes"`
+	Id              openapi_types.UUID `json:"id"`
+	Name            string             `json:"name"`
+	PriceCents      int64              `json:"price_cents"`
+}
+
+// ServiceStatusRequest defines model for ServiceStatusRequest.
+type ServiceStatusRequest struct {
+	Active bool `json:"active"`
+}
+
 // TrialStatus defines model for TrialStatus.
 type TrialStatus string
+
+// UpdateServiceRequest defines model for UpdateServiceRequest.
+type UpdateServiceRequest struct {
+	// DurationMinutes Omitted preserves duration; null resets to 30 minutes.
+	DurationMinutes *int64 `json:"duration_minutes,omitempty"`
+
+	// Name Trimmed before validation; nonempty, at most 120 Unicode code points, and no NUL character.
+	Name       *string `json:"name,omitempty"`
+	PriceCents *int64  `json:"price_cents,omitempty"`
+}
 
 // UserRole defines model for UserRole.
 type UserRole string
@@ -297,6 +340,9 @@ type Forbidden = ErrorResponse
 
 // InternalServerError defines model for InternalServerError.
 type InternalServerError = ErrorResponse
+
+// NotFound defines model for NotFound.
+type NotFound = ErrorResponse
 
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorResponse
@@ -317,6 +363,12 @@ type GetProfessionalsParams struct {
 type GetPublicEstablishmentLogoParams struct {
 	// IfNoneMatch ETag do logo previamente recebido para revalidar o cache.
 	IfNoneMatch *string `json:"If-None-Match,omitempty"`
+}
+
+// GetServicesParams defines parameters for GetServices.
+type GetServicesParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // PostAuthEmailConfirmationJSONRequestBody defines body for PostAuthEmailConfirmation for application/json ContentType.
@@ -348,6 +400,15 @@ type PatchEstablishmentSettingsJSONRequestBody = EstablishmentSettingsPatchReque
 
 // PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
 type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
+
+// PostServicesJSONRequestBody defines body for PostServices for application/json ContentType.
+type PostServicesJSONRequestBody = CreateServiceRequest
+
+// PatchServiceJSONRequestBody defines body for PatchService for application/json ContentType.
+type PatchServiceJSONRequestBody = UpdateServiceRequest
+
+// PutServiceStatusJSONRequestBody defines body for PutServiceStatus for application/json ContentType.
+type PutServiceStatusJSONRequestBody = ServiceStatusRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -405,6 +466,21 @@ type ServerInterface interface {
 	// GetPublicEstablishmentLogo Consulta o logo atual de um estabelecimento publicável
 	// (GET /public/establishments/{slug}/logo)
 	GetPublicEstablishmentLogo(c *gin.Context, slug string, params GetPublicEstablishmentLogoParams)
+	// GetServices Lista serviços do estabelecimento do proprietário
+	// (GET /services)
+	GetServices(c *gin.Context, params GetServicesParams)
+	// PostServices Cadastra serviço no estabelecimento do proprietário
+	// (POST /services)
+	PostServices(c *gin.Context)
+	// GetService Consulta serviço do estabelecimento do proprietário
+	// (GET /services/{service_id})
+	GetService(c *gin.Context, serviceId openapi_types.UUID)
+	// PatchService Edita parcialmente um serviço do estabelecimento
+	// (PATCH /services/{service_id})
+	PatchService(c *gin.Context, serviceId openapi_types.UUID)
+	// PutServiceStatus Define o estado ativo do serviço de forma idempotente
+	// (PUT /services/{service_id}/status)
+	PutServiceStatus(c *gin.Context, serviceId openapi_types.UUID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -720,6 +796,129 @@ func (siw *ServerInterfaceWrapper) GetPublicEstablishmentLogo(c *gin.Context) {
 	siw.Handler.GetPublicEstablishmentLogo(c, slug, params)
 }
 
+// GetServices operation middleware
+func (siw *ServerInterfaceWrapper) GetServices(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetServicesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetServices(c, params)
+}
+
+// PostServices operation middleware
+func (siw *ServerInterfaceWrapper) PostServices(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostServices(c)
+}
+
+// GetService operation middleware
+func (siw *ServerInterfaceWrapper) GetService(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "service_id" -------------
+	var serviceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "service_id", c.Param("service_id"), &serviceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter service_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetService(c, serviceId)
+}
+
+// PatchService operation middleware
+func (siw *ServerInterfaceWrapper) PatchService(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "service_id" -------------
+	var serviceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "service_id", c.Param("service_id"), &serviceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter service_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PatchService(c, serviceId)
+}
+
+// PutServiceStatus operation middleware
+func (siw *ServerInterfaceWrapper) PutServiceStatus(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "service_id" -------------
+	var serviceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "service_id", c.Param("service_id"), &serviceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter service_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PutServiceStatus(c, serviceId)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -764,5 +963,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/public/establishments/:slug", wrapper.GetPublicEstablishment)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
+	router.GET(options.BaseURL+"/services", wrapper.GetServices)
+	router.POST(options.BaseURL+"/services", wrapper.PostServices)
+	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)
+	router.PATCH(options.BaseURL+"/services/:service_id", wrapper.PatchService)
+	router.PUT(options.BaseURL+"/services/:service_id/status", wrapper.PutServiceStatus)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

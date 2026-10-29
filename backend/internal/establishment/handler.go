@@ -54,9 +54,8 @@ func NewHandler(finder Finder, settings SettingsManager, logoUploader LogoUpload
 const maxLogoMultipartBodyBytes = MaxLogoBytes + 64*1024
 
 func (handler *Handler) PutEstablishmentLogo(c *gin.Context) {
-	principal, ok := auth.PrincipalFromContext(c)
+	principal, ok := auth.RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	if handler.logoUploader == nil {
@@ -142,9 +141,8 @@ func readLogoMultipart(c *gin.Context) (ValidatedLogo, error) {
 }
 
 func (handler *Handler) GetEstablishment(c *gin.Context) {
-	principal, ok := auth.PrincipalFromContext(c)
+	principal, ok := auth.RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	establishment, err := handler.finder.Get(c.Request.Context(), principal)
@@ -253,9 +251,8 @@ func matchesIfNoneMatch(values []string, etag string) bool {
 }
 
 func (handler *Handler) GetEstablishmentSettings(c *gin.Context) {
-	principal, ok := auth.PrincipalFromContext(c)
+	principal, ok := auth.RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	settings, err := handler.settings.GetSettings(c.Request.Context(), principal)
@@ -308,9 +305,8 @@ type settingsPatchRequest struct {
 }
 
 func (handler *Handler) PatchEstablishmentSettings(c *gin.Context) {
-	principal, ok := auth.PrincipalFromContext(c)
+	principal, ok := auth.RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request settingsPatchRequest

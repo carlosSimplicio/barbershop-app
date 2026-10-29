@@ -104,8 +104,9 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - Cada profissional possui jornada semanal recorrente própria, editável por ele ou pelo proprietário.
 - Permita vários períodos no mesmo dia, como `08:00–12:00` e `13:00–18:00`, sem sobreposição entre períodos.
 - Proprietário e profissional podem criar bloqueios pontuais para compromissos, folgas ou outras indisponibilidades.
-- Cada serviço possui um preço padrão obrigatório, armazenado com precisão monetária; aceite zero para serviços gratuitos e rejeite valores negativos.
-- O proprietário define a duração do serviço; quando vazia, use 30 minutos.
+- Serviço exige nome não vazio após remover espaços nas extremidades, com até 120 pontos de código Unicode e sem caractere nulo (`U+0000`); nomes repetidos são permitidos no mesmo estabelecimento.
+- Cada serviço possui preço obrigatório de R$ 0,00 a R$ 99.999,99, com até duas casas decimais, representado em centavos inteiros; aceite zero para serviços gratuitos.
+- O proprietário define a duração do serviço entre 1 e 1.440 minutos inteiros, sem exigir múltiplos de 15; quando vazia, use 30 minutos.
 - Ofereça inícios em intervalos de 15 minutos. Não existe buffer antes ou depois do serviço no MVP.
 - A duração integral do serviço define o fim do atendimento; o slot define apenas possíveis horários de início.
 - Calcule disponibilidade com jornada, duração, agendamentos e bloqueios.
@@ -116,6 +117,15 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - Copie para o agendamento o preço e a duração do serviço no momento da criação.
 - Alterar preço ou duração no catálogo afeta somente novos agendamentos e não modifica valores nem intervalos já registrados.
 - Cancelar ou reagendar preserva os snapshots originais de preço e duração do agendamento.
+
+### Administração do catálogo
+
+- O proprietário pode cadastrar, listar, consultar, editar, ativar e desativar serviços do próprio estabelecimento pela API e em `/painel/servicos`. O cadastro cria serviço ativo; a associação a profissionais permanece explícita e será entregue no respectivo escopo.
+- A listagem paginada inclui ativos e inativos, nome, preço em BRL, duração e estado, com carregamento, vazio, erro e nova tentativa. Com acesso expirado, mantém a consulta e informa modo somente leitura, bloqueando alterações.
+- Os formulários de cadastro e edição apresentam antecipadamente nome obrigatório com até 120 caracteres, preço de R$ 0,00 a R$ 99.999,99 com até duas casas decimais e duração de 1 a 1.440 minutos. O cadastro valida campos por conveniência, usa 30 minutos quando a duração estiver vazia e impede envio simultâneo. Após confirmação, atualiza a lista; falha na recarga não desfaz o sucesso e resposta ambígua orienta conferir a lista antes de reenviar.
+- A edição carrega o registro persistido, inclusive inativo, e envia apenas campos alterados. Omitidos permanecem inalterados; limpar duração aplica 30 minutos. Cancelar não grava. Erros preservam os campos editados; resultado ambíguo exige recarga antes de novo envio. A reconciliação preserva alterações do usuário e atualiza os demais campos com os valores consultados, evitando sobrescrever mudanças feitas em outro acesso. Toda consulta individual confirmada pelo editor também atualiza o registro na lista com os dados persistidos, sem publicar o rascunho.
+- Ativar ou desativar exige confirmação identificando o serviço, com opção de cancelar. A ação preserva o catálogo e o histórico e só apresenta sucesso após confirmação. A lista e o editor aberto refletem o estado retornado; uma resposta incerta exige consultar o serviço antes de tentar novamente. Durante um envio, a interface impede outros envios e mudanças da lista.
+- Contagem prévia e alertas de agendamentos afetados serão integrados quando existir agenda, conforme “Serviços e profissionais inativos”; a entrega atual não apresenta contagens fictícias.
 
 ### Limites configuráveis
 
@@ -165,7 +175,7 @@ O proprietário pode atualizar esses limites e os dados opcionais do perfil por 
 - Itens inativos não aparecem em novos agendamentos públicos, mas permanecem em consultas históricas.
 - Ao remover uma associação entre profissional e serviço, impeça somente novos agendamentos para esse par e preserve agendamentos existentes.
 - Preserve referências e snapshots necessários para interpretar agenda e financeiro antigos.
-- Antes de desativar, informe quantos agendamentos futuros serão afetados.
+- Antes de desativar, informe quantos agendamentos futuros serão afetados. A API do catálogo já permite ativar e desativar serviços; contagem prévia e alertas serão integrados quando existir agenda, sem apresentar contagens fictícias na entrega atual.
 - Agendamentos futuros continuam válidos; não os cancele automaticamente.
 - Exiba um alerta interno ao proprietário para tratamento manual, sem notificação externa.
 - Não use exclusão em cascata que remova agendamentos, atendimentos, comissões ou lançamentos.
