@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ActionLink } from "@/components/ui";
+import { TRIAL_DURATION_DAYS } from "@/lib/establishment/trial-policy";
 
 import styles from "./page.module.css";
 
@@ -43,7 +44,8 @@ export default function Home() {
             </ActionLink>
           </div>
           <p className={styles.trialNote}>
-            Confirme seu e-mail para iniciar 14 dias de avaliação.
+            Confirme seu e-mail para iniciar {TRIAL_DURATION_DAYS} dias de
+            avaliação.
           </p>
         </div>
 

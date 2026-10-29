@@ -25,6 +25,7 @@ import {
   INVALID_PUBLIC_SLUG_MESSAGE,
 } from "@/lib/establishment/establishment-limits";
 import { BRAZILIAN_TIME_ZONES } from "@/lib/establishment/brazilian-time-zones";
+import { TRIAL_DURATION_DAYS } from "@/lib/establishment/trial-policy";
 
 import { ConfirmationResend } from "../confirmation-resend/confirmation-resend";
 import styles from "./registration-form.module.css";
@@ -261,8 +262,8 @@ export function RegistrationForm() {
         {submitting ? "Criando…" : "Criar meu espaço"}
       </Button>
       <p className={styles.note}>
-        Enviaremos um link para confirmar seu e-mail. Os 14 dias de avaliação
-        começam somente depois da confirmação.
+        Enviaremos um link para confirmar seu e-mail. Os {TRIAL_DURATION_DAYS}{" "}
+        dias de avaliação começam somente depois da confirmação.
       </p>
     </form>
   );
