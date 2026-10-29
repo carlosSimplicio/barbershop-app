@@ -46,7 +46,7 @@ WHERE normalized_email = $1
 -- name: CreateEmailConfirmation :one
 INSERT INTO email_confirmations (user_id, token_hash, expires_at, created_at)
 VALUES ($1, $2, $3, $4)
-RETURNING *;
+RETURNING id, user_id, token_hash, expires_at, consumed_at, invalidated_at, created_at;
 
 -- name: GetEmailConfirmationOwnerForUpdate :one
 SELECT u.id
@@ -102,7 +102,7 @@ FROM users AS u
 WHERE u.id = sqlc.arg(owner_user_id)
   AND u.establishment_id = sqlc.arg(establishment_id)
   AND u.role = 'owner'
-RETURNING *;
+RETURNING id, owner_user_id, establishment_id, starts_at, ends_at, created_at;
 
 -- name: GetEstablishmentWithTrial :one
 SELECT e.id, e.name, e.slug, e.time_zone, t.starts_at, t.ends_at
