@@ -22,6 +22,7 @@ import (
 )
 
 type Registry interface {
+	Get(context.Context, auth.Principal, string) (Professional, error)
 	Create(context.Context, auth.Principal, CreateInput) (Professional, error)
 	List(context.Context, auth.Principal, int32, int32) (ListResult, error)
 }
@@ -156,4 +157,39 @@ func writeFieldError(httpContext *gin.Context, status int, field, code, message 
 	httpContext.JSON(status, api.ErrorResponse{
 		Code: topCode, Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(httpContext), Fields: &fields,
 	})
+}
+
+func (handler *Handler) GetProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	professional, err := handler.registry.Get(httpContext.Request.Context(), principal, professionalID.String())
+	if err != nil {
+		writeProfessionalError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func writeProfessionalError(httpContext *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrForbidden):
+		writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode consultar este profissional.")
+	case errors.Is(err, ErrNotFound):
+		writeError(httpContext, http.StatusNotFound, "professional_not_found", "Profissional não encontrado.")
+	default:
+		slog.Error("professional_query_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o profissional.")
+	}
+}
+
+func writeProfessionalResponse(httpContext *gin.Context, status int, professional Professional) {
+	professionalID, err := uuid.Parse(professional.ID)
+	if err != nil {
+		slog.Error("professional_response_invalid", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o profissional.")
+		return
+	}
+	httpContext.JSON(status, api.ProfessionalResponse{Id: professionalID, Name: professional.Name, Email: openapiTypes.Email(professional.Email), Active: professional.Active})
 }

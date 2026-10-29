@@ -77,6 +77,37 @@ func (q *Queries) CreateProfessionalUser(ctx context.Context, arg CreateProfessi
 	return id, err
 }
 
+const getProfessional = `-- name: GetProfessional :one
+SELECT p.user_id, p.name, u.email, u.active
+FROM professionals AS p
+JOIN users AS u ON u.id = p.user_id AND u.establishment_id = p.establishment_id
+WHERE p.user_id = $1 AND p.establishment_id = $2 AND u.role = 'professional'
+`
+
+type GetProfessionalParams struct {
+	UserID          pgtype.UUID `json:"user_id"`
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+}
+
+type GetProfessionalRow struct {
+	UserID pgtype.UUID `json:"user_id"`
+	Name   string      `json:"name"`
+	Email  string      `json:"email"`
+	Active bool        `json:"active"`
+}
+
+func (q *Queries) GetProfessional(ctx context.Context, arg GetProfessionalParams) (GetProfessionalRow, error) {
+	row := q.db.QueryRow(ctx, getProfessional, arg.UserID, arg.EstablishmentID)
+	var i GetProfessionalRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Active,
+	)
+	return i, err
+}
+
 const listProfessionalsByEstablishment = `-- name: ListProfessionalsByEstablishment :many
 SELECT p.user_id, p.name, u.email, u.active
 FROM professionals AS p

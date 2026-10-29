@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	ErrNotFound         = errors.New("professional not found")
 	ErrForbidden        = errors.New("professional operation forbidden")
 	ErrInvalidName      = errors.New("invalid professional name")
 	ErrEmailUnavailable = errors.New("professional email unavailable")
@@ -53,6 +54,7 @@ type Creation struct {
 }
 
 type Store interface {
+	Get(context.Context, string, string) (Professional, error)
 	Create(context.Context, Creation) (string, error)
 	List(context.Context, string, int32, int32) ([]Professional, error)
 }
@@ -135,4 +137,11 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, limi
 		items = []Professional{}
 	}
 	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore, CanWrite: writeErr == nil}, nil
+}
+
+func (service *Service) Get(ctx context.Context, principal auth.Principal, professionalID string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	return service.store.Get(ctx, principal.EstablishmentID, professionalID)
 }

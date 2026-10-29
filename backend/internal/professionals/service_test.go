@@ -123,3 +123,7 @@ func (stub *writeEntitlementsStub) RequireWrite(_ context.Context, establishment
 	stub.establishmentID = establishmentID
 	return stub.err
 }
+
+func (*createStoreStub) Get(context.Context, string, string) (Professional, error) {
+	return Professional{}, nil
+}

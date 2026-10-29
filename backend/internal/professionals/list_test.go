@@ -107,3 +107,7 @@ func TestListProfessionalsDistinguishesReadOnlyFromInfrastructureFailure(t *test
 		})
 	}
 }
+
+func (*listStoreStub) Get(context.Context, string, string) (Professional, error) {
+	return Professional{}, nil
+}

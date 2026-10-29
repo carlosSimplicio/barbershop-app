@@ -8,6 +8,7 @@ import (
 	db "barbershop-app/backend/db/generated"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,4 +81,25 @@ func (store *PostgresStore) List(ctx context.Context, establishmentID string, li
 		})
 	}
 	return items, nil
+}
+
+func (store *PostgresStore) Get(ctx context.Context, establishmentID, professionalID string) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	row, err := db.New(store.pool).GetProfessional(ctx, db.GetProfessionalParams{
+		UserID: pgtype.UUID{Bytes: professionalUUID, Valid: true}, EstablishmentID: pgtype.UUID{Bytes: tenant, Valid: true},
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("get professional: %w", err)
+	}
+	return Professional{ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active}, nil
 }

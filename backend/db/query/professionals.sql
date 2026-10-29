@@ -22,3 +22,9 @@ WHERE p.establishment_id = $1
   AND u.role = 'professional'
 ORDER BY p.created_at DESC, p.user_id DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetProfessional :one
+SELECT p.user_id, p.name, u.email, u.active
+FROM professionals AS p
+JOIN users AS u ON u.id = p.user_id AND u.establishment_id = p.establishment_id
+WHERE p.user_id = $1 AND p.establishment_id = $2 AND u.role = 'professional';

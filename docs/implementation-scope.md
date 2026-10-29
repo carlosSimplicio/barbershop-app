@@ -311,7 +311,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
 - [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação, `can_write` centralizado e leitura após expiração do trial.
 - [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
-- [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
+- [x] Consultar individualmente pela API profissionais ativos e inativos do próprio estabelecimento, inclusive sem trial ativo.
+- [ ] Editar, ativar e desativar profissionais pela API.
+- [ ] Consultar individualmente, editar, ativar e desativar profissionais pelo painel.
 - [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
@@ -523,6 +525,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário no cadastro autenticado de profissionais.
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário na listagem autenticada de profissionais.
+- [x] Validar tenant, papel do proprietário e perfil profissional na consulta individual, sem expor credenciais ou sessões.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.

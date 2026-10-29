@@ -487,6 +487,41 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getProfessional
+      summary: Consulta profissional ativo ou inativo do estabelecimento do proprietário
+      tags: [professionals]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Cadastro do profissional, disponível inclusive sem trial ativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Profissional inexistente ou de outro estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /services:
     get:
       operationId: getServices
