@@ -7,7 +7,7 @@ export function OwnerPanelShell({
   activePage = "professionals",
   children,
 }: {
-  activePage?: "professionals" | "settings" | "none";
+  activePage?: "professionals" | "services" | "settings" | "none";
   children: ReactNode;
 }) {
   return (
@@ -26,6 +26,13 @@ export function OwnerPanelShell({
             href="/painel/profissionais"
           >
             Profissionais
+          </Link>
+          <Link
+            aria-current={activePage === "services" ? "page" : undefined}
+            className={styles.link}
+            href="/painel/servicos"
+          >
+            Serviços
           </Link>
           <Link
             aria-current={activePage === "settings" ? "page" : undefined}

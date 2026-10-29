@@ -326,7 +326,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Consultar individualmente serviço ativo ou inativo pela API, com isolamento e leitura após expiração.
 - [x] Editar nome, preço e duração pela API com PATCH parcial, validação atômica, CSRF em rota parametrizada e preservação da identidade.
 - [x] Ativar e desativar serviço pela API com estado explícito idempotente, tenant, CSRF e direito de escrita.
-- [ ] Listar serviços no painel.
+- [x] Listar serviços no painel com paginação, preço BRL exato, estados de consulta e somente leitura.
 - [ ] Cadastrar serviço no painel.
 - [ ] Consultar e editar serviço no painel.
 - [ ] Ativar e desativar serviço no painel.

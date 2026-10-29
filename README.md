@@ -58,6 +58,13 @@ O Caddy é o único ponto público da aplicação. Ele encaminha `/api/v1` para 
 backend e as demais rotas para o Next.js. PostgreSQL, backend, frontend e SMTP
 permanecem nas redes internas do Compose.
 
+## Catálogo de serviços
+
+O proprietário pode consultar serviços ativos e inativos em `/painel/servicos`,
+com preço em BRL, duração e paginação. A leitura permanece disponível após
+expiração do trial. A API já permite cadastro, edição e mudança de estado;
+os respectivos controles do painel serão entregues nas etapas seguintes.
+
 ## Onboarding local
 
 Com o ambiente local ativo e as migrations aplicadas, abra
