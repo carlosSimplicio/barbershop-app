@@ -48,11 +48,11 @@ func validateSettingsPatch(patch SettingsPatch) (SettingsPatch, error) {
 	}
 	if patch.Name.Set {
 		if patch.Name.Null {
-			return SettingsPatch{}, invalidSettingsField("name", "invalid_name", "Informe um nome com até 120 caracteres.")
+			return SettingsPatch{}, invalidSettingsField("name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", MaxNameCodePoints))
 		}
 		name := strings.TrimSpace(patch.Name.Value)
 		if !IsNameValid(name) {
-			return SettingsPatch{}, invalidSettingsField("name", "invalid_name", "Informe um nome com até 120 caracteres.")
+			return SettingsPatch{}, invalidSettingsField("name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", MaxNameCodePoints))
 		}
 		patch.Name.Value = name
 	}
@@ -77,8 +77,8 @@ func validateSettingsPatch(patch SettingsPatch) (SettingsPatch, error) {
 			continue
 		}
 		value := strings.TrimSpace(textField.field.Value)
-		if !utf8.ValidString(value) || utf8.RuneCountInString(value) > 500 {
-			return SettingsPatch{}, invalidSettingsField(textField.name, "invalid_text", "O texto deve ter até 500 caracteres.")
+		if !utf8.ValidString(value) || utf8.RuneCountInString(value) > MaxProfileTextCodePoints {
+			return SettingsPatch{}, invalidSettingsField(textField.name, "invalid_text", fmt.Sprintf("O texto deve ter até %d caracteres.", MaxProfileTextCodePoints))
 		}
 		if value == "" {
 			textField.field.Null = true
@@ -98,14 +98,14 @@ func validateSettingsPatch(patch SettingsPatch) (SettingsPatch, error) {
 			patch.SocialLinks.Value = []SocialLink{}
 			patch.SocialLinks.Null = false
 		}
-		if len(patch.SocialLinks.Value) > 5 {
-			return SettingsPatch{}, invalidSettingsField("social_links", "too_many_links", "Informe no máximo cinco links.")
+		if len(patch.SocialLinks.Value) > MaxSocialLinks {
+			return SettingsPatch{}, invalidSettingsField("social_links", "too_many_links", fmt.Sprintf("Informe no máximo %d links.", MaxSocialLinks))
 		}
 		for index, link := range patch.SocialLinks.Value {
 			fieldPrefix := "social_links." + strconv.Itoa(index)
 			label := strings.TrimSpace(link.Label)
-			if !utf8.ValidString(label) || label == "" || utf8.RuneCountInString(label) > 60 {
-				return SettingsPatch{}, invalidSettingsField(fieldPrefix+".label", "invalid_label", "Informe um rótulo com até 60 caracteres.")
+			if !utf8.ValidString(label) || label == "" || utf8.RuneCountInString(label) > MaxSocialLinkLabelCodePoints {
+				return SettingsPatch{}, invalidSettingsField(fieldPrefix+".label", "invalid_label", fmt.Sprintf("Informe um rótulo com até %d caracteres.", MaxSocialLinkLabelCodePoints))
 			}
 			linkURL := strings.TrimSpace(link.URL)
 			if !validSocialLinkURL(linkURL) {
@@ -180,7 +180,7 @@ func normalizeBrazilianPhone(value string) (string, bool) {
 }
 
 func validSocialLinkURL(value string) bool {
-	if value == "" || utf8.RuneCountInString(value) > 2048 {
+	if value == "" || utf8.RuneCountInString(value) > MaxSocialLinkURLCodePoints {
 		return false
 	}
 	parsed, err := url.Parse(value)

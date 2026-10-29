@@ -8,7 +8,7 @@ import (
 )
 
 func IsNameValid(name string) bool {
-	return utf8.ValidString(name) && strings.TrimSpace(name) != "" && utf8.RuneCountInString(name) <= 120
+	return utf8.ValidString(name) && strings.TrimSpace(name) != "" && utf8.RuneCountInString(name) <= MaxNameCodePoints
 }
 
 func IsTimeZoneValid(name string) bool {

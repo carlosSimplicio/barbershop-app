@@ -1,3 +1,10 @@
+import {
+  ESTABLISHMENT_LIMITS,
+  INVALID_ESTABLISHMENT_NAME_MESSAGE,
+  INVALID_ESTABLISHMENT_TEXT_MESSAGE,
+  INVALID_SOCIAL_LINK_LABEL_MESSAGE,
+  TOO_MANY_SOCIAL_LINKS_MESSAGE,
+} from "@/lib/establishment/establishment-limits";
 import type {
   EstablishmentSettings,
   EstablishmentSettingsPatch,
@@ -29,14 +36,14 @@ export type SettingsDraft = {
 export type FieldErrors = Record<string, string>;
 
 const serverMessages: Record<string, string> = {
-  invalid_name: "Informe um nome com até 120 caracteres.",
+  invalid_name: INVALID_ESTABLISHMENT_NAME_MESSAGE,
   invalid_time_zone: "Informe um fuso horário IANA válido.",
   time_zone_locked:
     "O fuso não pode ser alterado após o primeiro dado operacional.",
-  invalid_text: "O texto deve ter até 500 caracteres.",
+  invalid_text: INVALID_ESTABLISHMENT_TEXT_MESSAGE,
   invalid_phone: "Informe um telefone brasileiro com DDD.",
-  too_many_links: "Informe no máximo cinco links.",
-  invalid_label: "Informe um rótulo com até 60 caracteres.",
+  too_many_links: TOO_MANY_SOCIAL_LINKS_MESSAGE,
+  invalid_label: INVALID_SOCIAL_LINK_LABEL_MESSAGE,
   invalid_url: "Informe uma URL HTTPS válida sem credenciais.",
   invalid_limit: "Informe um número inteiro não negativo.",
   invalid_horizon: "Informe um número inteiro maior que zero.",
@@ -108,9 +115,9 @@ export function validateDraft(
 ): FieldErrors {
   const errors: FieldErrors = {};
   const name = draft.name.trim();
-  if (!name || characterCount(name) > 120) {
+  if (!name || characterCount(name) > ESTABLISHMENT_LIMITS.nameMaxCodePoints) {
     errors.name = name
-      ? "Informe um nome com até 120 caracteres."
+      ? INVALID_ESTABLISHMENT_NAME_MESSAGE
       : "Informe o nome do estabelecimento.";
   }
   if (timeZoneEditable && !timeZoneIsListed) {
@@ -118,8 +125,8 @@ export function validateDraft(
   }
   for (const field of ["description", "address"] as const) {
     const value = draft[field].trim();
-    if (characterCount(value) > 500) {
-      errors[field] = "O texto deve ter até 500 caracteres.";
+    if (characterCount(value) > ESTABLISHMENT_LIMITS.profileTextMaxCodePoints) {
+      errors[field] = INVALID_ESTABLISHMENT_TEXT_MESSAGE;
     }
   }
   if (
@@ -140,9 +147,11 @@ export function validateDraft(
     // Existing links from before the supported network selector remain intact
     // until the owner replaces or removes them.
     if (!link.network) continue;
-    if (!label || characterCount(label) > 60) {
-      errors[`social_links.${index}.label`] =
-        "Informe um rótulo com até 60 caracteres.";
+    if (
+      !label ||
+      characterCount(label) > ESTABLISHMENT_LIMITS.socialLinkLabelMaxCodePoints
+    ) {
+      errors[`social_links.${index}.label`] = INVALID_SOCIAL_LINK_LABEL_MESSAGE;
     }
     if (!isValidSocialURL(url)) {
       errors[`social_links.${index}.url`] =
@@ -302,7 +311,7 @@ function validateLimit(
   if (
     !Number.isInteger(parsed) ||
     parsed < (positive ? 1 : 0) ||
-    parsed > 2147483647
+    parsed > ESTABLISHMENT_LIMITS.bookingLimitMax
   ) {
     errors[field] = positive
       ? "Informe um número inteiro maior que zero."
@@ -339,7 +348,11 @@ function isValidBrazilianPhone(value: string) {
 }
 
 function isValidSocialURL(value: string) {
-  if (!value || characterCount(value) > 2048) return false;
+  if (
+    !value ||
+    characterCount(value) > ESTABLISHMENT_LIMITS.socialLinkURLMaxCodePoints
+  )
+    return false;
   try {
     const parsed = new URL(value);
     return (

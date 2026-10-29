@@ -21,6 +21,7 @@ import type {
   EstablishmentSettings,
   EstablishmentSettingsPatch,
 } from "@/lib/establishment/establishment-api";
+import { ESTABLISHMENT_LIMITS } from "@/lib/establishment/establishment-limits";
 import { BRAZILIAN_TIME_ZONES } from "@/lib/establishment/brazilian-time-zones";
 
 import {
@@ -275,7 +276,7 @@ export function SettingsForm({
             error={errors.name}
             id="name"
             label="Nome do estabelecimento"
-            maxLength={120}
+            maxLength={ESTABLISHMENT_LIMITS.nameMaxCodePoints}
             onChange={(event) => updateDraft("name", event.target.value)}
             ref={(element) => {
               fieldRefs.current.name = element;
@@ -323,7 +324,7 @@ export function SettingsForm({
           />
           <TextareaField
             error={errors.description}
-            hint="Opcional. Até 500 caracteres."
+            hint={`Opcional. Até ${ESTABLISHMENT_LIMITS.profileTextMaxCodePoints} caracteres.`}
             id="description"
             label="Descrição"
             onChange={(event) => updateDraft("description", event.target.value)}
@@ -334,7 +335,7 @@ export function SettingsForm({
           />
           <TextareaField
             error={errors.address}
-            hint="Opcional. Até 500 caracteres."
+            hint={`Opcional. Até ${ESTABLISHMENT_LIMITS.profileTextMaxCodePoints} caracteres.`}
             id="address"
             label="Endereço"
             onChange={(event) => updateDraft("address", event.target.value)}
@@ -357,7 +358,7 @@ export function SettingsForm({
             hint="Minutos. Vazio remove o limite; zero não exige antecedência mínima."
             id="minimum_booking_notice_minutes"
             label="Prazo de antecedência mínima"
-            max={2147483647}
+            max={ESTABLISHMENT_LIMITS.bookingLimitMax}
             min={0}
             onChange={(event) =>
               updateDraft("minimum_booking_notice_minutes", event.target.value)
@@ -374,7 +375,7 @@ export function SettingsForm({
             hint="Dias no futuro. Vazio remove o limite."
             id="booking_horizon_days"
             label="Horizonte máximo de agendamento"
-            max={2147483647}
+            max={ESTABLISHMENT_LIMITS.bookingLimitMax}
             min={1}
             onChange={(event) =>
               updateDraft("booking_horizon_days", event.target.value)
@@ -391,7 +392,7 @@ export function SettingsForm({
             hint="Minutos antes do atendimento. Vazio remove o limite; zero não exige antecedência."
             id="customer_change_deadline_minutes"
             label="Prazo para alterar agendamento"
-            max={2147483647}
+            max={ESTABLISHMENT_LIMITS.bookingLimitMax}
             min={0}
             onChange={(event) =>
               updateDraft(

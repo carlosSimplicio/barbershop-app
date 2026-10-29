@@ -19,6 +19,11 @@ import {
   registerOwner,
   type RegisterRequest,
 } from "@/lib/auth/registration-api/registration-api";
+import {
+  ESTABLISHMENT_LIMITS,
+  INVALID_ESTABLISHMENT_NAME_MESSAGE,
+  INVALID_PUBLIC_SLUG_MESSAGE,
+} from "@/lib/establishment/establishment-limits";
 import { BRAZILIAN_TIME_ZONES } from "@/lib/establishment/brazilian-time-zones";
 
 import { ConfirmationResend } from "../confirmation-resend/confirmation-resend";
@@ -36,8 +41,8 @@ const fieldOrder: FieldName[] = [
 ];
 
 const serverMessages: Record<string, string> = {
-  invalid_name: "Informe um nome com até 120 caracteres.",
-  invalid_slug: "Use de 3 a 63 letras minúsculas, números ou hífens.",
+  invalid_name: INVALID_ESTABLISHMENT_NAME_MESSAGE,
+  invalid_slug: INVALID_PUBLIC_SLUG_MESSAGE,
   reserved_slug: "Este endereço está reservado. Escolha outro.",
   invalid_time_zone: "Informe um fuso horário IANA válido.",
   invalid_email: INVALID_EMAIL_MESSAGE,
@@ -202,7 +207,7 @@ export function RegistrationForm() {
         error={errors.slug}
         hint="Seus clientes encontrarão você por este endereço. Ele não poderá ser alterado."
         label="Endereço da sua página"
-        maxLength={63}
+        maxLength={ESTABLISHMENT_LIMITS.slug.maxLength}
         onChange={(event) => {
           slugEdited.current = true;
           update("slug", event.target.value);
@@ -282,7 +287,7 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 63)
+    .slice(0, ESTABLISHMENT_LIMITS.slug.maxLength)
     .replace(/-$/, "");
 }
 
@@ -290,18 +295,19 @@ function validate(values: RegisterRequest): FieldErrors {
   const errors: FieldErrors = {};
   if (
     !values.establishment_name.trim() ||
-    [...values.establishment_name].length > 120
+    [...values.establishment_name].length >
+      ESTABLISHMENT_LIMITS.nameMaxCodePoints
   ) {
     errors.establishment_name = "Informe o nome do estabelecimento.";
   }
   if (!values.slug) {
     errors.slug = "Escolha o endereço da sua página.";
   } else if (
-    values.slug.length < 3 ||
-    values.slug.length > 63 ||
+    values.slug.length < ESTABLISHMENT_LIMITS.slug.minLength ||
+    values.slug.length > ESTABLISHMENT_LIMITS.slug.maxLength ||
     !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(values.slug)
   ) {
-    errors.slug = "Use de 3 a 63 letras minúsculas, números ou hífens.";
+    errors.slug = INVALID_PUBLIC_SLUG_MESSAGE;
   } else if (["admin", "api", "login", "assets"].includes(values.slug)) {
     errors.slug = "Este endereço está reservado. Escolha outro.";
   }

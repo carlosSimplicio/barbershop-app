@@ -2,6 +2,8 @@ import "server-only";
 
 import type { components } from "@/types/generated/api";
 
+import { ESTABLISHMENT_LIMITS } from "./establishment-limits";
+
 export type PublicEstablishment =
   components["schemas"]["PublicEstablishmentProfileResponse"];
 
@@ -36,7 +38,12 @@ export async function getPublicEstablishment(
   slug: string,
 ): Promise<PublicEstablishment | null> {
   const { apiInternalUrl } = getServerConfig();
-  if (!/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug)) return null;
+  if (
+    slug.length < ESTABLISHMENT_LIMITS.slug.minLength ||
+    slug.length > ESTABLISHMENT_LIMITS.slug.maxLength ||
+    !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(slug)
+  )
+    return null;
   try {
     const response = await fetch(
       `${apiInternalUrl}/api/v1/public/establishments/${encodeURIComponent(slug)}`,

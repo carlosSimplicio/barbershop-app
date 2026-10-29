@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"math"
@@ -12,6 +13,7 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/ratelimit"
 	api "barbershop-app/backend/openapi/generated"
@@ -124,9 +126,9 @@ func (handler *Handler) writeRegistrationFailure(httpContext *gin.Context, err e
 	var rateLimitError ratelimit.Error
 	switch {
 	case errors.Is(err, ErrInvalidName):
-		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "establishment_name", "invalid_name", "Informe um nome com até 120 caracteres.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "establishment_name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", establishment.MaxNameCodePoints))
 	case errors.Is(err, ErrInvalidSlug):
-		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "slug", "invalid_slug", "Informe um identificador válido com 3 a 63 caracteres.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "slug", "invalid_slug", fmt.Sprintf("Informe um identificador válido com %d a %d caracteres.", establishment.MinPublicSlugLength, establishment.MaxPublicSlugLength))
 	case errors.Is(err, ErrReservedSlug):
 		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "slug", "reserved_slug", "Escolha outro identificador.")
 	case errors.Is(err, ErrInvalidTimeZone):
