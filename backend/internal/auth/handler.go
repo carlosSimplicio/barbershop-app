@@ -50,7 +50,7 @@ func (handler *Handler) PostAuthPasswordRecoveryVerify(c *gin.Context) {
 		case errors.Is(err, ErrInvalidPasswordRecovery):
 			writeError(c, http.StatusBadRequest, "invalid_password_recovery", "Link inválido ou expirado.")
 		case errors.Is(err, security.ErrInvalidPassword):
-			writeFieldError(c, "new_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+			writeFieldError(c, "new_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
 		case errors.Is(err, ErrPasswordUnchanged):
 			writeFieldError(c, "new_password", "password_unchanged", "Escolha uma senha diferente da atual.")
 		default:
@@ -110,7 +110,7 @@ func (handler *Handler) PostAuthLogin(c *gin.Context) {
 		return
 	}
 	if err := security.ValidatePassword(request.Password); err != nil {
-		writeFieldError(c, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+		writeFieldError(c, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
 		return
 	}
 
@@ -185,7 +185,7 @@ func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, security.ErrInvalidPassword):
-			writeFieldError(c, "new_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+			writeFieldError(c, "new_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
 		case errors.Is(err, ErrPasswordUnchanged):
 			writeFieldError(c, "new_password", "password_unchanged", "Escolha uma senha diferente da senha temporária.")
 		case errors.Is(err, ErrPasswordChangeDenied), errors.Is(err, ErrInvalidSession):

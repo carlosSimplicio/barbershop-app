@@ -93,11 +93,7 @@ export function EstablishmentLogoUploader({
   }
 
   function restoreSavedLogo() {
-    if (currentLogoUrl) {
-      resetSelection();
-      return;
-    }
-    setShowSelectedPreview(Boolean(previewUrl));
+    resetSelection();
   }
 
   function submit() {

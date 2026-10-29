@@ -134,7 +134,7 @@ func (handler *Handler) writeRegistrationFailure(c *gin.Context, err error) {
 	case errors.Is(err, auth.ErrInvalidEmail):
 		writeOnboardingFieldError(c, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
 	case errors.Is(err, security.ErrInvalidPassword):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres e não pode conter espaços.")
+		writeOnboardingFieldError(c, http.StatusBadRequest, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
 	case errors.Is(err, ErrEmailUnavailable):
 		writeOnboardingFieldError(c, http.StatusConflict, "email", "email_unavailable", "Este e-mail já está cadastrado.")
 	case errors.Is(err, ErrSlugUnavailable):

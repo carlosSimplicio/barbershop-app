@@ -29,7 +29,7 @@ func (service *EmailConfirmationVerificationService) Verify(ctx context.Context,
 	now := service.now().UTC()
 	var result auth.LoginResult
 	err := service.store.ConfirmEmailAndCreateSession(
-		ctx, security.HashOpaqueToken(token), sessionID, now, now.Add(15*24*time.Hour),
+		ctx, security.HashOpaqueToken(token), sessionID, now, now.Add(auth.SessionLifetime),
 		func(user auth.User) error {
 			var issueErr error
 			result, issueErr = service.issuer.Issue(user, sessionID, now)

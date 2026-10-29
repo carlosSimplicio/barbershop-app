@@ -70,3 +70,36 @@ func TestPasswordHasherDetectsParametersThatNeedRehash(t *testing.T) {
 		t.Fatalf("NeedsRehash = %v, %v; want true, nil", needsRehash, err)
 	}
 }
+
+func TestValidatePasswordUsesUnicodeWhiteSpace(t *testing.T) {
+	for _, space := range []rune{'\u0085', '\u00a0', '\u1680', '\u2007', '\u2028', '\u202f', '\u3000'} {
+		if err := ValidatePassword("abcd" + string(space) + "efgh"); !errors.Is(err, ErrInvalidPassword) {
+			t.Errorf("accepted Unicode whitespace U+%04X", space)
+		}
+	}
+}
+
+func TestValidatePasswordRejectsControlAndInvisibleCharacters(t *testing.T) {
+	characters := []rune{
+		'\u0000', '\u001B', '\u007F', '\u00AD', '\u034F', '\u061C',
+		'\u115F', '\u17B4', '\u180B', '\u200B', '\u200C', '\u200D',
+		'\u202E', '\u2060', '\u2066', '\u3164', '\uFE0F', '\uFEFF',
+		'\uFFA0', '\U000E0020', '\U000E0080', '\U000E0100',
+	}
+	for _, character := range characters {
+		value := string(character)
+		for _, password := range []string{value + "abcdefgh", "abcd" + value + "efgh", "abcdefgh" + value} {
+			if err := ValidatePassword(password); !errors.Is(err, ErrInvalidPassword) {
+				t.Errorf("accepted disallowed U+%04X", character)
+			}
+		}
+	}
+}
+
+func TestValidatePasswordAllowsVisibleUnicodeAndOrdinaryCombiningMarks(t *testing.T) {
+	for _, password := range []string{"áéíóúçãõ", "Cafe\u0301-123", "عربي1234", "🔑🔒🙂😀😃😄😁😆"} {
+		if err := ValidatePassword(password); err != nil {
+			t.Error("rejected a valid visible Unicode password")
+		}
+	}
+}

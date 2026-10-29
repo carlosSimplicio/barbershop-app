@@ -533,6 +533,7 @@ components:
           type: string
           minLength: 8
           maxLength: 32
+          description: Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
     ProfessionalResponse:
       type: object
       required: [id, name, email, active]
@@ -586,6 +587,7 @@ components:
           type: string
           minLength: 8
           maxLength: 32
+          description: Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
     EmailConfirmationRequest:
       type: object
       additionalProperties: false
@@ -629,6 +631,7 @@ components:
           type: string
           minLength: 8
           maxLength: 32
+          description: Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
     LoginRequest:
       type: object
       additionalProperties: false
@@ -642,6 +645,7 @@ components:
           type: string
           minLength: 8
           maxLength: 32
+          description: Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
     ChangePasswordRequest:
       type: object
       additionalProperties: false
@@ -651,6 +655,7 @@ components:
           type: string
           minLength: 8
           maxLength: 32
+          description: Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
     UserRole:
       type: string
       enum: [owner, professional]

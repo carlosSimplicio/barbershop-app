@@ -139,7 +139,7 @@ func newTestApplication(t *testing.T) *testApplication {
 	if err != nil {
 		t.Fatalf("generate JWT key: %v", err)
 	}
-	accessTokens, err := security.NewJWTManager("integration-key", privateKey, map[string]ed25519.PublicKey{"integration-key": publicKey}, 15*24*time.Hour)
+	accessTokens, err := security.NewJWTManager("integration-key", privateKey, map[string]ed25519.PublicKey{"integration-key": publicKey}, auth.SessionLifetime)
 	if err != nil {
 		t.Fatalf("create JWT manager: %v", err)
 	}

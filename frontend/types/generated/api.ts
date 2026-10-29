@@ -289,6 +289,7 @@ export interface components {
             name: string;
             /** Format: email */
             email: string;
+            /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             temporary_password: string;
         };
         ProfessionalResponse: {
@@ -311,6 +312,7 @@ export interface components {
         };
         PasswordRecoveryVerifyRequest: {
             token: string;
+            /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             new_password: string;
         };
         EmailConfirmationRequest: {
@@ -326,14 +328,17 @@ export interface components {
             time_zone: string;
             /** Format: email */
             email: string;
+            /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             password: string;
         };
         LoginRequest: {
             /** Format: email */
             email: string;
+            /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             password: string;
         };
         ChangePasswordRequest: {
+            /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             new_password: string;
         };
         /** @enum {string} */

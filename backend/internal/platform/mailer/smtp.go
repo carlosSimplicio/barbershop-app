@@ -16,9 +16,10 @@ import (
 const smtpOperationTimeout = 10 * time.Second
 
 type SMTPTransport struct {
-	address string
-	host    string
-	from    string
+	address     string
+	host        string
+	from        string
+	dialContext func(context.Context, string, string) (net.Conn, error)
 }
 
 func NewSMTPTransport(address, from string) (*SMTPTransport, error) {
@@ -34,7 +35,7 @@ func NewSMTPTransport(address, from string) (*SMTPTransport, error) {
 	if err != nil {
 		return nil, fmt.Errorf("SMTP_FROM must be a valid email address")
 	}
-	return &SMTPTransport{address: address, host: host, from: parsedFrom}, nil
+	return &SMTPTransport{address: address, host: host, from: parsedFrom, dialContext: (&net.Dialer{}).DialContext}, nil
 }
 
 func (transport *SMTPTransport) Send(ctx context.Context, message Message) error {
@@ -42,15 +43,16 @@ func (transport *SMTPTransport) Send(ctx context.Context, message Message) error
 	if err != nil || message.Subject == "" || strings.ContainsAny(message.Subject, "\r\n") {
 		return ErrDeliveryFailed
 	}
-	connection, err := (&net.Dialer{}).DialContext(ctx, "tcp", transport.address)
+	ctx, cancel := context.WithTimeout(ctx, smtpOperationTimeout)
+	defer cancel()
+	connection, err := transport.dialContext(ctx, "tcp", transport.address)
 	if err != nil {
 		return ErrDeliveryFailed
 	}
 	defer connection.Close()
-	deadline := time.Now().Add(smtpOperationTimeout)
-	if contextDeadline, ok := ctx.Deadline(); ok && contextDeadline.Before(deadline) {
-		deadline = contextDeadline
-	}
+	stopCancellation := context.AfterFunc(ctx, func() { _ = connection.Close() })
+	defer stopCancellation()
+	deadline, _ := ctx.Deadline()
 	if err := connection.SetDeadline(deadline); err != nil {
 		return ErrDeliveryFailed
 	}

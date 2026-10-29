@@ -27,7 +27,9 @@ test("valida a nova senha e mantém o foco no campo inválido", () => {
   });
   fireEvent.click(button);
   expect(
-    screen.getByText("Use de 8 a 32 caracteres, sem espaços."),
+    screen.getByText(
+      "Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.",
+    ),
   ).toBeInTheDocument();
   expect(verifyPasswordRecovery).not.toHaveBeenCalled();
 });
@@ -96,7 +98,10 @@ test("link usado ou expirado mostra recusa sem revelar detalhes", async () => {
 });
 
 test.each([
-  ["invalid_password", "Use de 8 a 32 caracteres, sem espaços."],
+  [
+    "invalid_password",
+    "Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.",
+  ],
   ["password_unchanged", "Escolha uma senha diferente da atual."],
 ] as const)(
   "mostra %s junto ao campo e permite corrigir",

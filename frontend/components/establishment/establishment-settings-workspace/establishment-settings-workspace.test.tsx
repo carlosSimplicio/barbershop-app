@@ -636,6 +636,45 @@ test("mantém o logo publicado após falha e permite tentar novamente", async ()
   expect(uploadLogoMock).toHaveBeenCalledTimes(2);
 });
 
+test.each([
+  [400, "validation_failed"],
+  [413, "request_too_large"],
+  [403, "csrf_failed"],
+  [403, "read_only"],
+])(
+  "limpa o primeiro logo recusado com status %i e código %s",
+  async (status, code) => {
+    getSettingsMock.mockResolvedValue(successfulResult());
+    const revoke = vi.spyOn(URL, "revokeObjectURL");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:first-logo");
+    uploadLogoMock.mockResolvedValue({
+      state: "error",
+      status,
+      error: {
+        code,
+        message: "backend internal message",
+        request_id: "request-id",
+      },
+    });
+    render(<EstablishmentSettingsWorkspace />);
+    fireEvent.change(await screen.findByLabelText("Selecionar logo"), {
+      target: {
+        files: [new File(["invalid"], "rejected.png", { type: "image/png" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+    expect(await screen.findByText("Nenhum arquivo selecionado")).toBeVisible();
+    expect(
+      screen.queryByRole("img", { name: "Pré-visualização do logo" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
+    expect(revoke).toHaveBeenCalledWith("blob:first-logo");
+    expect(
+      screen.queryByText("backend internal message"),
+    ).not.toBeInTheDocument();
+  },
+);
+
 test("mostra o endereço quando o upload confirma mas a atualização falha", async () => {
   getSettingsMock
     .mockResolvedValueOnce(successfulResult())

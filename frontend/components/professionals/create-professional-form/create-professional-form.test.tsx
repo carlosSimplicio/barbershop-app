@@ -47,7 +47,9 @@ test("valida os campos antes do envio e foca o primeiro erro", () => {
   ).toBeInTheDocument();
   expect(screen.getByText("Digite um e-mail válido.")).toBeInTheDocument();
   expect(
-    screen.getByText("Use de 8 a 32 caracteres, sem espaços."),
+    screen.getByText(
+      "Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.",
+    ),
   ).toBeInTheDocument();
   expect(createProfessional).not.toHaveBeenCalled();
 });

@@ -131,7 +131,7 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 	if err != nil {
 		return LoginResult{}, err
 	}
-	if err := service.store.CreateSession(ctx, user.ID, sessionID, now.Add(15*24*time.Hour)); err != nil {
+	if err := service.store.CreateSession(ctx, user.ID, sessionID, now.Add(SessionLifetime)); err != nil {
 		return LoginResult{}, err
 	}
 

@@ -91,7 +91,7 @@ func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, prin
 	if err != nil {
 		return LoginResult{}, err
 	}
-	if err := service.store.ChangeTemporaryPassword(ctx, user.ID, previousVersion, passwordHash, sessionID, now, now.Add(15*24*time.Hour)); err != nil {
+	if err := service.store.ChangeTemporaryPassword(ctx, user.ID, previousVersion, passwordHash, sessionID, now, now.Add(SessionLifetime)); err != nil {
 		return LoginResult{}, err
 	}
 	return result, nil

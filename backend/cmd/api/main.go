@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/password_recovery"
@@ -77,7 +76,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	accessTokens, err := security.NewJWTManager(configuration.JWTActiveKeyID, configuration.JWTPrivateKey, configuration.JWTPublicKeys, 15*24*time.Hour)
+	accessTokens, err := security.NewJWTManager(configuration.JWTActiveKeyID, configuration.JWTPrivateKey, configuration.JWTPublicKeys, auth.SessionLifetime)
 	if err != nil {
 		return err
 	}

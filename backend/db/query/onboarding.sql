@@ -48,6 +48,13 @@ INSERT INTO email_confirmations (user_id, token_hash, expires_at, created_at)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
 
+-- name: GetEmailConfirmationOwnerForUpdate :one
+SELECT u.id
+FROM users AS u
+JOIN email_confirmations AS ec ON ec.user_id = u.id
+WHERE ec.token_hash = $1
+FOR UPDATE OF u;
+
 -- name: GetEmailConfirmationForUpdate :one
 SELECT
     ec.id,
@@ -67,7 +74,7 @@ SELECT
 FROM email_confirmations AS ec
 JOIN users AS u ON u.id = ec.user_id
 WHERE ec.token_hash = $1
-FOR UPDATE OF ec, u;
+FOR UPDATE OF ec;
 
 -- name: ConsumeEmailConfirmation :execrows
 UPDATE email_confirmations
@@ -121,7 +128,12 @@ SELECT
     e.minimum_booking_notice_minutes, e.booking_horizon_days, e.customer_change_deadline_minutes,
     e.operational_data_started_at,
     l.content_type AS logo_content_type, l.byte_size AS logo_byte_size,
-    l.width AS logo_width, l.height AS logo_height
+    l.width AS logo_width, l.height AS logo_height,
+    COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('label', links.label, 'url', links.url) ORDER BY links.position)
+        FROM establishment_social_links AS links
+        WHERE links.establishment_id = e.id
+    ), '[]'::jsonb)::text AS social_links
 FROM establishments AS e
 LEFT JOIN establishment_logos AS l ON l.establishment_id = e.id AND l.id = e.logo_id
 WHERE e.id = $1;

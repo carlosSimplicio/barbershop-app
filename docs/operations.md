@@ -42,13 +42,14 @@
 
 - Produção usa `.env` somente na VPS, com permissões restritas.
 - Versione `.env.example` com todas as chaves, sem valores sensíveis.
-- Ignore arquivos `.env` reais e nunca os copie para imagens ou logs.
+- Ignore arquivos `.env` reais e nunca os copie para imagens ou logs. Os contextos Docker de backend e frontend excluem `.env` e `.env.*`, inclusive em subdiretórios, e preservam somente exemplos `.env.example`. Um teste com o parser de padrões do Docker protege essa exclusão; variáveis reais são fornecidas em runtime.
 - Cada aplicação valida configuração obrigatória na inicialização e falha claramente se estiver ausente ou inválida.
 - `LOGO_STORAGE_DIR` é um caminho absoluto interno ao container, sem `..` e diferente da raiz do filesystem. No Compose use `/var/lib/barbershop/logos`; não configure um caminho do host nem publique esse diretório pelo Caddy.
 - Segredos nunca usam `NEXT_PUBLIC_*`.
 - Chaves JWT, credenciais do PostgreSQL e outros segredos ficam somente no backend e na infraestrutura.
 - Configure `JWT_ACTIVE_KEY_ID`, `JWT_PRIVATE_KEY_BASE64`, `JWT_PUBLIC_KEYS_JSON`, `CSRF_SIGNING_KEY_BASE64`, `RATE_LIMIT_HMAC_KEY_BASE64`, `TRUSTED_ORIGINS` e `TRUSTED_PROXY_CIDRS`. A chave JWT privada é um seed Ed25519 em base64 sem padding; o keyring público é um objeto JSON de `kid` para chave pública.
 - O frontend recebe `API_INTERNAL_URL` (origem HTTP/HTTPS interna da API) e `PUBLIC_APP_URL` (origem HTTPS canônica) em runtime pelo Compose. A inicialização Node valida origens sem credenciais, caminho, query ou fragmento; valores inválidos impedem o startup sem expor seus conteúdos. Essas variáveis são exclusivas ao servidor e não usam `NEXT_PUBLIC_*`.
+- O envio SMTP local tem orçamento total de 10 segundos, incluindo DNS e conexão; deadlines menores e cancelamento do chamador interrompem o envio. Falhas de entrega posteriores à persistência mantêm as respostas genéricas documentadas.
 - Configure `PUBLIC_APP_URL` como a origem HTTPS usada nos links transacionais e nos metadados da página pública. No ambiente local, `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT` e `SMTP_FROM` apontam exclusivamente para o Mailpit interno. O modo desabilitado é aceito somente em testes; produção recusa a inicialização enquanto não houver um provedor real suportado e explicitamente configurado.
 - `PUBLIC_APP_URL` e cada item de `TRUSTED_ORIGINS` devem ser origens HTTPS sem path, query ou fragmento. `SMTP_HOST` não inclui porta; `SMTP_PORT` aceita de 1 a 65535; `SMTP_FROM` precisa ser um endereço válido. `EMAIL_PROVIDER=disabled` é exclusivo de testes.
 - Ao adicionar configuração obrigatória, atualize `.env.example` e a documentação operacional.

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (store *Store) ResetOwnerPassword(ctx context.Context, tokenHash []byte, newPassword string, passwords PasswordManager) error {
+func (store *Store) ResetOwnerPassword(ctx context.Context, tokenHash []byte, prepare RecoveredPasswordPreparer) error {
 	candidate, err := store.queries.GetPasswordRecoveryCandidate(ctx, tokenHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrInvalidPasswordRecovery
@@ -32,9 +32,6 @@ func (store *Store) ResetOwnerPassword(ctx context.Context, tokenHash []byte, ne
 	if err != nil {
 		return fmt.Errorf("lock password recovery owner: %w", err)
 	}
-	if user.Role != "owner" || !user.Active || !user.EmailConfirmedAt.Valid {
-		return ErrInvalidPasswordRecovery
-	}
 	token, err := queries.GetPasswordRecoveryForUpdate(ctx, tokenHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrInvalidPasswordRecovery
@@ -42,19 +39,12 @@ func (store *Store) ResetOwnerPassword(ctx context.Context, tokenHash []byte, ne
 	if err != nil {
 		return fmt.Errorf("lock password recovery token: %w", err)
 	}
-	if token.UserID != user.ID || !token.ExpiresAt.Time.After(time.Now().UTC()) || token.ConsumedAt.Valid || token.InvalidatedAt.Valid {
-		return ErrInvalidPasswordRecovery
-	}
-	unchanged, err := passwords.Verify(newPassword, user.PasswordHash)
+	newHash, err := prepare(userFromIDRow(db.GetAuthUserByIDRow(user)), PasswordRecoveryState{
+		UserID: uuidString(token.UserID), ExpiresAt: token.ExpiresAt.Time,
+		Consumed: token.ConsumedAt.Valid, Invalidated: token.InvalidatedAt.Valid,
+	})
 	if err != nil {
-		return fmt.Errorf("verify previous owner password: %w", err)
-	}
-	if unchanged {
-		return ErrPasswordUnchanged
-	}
-	newHash, err := passwords.Hash(newPassword)
-	if err != nil {
-		return fmt.Errorf("hash recovered owner password: %w", err)
+		return err
 	}
 	now := time.Now().UTC()
 	consumed, err := queries.ConsumePasswordRecoveryToken(ctx, db.ConsumePasswordRecoveryTokenParams{

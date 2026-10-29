@@ -153,7 +153,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Criar `backend/` e `frontend/` como aplicações separadas no mesmo repositório.
 - [x] Selecionar as versões estáveis atuais das tecnologias e fixá-las explicitamente, sem tags `latest` ou intervalos flutuantes.
-- [x] Configurar arquivos ignorados, `.editorconfig` e comandos de desenvolvimento sem incluir segredos.
+- [x] Configurar arquivos ignorados, `.editorconfig` e comandos de desenvolvimento sem incluir segredos; proteger por regressão a exclusão de arquivos de ambiente dos contextos Docker.
 - [x] Criar `.env.example` completo e validar toda configuração obrigatória na inicialização.
 - [x] Documentar comandos locais para instalar, gerar código, migrar banco, testar, executar e construir o projeto.
 - [x] Garantir que código, schema, endpoints e identificadores técnicos usem inglês e que a interface use `pt-BR`.
@@ -180,6 +180,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Modelar todos os dados pertencentes a estabelecimento com isolamento explícito de tenant.
 - [x] Criar persistência base para estabelecimentos, usuários, credenciais, sessões e tokens de autenticação.
 - [x] Persistir descrição, endereço, telefone de contato, links sociais ordenados e limites opcionais de agenda por estabelecimento; aplicação das configurações aos fluxos de agenda permanece pendente no escopo 7.
+- [x] Consultar perfil, logo e links das configurações no mesmo snapshot SQL, com regressão HTTP sob atualização concorrente.
 - [x] Persistir o marcador imutável de início dos dados operacionais e a query que bloqueia a linha do estabelecimento; a alteração de fuso já usa esse bloqueio; a integração atômica com futuros agendamentos, bloqueios e lançamentos permanece pendente no escopo 7.
 - [ ] Criar persistência para clientes.
 - [ ] Criar persistência para serviços.
@@ -225,12 +226,12 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir solicitar novo link no estado pós-cadastro e no login após confirmação obrigatória, sempre com resposta genérica.
 - [x] Confirmar o e-mail em `/confirmar-email` usando apenas o fragmento da URL e o corpo da API, sincronizar a sessão e direcionar o proprietário pela entrada `/painel` conforme a presença do logo.
 - [x] Garantir e-mail globalmente único, normalizado, case-insensitive e imutável no MVP.
-- [x] Validar senhas de 8 a 32 caracteres sem whitespace, sem regra obrigatória de composição.
+- [x] Validar senhas de 8 a 32 pontos de código sem Unicode `White_Space`, controles (`Cc`), formatação (`Cf`) ou `Default_Ignorable_Code_Point`, sem normalização nem regra obrigatória de composição, com regressões equivalentes no backend e no frontend e cobertura HTTP dos cinco fluxos de credenciais.
 - [x] Armazenar senhas com Argon2id, salt individual e parâmetros centralizados e ajustáveis.
 - [x] Implementar confirmação de e-mail do proprietário com token aleatório, expirável, de uso único e armazenado de forma segura.
 - [x] Iniciar o trial somente depois da confirmação do e-mail.
 - [x] Implementar login de proprietário e profissional na API e em `/login`, com resposta genérica para credenciais inválidas, reenvio de confirmação e sincronização de sessão.
-- [x] Implementar access JWT e sessões com expiração fixa de 15 dias, sem refresh token ou renovação.
+- [x] Implementar access JWT e sessões com expiração fixa de 15 dias, sem refresh token ou renovação, centralizada com o prazo dos cookies em `auth.SessionLifetime`.
 - [x] Transportar access e CSRF em cookies `Secure` e `SameSite=Strict`, com escopo mínimo e `HttpOnly` no access.
 - [x] Implementar logout idempotente e revogação da sessão atual identificada no access JWT.
 - [x] Tratar qualquer `401` como sessão ausente sem renovação ou repetição automática; não declarar logout em erro temporário e não expor ou persistir tokens no JavaScript.
@@ -359,6 +360,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas, com nova consulta ao servidor ao tentar novamente após falha temporária.
 - [x] Não renderizar seções vazias para informações públicas opcionais.
+- [x] Limpar seleção e pré-visualização do logo após recusas definitivas, inclusive no primeiro upload, preservando a reconciliação de falhas ambíguas.
 - [ ] Criar fluxo interativo para escolher serviço, profissional associado, dia e horário.
 - [ ] Coletar somente nome e telefone para criar o agendamento.
 - [ ] Criar agendamento com exatamente um serviço e um profissional.
@@ -464,6 +466,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 20. Trial, planos e assinatura
 
 - [x] Iniciar um único trial de 14 dias após confirmação do e-mail, com acesso completo.
+- [x] Serializar reenvio e consumo da confirmação na ordem proprietário → token, com regressão concorrente em PostgreSQL real.
 - [x] Persistir uso do trial independentemente da assinatura atual para impedir reutilização.
 - [ ] Modelar catálogo com planos, opções de preço e período, sem assumir plano único no schema ou domínio.
 - [ ] Preservar versão, preço e termos contratados no histórico da assinatura.
@@ -487,7 +490,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar interface pequena de envio desacoplada do provedor.
 - [x] Versionar o template de confirmação de e-mail em `pt-BR`.
 - [x] Versionar o template de solicitação de recuperação de senha em `pt-BR`.
-- [x] Integrar Mailpit por SMTP somente no ambiente local.
+- [x] Integrar Mailpit por SMTP somente no ambiente local, com deadline total de 10 segundos incluindo conexão e interrupção por cancelamento.
 - [x] Não registrar endereço completo, token, link ou credencial nas falhas dos fluxos de onboarding entregues.
 - [x] Não registrar endereço completo, token ou link nas falhas de solicitação de recuperação.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros de e-mail transacional.
@@ -498,6 +501,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Tratar nome do estabelecimento, e-mail, tokens e credenciais como sensíveis nos fluxos de onboarding entregues.
 - [ ] Estender o tratamento de dados sensíveis aos futuros fluxos de clientes e financeiro.
+- [x] Compartilhar a captura segura de tokens transacionais entre confirmação e recuperação, com testes de limpeza prévia da URL, falha segura e Strict Mode.
 - [x] Não expor dados sensíveis em logs, path, query, mensagens de erro ou fixtures dos fluxos de onboarding; a interface de confirmação remove o token do fragmento antes de qualquer chamada de API e não o persiste.
 - [ ] Preservar a mesma garantia nos demais fluxos futuros.
 - [x] Usar respostas genéricas no login e na solicitação e verificação de confirmação para reduzir enumeração.
@@ -560,6 +564,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 26. Testes e critérios de qualidade
 
 - [x] Criar testes unitários de backend com o pacote `testing`.
+- [x] Testar elegibilidade, expiração, recusa de senha atual e falhas da recuperação sem PostgreSQL, preservando integração para bloqueios, uso único e rollback.
 - [x] Criar testes unitários de frontend com Vitest.
 - [x] Orientar testes unitários a comportamentos observáveis e regras de negócio, evitando detalhes internos e casos sem risco ou requisito identificável.
 - [x] Criar infraestrutura de integração do backend com Testcontainers, PostgreSQL real, migrations Goose e servidor HTTP TLS descartável.
