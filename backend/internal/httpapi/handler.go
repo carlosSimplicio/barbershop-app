@@ -9,6 +9,7 @@ import (
 	"barbershop-app/backend/internal/services"
 	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -101,3 +102,5 @@ func (h *Handler) PostServices(c *gin.Context) { h.services.PostServices(c) }
 func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
 	h.services.GetServices(c, params)
 }
+
+func (h *Handler) GetService(c *gin.Context, id uuid.UUID) { h.services.GetService(c, id) }

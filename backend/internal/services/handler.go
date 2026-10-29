@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"io"
 	"log/slog"
 	"net/http"
@@ -67,6 +68,8 @@ func (h *Handler) PostServices(c *gin.Context) {
 }
 func writeServiceError(c *gin.Context, err error) {
 	switch {
+	case errors.Is(err, ErrNotFound):
+		writeError(c, 404, "not_found", "Serviço não encontrado.")
 	case errors.Is(err, ErrForbidden):
 		writeError(c, 403, "forbidden", "Você não pode administrar serviços.")
 	case errors.Is(err, entitlements.ErrReadOnly):
@@ -115,4 +118,18 @@ func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
 		return
 	}
 	c.JSON(200, page)
+}
+
+func (h *Handler) GetService(c *gin.Context, id uuid.UUID) {
+	p, ok := auth.PrincipalFromContext(c)
+	if !ok {
+		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	record, err := h.service.Get(c.Request.Context(), p, id.String())
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(200, record)
 }

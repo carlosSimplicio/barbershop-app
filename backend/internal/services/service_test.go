@@ -89,3 +89,27 @@ func TestServiceListReturnsBoundedPageAndWriteRights(t *testing.T) {
 		}
 	}
 }
+
+func (s *testStore) Get(_ context.Context, tenant, id string) (Record, error) {
+	s.called = true
+	s.tenant = tenant
+	return Record{ID: id}, s.err
+}
+func TestServiceGetAuthorizesAndPropagatesMissingResource(t *testing.T) {
+	for _, tc := range []struct {
+		role           string
+		storeErr, want error
+	}{{"owner", nil, nil}, {"owner", ErrNotFound, ErrNotFound}, {"professional", nil, ErrForbidden}} {
+		store := &testStore{err: tc.storeErr}
+		record, err := NewService(store, testWrites{entitlements.ErrReadOnly}).Get(context.Background(), auth.Principal{Role: tc.role, EstablishmentID: "tenant"}, "service")
+		if !errors.Is(err, tc.want) {
+			t.Fatalf("err=%v want=%v", err, tc.want)
+		}
+		if tc.want == nil && (record.ID != "service" || store.tenant != "tenant") {
+			t.Fatalf("record=%+v store=%+v", record, store)
+		}
+		if tc.role != "owner" && store.called {
+			t.Fatal("professional read store")
+		}
+	}
+}

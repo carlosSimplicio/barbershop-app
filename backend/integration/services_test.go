@@ -177,3 +177,39 @@ func TestServiceListPaginationTenantAndExpiredRead(t *testing.T) {
 		t.Fatal("absent trial can write")
 	}
 }
+
+func TestServiceIndividualReadHidesOtherTenants(t *testing.T) {
+	app := newTestApplication(t)
+	registerAndConfirmOwner(t, app, defaultOwnerRegistration())
+	record := createCatalogService(t, app, "Corte", 1)
+	path := "/api/v1/services/" + record.ID
+	response := app.request(t, "GET", path, nil)
+	assertStatus(t, response, 200)
+	var got serviceRecord
+	decodeJSON(t, response, &got)
+	if got != record {
+		t.Fatalf("got=%+v want=%+v", got, record)
+	}
+	if _, err := integrationPool.Exec(context.Background(), `UPDATE services SET active=false WHERE id=$1`, record.ID); err != nil {
+		t.Fatal(err)
+	}
+	expireServiceTrial(t)
+	response = app.request(t, "GET", path, nil)
+	assertStatus(t, response, 200)
+	decodeJSON(t, response, &got)
+	if got.Active {
+		t.Fatal("inactive not returned")
+	}
+	assertStatus(t, app.request(t, "GET", "/api/v1/services/invalid", nil), 400)
+	assertStatus(t, app.request(t, "GET", "/api/v1/services/771d0b88-237b-4f35-89ad-850ffbd894d3", nil), 404)
+	other := defaultOwnerRegistration()
+	other.Email = "get-other@example.test"
+	other.Slug = "get-other"
+	registerAndConfirmOwner(t, app, other)
+	assertStatus(t, app.request(t, "GET", path, nil), 404)
+	assertStatus(t, serviceRawRequest(t, app, "GET", path, nil, "", false, false), 401)
+	createProfessionalForList(t, app, "Ana", "get-prof@example.test")
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/login", map[string]string{"email": "get-prof@example.test", "password": "senha-temporaria"}), 200)
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/password/change", map[string]string{"new_password": "senha-definitiva"}), 204)
+	assertStatus(t, app.request(t, "GET", path, nil), 403)
+}

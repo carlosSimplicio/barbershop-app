@@ -3,7 +3,9 @@ package services
 import (
 	db "barbershop-app/backend/db/generated"
 	"context"
+	"errors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -43,4 +45,20 @@ func (s *PostgresStore) List(ctx context.Context, tenant string, limit, offset i
 		items = append(items, recordFromRow(row))
 	}
 	return items, nil
+}
+
+func (s *PostgresStore) Get(ctx context.Context, tenant, serviceID string) (Record, error) {
+	id, err := tenantUUID(tenant)
+	if err != nil {
+		return Record{}, err
+	}
+	target, err := tenantUUID(serviceID)
+	if err != nil {
+		return Record{}, err
+	}
+	row, err := s.queries.GetService(ctx, db.GetServiceParams{ID: target, EstablishmentID: id})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Record{}, ErrNotFound
+	}
+	return recordFromRow(row), err
 }

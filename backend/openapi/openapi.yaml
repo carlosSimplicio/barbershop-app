@@ -553,6 +553,37 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /services/{service_id}:
+    parameters:
+      - name: service_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getService
+      summary: Consulta serviço do estabelecimento do proprietário
+      tags: [services]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Serviço ativo ou inativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -1022,6 +1053,12 @@ components:
           items:
             $ref: "#/components/schemas/FieldError"
   responses:
+    NotFound:
+      description: Recurso não encontrado no estabelecimento
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     BadRequest:
       description: Requisição inválida
       content:

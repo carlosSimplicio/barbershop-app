@@ -326,6 +326,9 @@ type Forbidden = ErrorResponse
 // InternalServerError defines model for InternalServerError.
 type InternalServerError = ErrorResponse
 
+// NotFound defines model for NotFound.
+type NotFound = ErrorResponse
+
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorResponse
 
@@ -448,6 +451,9 @@ type ServerInterface interface {
 	// PostServices Cadastra serviço no estabelecimento do proprietário
 	// (POST /services)
 	PostServices(c *gin.Context)
+	// GetService Consulta serviço do estabelecimento do proprietário
+	// (GET /services/{service_id})
+	GetService(c *gin.Context, serviceId openapi_types.UUID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -811,6 +817,31 @@ func (siw *ServerInterfaceWrapper) PostServices(c *gin.Context) {
 	siw.Handler.PostServices(c)
 }
 
+// GetService operation middleware
+func (siw *ServerInterfaceWrapper) GetService(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "service_id" -------------
+	var serviceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "service_id", c.Param("service_id"), &serviceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter service_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetService(c, serviceId)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -857,5 +888,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
 	router.GET(options.BaseURL+"/services", wrapper.GetServices)
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
+	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

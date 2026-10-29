@@ -22,6 +22,7 @@ type CreateInput struct {
 	DurationMinutes *int64
 }
 type Store interface {
+	Get(context.Context, string, string) (Record, error)
 	Create(context.Context, string, string, int32, int32) (Record, error)
 	List(context.Context, string, int32, int32) ([]Record, error)
 }
@@ -97,4 +98,13 @@ func (s *Service) List(ctx context.Context, p auth.Principal, limit, offset int6
 		items = []Record{}
 	}
 	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: more, CanWrite: writeErr == nil}, nil
+}
+
+var ErrNotFound = errors.New("service not found")
+
+func (s *Service) Get(ctx context.Context, p auth.Principal, id string) (Record, error) {
+	if p.Role != "owner" {
+		return Record{}, ErrForbidden
+	}
+	return s.store.Get(ctx, p.EstablishmentID, id)
 }
