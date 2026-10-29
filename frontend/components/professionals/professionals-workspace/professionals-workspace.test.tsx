@@ -91,6 +91,6 @@ function page(
   return {
     state: "success" as const,
     status: 200,
-    data: { items, limit: 20, offset: 0, has_more: false },
+    data: { items, limit: 20, offset: 0, has_more: false, can_write: true },
   };
 }

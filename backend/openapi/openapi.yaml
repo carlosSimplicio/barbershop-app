@@ -801,7 +801,7 @@ components:
           type: boolean
     ProfessionalListResponse:
       type: object
-      required: [items, limit, offset, has_more]
+      required: [items, limit, offset, has_more, can_write]
       properties:
         items:
           type: array
@@ -816,6 +816,9 @@ components:
           minimum: 0
         has_more:
           type: boolean
+        can_write:
+          type: boolean
+          description: Direito de escrita resolvido centralmente; leitura permanece disponível sem trial ativo.
     PasswordRecoveryRequest:
       type: object
       additionalProperties: false

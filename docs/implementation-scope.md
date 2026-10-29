@@ -267,6 +267,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado.
 - [x] Criar componente reutilizável que decide o direito de escrita a partir do trial persistido, incluindo o início e excluindo o fim.
 - [x] Exigir esse direito de escrita na API de cadastro de profissionais.
+- [x] Informar `can_write` na listagem de profissionais pelo componente central, preservando leitura sem trial ativo e distinguindo falhas de infraestrutura.
 - [ ] Estender a decisão de escrita aos períodos de assinatura e aplicá-la aos endpoints de mutação autenticados e públicos.
 - [ ] Com acesso expirado, permitir autenticação, leitura e assinatura/renovação, bloqueando demais mutações.
 - [ ] Cobrir a matriz de autorização e isolamento com testes unitários.
@@ -308,7 +309,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 ## 9. Administração de profissionais
 
 - [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
-- [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação e leitura após expiração do trial.
+- [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação, `can_write` centralizado e leitura após expiração do trial.
 - [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
 - [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
 - [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.

@@ -210,6 +210,6 @@ function successPage(items: typeof records, offset = 0, has_more = false) {
   return {
     state: "success" as const,
     status: 200,
-    data: { items, limit: 20, offset, has_more },
+    data: { items, limit: 20, offset, has_more, can_write: true },
   };
 }

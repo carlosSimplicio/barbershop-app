@@ -10,6 +10,7 @@ import (
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/pagination"
 )
 
@@ -35,10 +36,11 @@ type Professional struct {
 }
 
 type ListResult struct {
-	Items   []Professional
-	Limit   int32
-	Offset  int32
-	HasMore bool
+	Items    []Professional
+	Limit    int32
+	Offset   int32
+	HasMore  bool
+	CanWrite bool
 }
 
 type Creation struct {
@@ -117,6 +119,10 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, limi
 	if offset < pagination.MinOffset {
 		return ListResult{}, ErrInvalidOffset
 	}
+	writeErr := service.entitlements.RequireWrite(ctx, principal.EstablishmentID)
+	if writeErr != nil && !errors.Is(writeErr, entitlements.ErrReadOnly) {
+		return ListResult{}, writeErr
+	}
 	items, err := service.store.List(ctx, principal.EstablishmentID, limit+1, offset)
 	if err != nil {
 		return ListResult{}, fmt.Errorf("list professionals: %w", err)
@@ -128,5 +134,5 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, limi
 	if items == nil {
 		items = []Professional{}
 	}
-	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore}, nil
+	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore, CanWrite: writeErr == nil}, nil
 }

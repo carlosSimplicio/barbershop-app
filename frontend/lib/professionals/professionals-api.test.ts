@@ -52,6 +52,7 @@ test("consulta uma página tipada sem enviar identificador de estabelecimento", 
     limit: 20,
     offset: 40,
     has_more: false,
+    can_write: true,
   };
   const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     new Response(JSON.stringify(response), {

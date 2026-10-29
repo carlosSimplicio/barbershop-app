@@ -254,10 +254,12 @@ type PasswordRecoveryVerifyRequest struct {
 
 // ProfessionalListResponse defines model for ProfessionalListResponse.
 type ProfessionalListResponse struct {
-	HasMore bool                   `json:"has_more"`
-	Items   []ProfessionalResponse `json:"items"`
-	Limit   int                    `json:"limit"`
-	Offset  int                    `json:"offset"`
+	// CanWrite Direito de escrita resolvido centralmente; leitura permanece disponível sem trial ativo.
+	CanWrite bool                   `json:"can_write"`
+	HasMore  bool                   `json:"has_more"`
+	Items    []ProfessionalResponse `json:"items"`
+	Limit    int                    `json:"limit"`
+	Offset   int                    `json:"offset"`
 }
 
 // ProfessionalResponse defines model for ProfessionalResponse.

@@ -404,6 +404,8 @@ export interface components {
             limit: number;
             offset: number;
             has_more: boolean;
+            /** @description Direito de escrita resolvido centralmente; leitura permanece disponível sem trial ativo. */
+            can_write: boolean;
         };
         PasswordRecoveryRequest: {
             /** Format: email */

@@ -89,7 +89,7 @@ func (handler *Handler) GetProfessionals(httpContext *gin.Context, parameters ap
 		})
 	}
 	httpContext.JSON(http.StatusOK, api.ProfessionalListResponse{
-		Items: items, Limit: int(result.Limit), Offset: int(result.Offset), HasMore: result.HasMore,
+		Items: items, Limit: int(result.Limit), Offset: int(result.Offset), HasMore: result.HasMore, CanWrite: result.CanWrite,
 	})
 }
 
