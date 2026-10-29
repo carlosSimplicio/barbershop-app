@@ -3,15 +3,17 @@ import type { components } from "@/types/generated/api";
 
 export type ServiceRecord = components["schemas"]["ServiceResponse"];
 export type ServicePage = components["schemas"]["ServiceListResponse"];
-export function listServices({
-  limit,
-  offset,
-  signal,
-}: {
+export type CreateServiceRequest =
+  components["schemas"]["CreateServiceRequest"];
+export type UpdateServiceRequest =
+  components["schemas"]["UpdateServiceRequest"];
+type ListServicesOptions = {
   limit: number;
   offset: number;
   signal?: AbortSignal;
-}) {
+};
+
+export function listServices({ limit, offset, signal }: ListServicesOptions) {
   const query = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
@@ -19,8 +21,6 @@ export function listServices({
   return apiFetch<ServicePage>(`/api/v1/services?${query}`, { signal });
 }
 
-export type CreateServiceRequest =
-  components["schemas"]["CreateServiceRequest"];
 export function createService(
   request: CreateServiceRequest,
   signal?: AbortSignal,
@@ -34,8 +34,6 @@ export function createService(
   });
 }
 
-export type UpdateServiceRequest =
-  components["schemas"]["UpdateServiceRequest"];
 export function getService(id: string, signal?: AbortSignal) {
   return apiFetch<ServiceRecord>(`/api/v1/services/${encodeURIComponent(id)}`, {
     signal,
