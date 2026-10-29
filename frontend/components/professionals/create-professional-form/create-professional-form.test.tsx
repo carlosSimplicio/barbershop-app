@@ -112,7 +112,7 @@ test("trata falha de rede com mensagem genérica", async () => {
   );
 
   expect(
-    await screen.findByText("Verifique sua conexão e tente novamente."),
+    await screen.findByText(/Verifique sua conexão e atualize a lista/),
   ).toBeInTheDocument();
   expect(screen.queryByText("network detail")).not.toBeInTheDocument();
 });

@@ -65,6 +65,14 @@
 - Para recuperação, mantenha uma segunda sessão de teste aberta para verificar a revogação, saia da sessão usada para o fluxo e use “Esqueci minha senha” em `/login` com o e-mail confirmado do proprietário. Abra o link mais recente no Mailpit e confira que `/redefinir-senha` remove fragmento e query antes de mostrar o formulário; defina uma senha diferente da atual, volte ao login e entre com a nova senha. Confira que o link usado não pode ser reutilizado e que a segunda sessão anterior retorna `401`. Não copie token ou senha para logs, URL query ou capturas públicas.
 - Para validar a restrição de papel, entre com a conta profissional criada no painel: o login deve abrir `/testes`, exibir a troca obrigatória e não permitir acesso a `/painel/profissionais`. Use somente contas e senhas fictícias e não exponha a senha em comandos ou logs.
 
+### Validação local da gestão de profissionais
+
+- Com a API atualizada e `make dev` em execução, entre como proprietário e abra `/painel/profissionais`. Confira teclado, foco, temas claro/escuro e tela estreita; a lista e os formulários usam os componentes do design system. Sem confirmação dos direitos da lista, as escritas permanecem bloqueadas; falha de leitura permite tentar novamente.
+- Use “Editar” em profissional ativo ou inativo. Confira nome persistido, e-mail somente leitura e limites do nome. Salvar sem alterações não envia PATCH; mudar o nome atualiza a lista com a resposta persistida. Cancelar não grava e devolve o foco à origem ou à lista.
+- Simule resposta incerta ao salvar. O rascunho deve permanecer fora da lista e outro envio deve exigir “Recarregar profissional”; a consulta propaga o registro persistido à lista e preserva o nome editado. Durante uma operação ou reconciliação, outros envios e mudanças da lista ficam bloqueados. Um `401` remove o conteúdo protegido, inclusive se uma leitura atrasada terminar depois.
+- Expire o trial de uma conta fictícia e confira leitura preservada e todas as escritas bloqueadas. Uma recusa `read_only` no cadastro ou na edição deve atualizar o bloqueio da página toda. Se a lista falhar após cadastro confirmado, a confirmação continua visível e o campo de senha permanece limpo.
+- As APIs de desativação e reativação já existem; suas ações no painel permanecem pendentes nesta etapa. Contagens e alertas de agendamentos continuam no escopo futuro da agenda.
+
 ### Validação local do catálogo de serviços
 
 - O catálogo exige a migration `00009_services.sql` aplicada e a API atualizada. Se o formulário permanecer desabilitado e a consulta do catálogo falhar, confira essas duas condições antes de investigar direitos de escrita; o frontend bloqueia alterações enquanto não consegue confirmar `can_write`. Após corrigir o ambiente, “Tentar novamente” ou recarregar a página deve liberar os campos para proprietário com acesso ativo.

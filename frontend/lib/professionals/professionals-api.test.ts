@@ -71,3 +71,38 @@ test("consulta uma página tipada sem enviar identificador de estabelecimento", 
   expect(init?.signal).toBe(controller.signal);
   expect(init?.credentials).toBe("include");
 });
+
+test("consulta e edita nome com cancelamento e CSRF somente na escrita", async () => {
+  const { getProfessional, updateProfessional } =
+    await import("./professionals-api");
+  document.cookie =
+    "__Secure-barbershop_csrf=csrf-test-token; Secure; SameSite=Strict; Path=/";
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+    async () =>
+      new Response(
+        JSON.stringify({
+          id: "id",
+          name: "Ana",
+          email: "ana@example.test",
+          active: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  );
+  const controller = new AbortController();
+  await getProfessional("id", controller.signal);
+  await updateProfessional("id", { name: "Ana" }, controller.signal);
+  const [getPath, getInit] = fetchMock.mock.calls[0];
+  const [patchPath, patchInit] = fetchMock.mock.calls[1];
+  expect(getPath).toBe("/api/v1/professionals/id");
+  expect(patchPath).toBe(getPath);
+  expect(getInit?.signal).toBe(controller.signal);
+  expect(patchInit?.signal).toBe(controller.signal);
+  expect(new Headers(getInit?.headers).get("X-CSRF-Token")).toBeNull();
+  expect(patchInit?.method).toBe("PATCH");
+  expect(new Headers(patchInit?.headers).get("X-CSRF-Token")).toBe(
+    "csrf-test-token",
+  );
+  expect(JSON.parse(String(patchInit?.body))).toEqual({ name: "Ana" });
+  document.cookie = "__Secure-barbershop_csrf=; Max-Age=0";
+});
