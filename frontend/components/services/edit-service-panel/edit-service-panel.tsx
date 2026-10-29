@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Feedback } from "@/components/ui";
+import { classifyServiceOperation } from "@/lib/services/service-operation-result";
 import {
   getService,
   updateService,
@@ -13,7 +14,6 @@ import {
   focusServiceError,
   recordToServiceValues,
   reconcileServiceValues,
-  serverServiceErrors,
   type FieldErrors,
 } from "@/lib/services/service-form-model";
 import { ServiceFields } from "../service-fields/service-fields";
@@ -170,27 +170,28 @@ export function EditServicePanel({
         controller.signal,
       );
       if (controller.signal.aborted) return;
-      if (result.status === 401) {
+      const outcome = classifyServiceOperation(result, 200);
+      if (outcome.state === "unauthorized") {
         onUnauthorized();
         return;
       }
-      if (result.status === 404) {
+      if (outcome.state === "missing") {
         setLoad("missing");
         return;
       }
-      if (result.state === "success" && result.status === 200) {
-        setRecord(result.data);
-        baseline.current = result.data;
-        setValues(recordToServiceValues(result.data));
+      if (outcome.state === "confirmed") {
+        setRecord(outcome.record);
+        baseline.current = outcome.record;
+        setValues(recordToServiceValues(outcome.record));
         setNotice({
           variant: "success",
           title: "Serviço atualizado",
           message: "As alterações foram salvas no catálogo.",
         });
-        onRecordConfirmed(result.data);
+        onRecordConfirmed(outcome.record);
         return;
       }
-      if (result.state === "error" && result.error.code === "read_only") {
+      if (outcome.state === "read_only") {
         onReadOnly();
         setNotice({
           variant: "warning",
@@ -199,15 +200,12 @@ export function EditServicePanel({
         });
         return;
       }
-      if (result.state === "error") {
-        const fields = serverServiceErrors(result.error.fields);
-        if (Object.keys(fields).length) {
-          pendingErrorFocus.current = true;
-          setErrors(fields);
-          return;
-        }
+      if (outcome.state === "validation") {
+        pendingErrorFocus.current = true;
+        setErrors(outcome.fields);
+        return;
       }
-      if (result.status >= 500 || result.status < 400) markUncertain();
+      if (outcome.state === "uncertain") markUncertain();
       else
         setNotice({
           variant: "error",

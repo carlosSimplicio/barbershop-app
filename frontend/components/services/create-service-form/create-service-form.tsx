@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Feedback } from "@/components/ui";
+import { classifyServiceOperation } from "@/lib/services/service-operation-result";
 import { createService } from "@/lib/services/services-api";
 import {
   emptyServiceValues,
   focusServiceError,
-  serverServiceErrors,
   validateServiceValues,
   type FieldErrors,
   type ServiceValues,
@@ -73,11 +73,12 @@ export function CreateServiceForm({
     try {
       const result = await createService(checked.request, request.signal);
       if (request.signal.aborted) return;
-      if (result.status === 401) {
+      const outcome = classifyServiceOperation(result, 201);
+      if (outcome.state === "unauthorized") {
         onUnauthorized();
         return;
       }
-      if (result.state === "success" && result.status === 201) {
+      if (outcome.state === "confirmed") {
         setValues(emptyServiceValues);
         setErrors({});
         setFeedback({
@@ -88,7 +89,7 @@ export function CreateServiceForm({
         onCreated();
         return;
       }
-      if (result.state === "error" && result.error.code === "read_only") {
+      if (outcome.state === "read_only") {
         onReadOnly();
         setFeedback({
           variant: "warning",
@@ -97,15 +98,12 @@ export function CreateServiceForm({
         });
         return;
       }
-      if (result.state === "error") {
-        const fieldErrors = serverServiceErrors(result.error.fields);
-        if (Object.keys(fieldErrors).length) {
-          pendingErrorFocus.current = true;
-          setErrors(fieldErrors);
-          return;
-        }
+      if (outcome.state === "validation") {
+        pendingErrorFocus.current = true;
+        setErrors(outcome.fields);
+        return;
       }
-      if (result.status >= 500 || result.status < 400) uncertain();
+      if (outcome.state === "uncertain") uncertain();
       else
         setFeedback({
           variant: "error",

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button, Feedback } from "@/components/ui";
+import { classifyServiceOperation } from "@/lib/services/service-operation-result";
 import {
   getService,
   setServiceStatus,
@@ -68,11 +69,12 @@ export function ServiceStatusAction({
         result = await setServiceStatus(record.id, target, request.signal);
       }
       if (request.signal.aborted) return;
-      if (result.status === 401) {
+      const outcome = classifyServiceOperation(result, 200);
+      if (outcome.state === "unauthorized") {
         onUnauthorized();
         return;
       }
-      if (result.status === 404) {
+      if (outcome.state === "missing") {
         setMissing(true);
         setTarget(null);
         setNotice({
@@ -82,7 +84,7 @@ export function ServiceStatusAction({
         });
         return;
       }
-      if (result.state === "success" && result.status === 200) {
+      if (outcome.state === "confirmed") {
         setUncertain(false);
         setMissing(false);
         setTarget(null);
@@ -91,17 +93,17 @@ export function ServiceStatusAction({
           variant: "success",
           title: check
             ? "Estado conferido"
-            : result.data.active
+            : outcome.record.active
               ? "Serviço ativado"
               : "Serviço desativado",
-          message: result.data.active
+          message: outcome.record.active
             ? "O serviço está ativo no catálogo."
             : "O serviço está inativo e permanece no catálogo.",
         });
-        onChanged(result.data);
+        onChanged(outcome.record);
         return;
       }
-      if (result.state === "error" && result.error.code === "read_only") {
+      if (outcome.state === "read_only") {
         onReadOnly();
         setNotice({
           variant: "warning",
@@ -117,7 +119,7 @@ export function ServiceStatusAction({
           message:
             "Verifique sua conexão e consulte novamente antes de alterar.",
         });
-      else if (result.status >= 500 || result.status < 400) markUncertain();
+      else if (outcome.state === "uncertain") markUncertain();
       else
         setNotice({
           variant: "error",

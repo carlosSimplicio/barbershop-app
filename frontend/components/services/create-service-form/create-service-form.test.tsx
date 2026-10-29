@@ -83,8 +83,17 @@ test("não envia com somente leitura e informa expiração recebida", async () =
   expect(createService).not.toHaveBeenCalled();
   expect(props.onReadOnly).not.toHaveBeenCalled();
 });
-test("não anuncia sucesso nem repete resposta ambígua", async () => {
-  vi.mocked(createService).mockRejectedValue(new Error("raw"));
+test.each([
+  null,
+  {
+    state: "error",
+    status: 503,
+    error: { code: "internal_error", message: "raw", request_id: "test" },
+  } as const,
+  { state: "empty", status: 201 } as const,
+])("não anuncia sucesso nem repete resultado ambíguo %j", async (result) => {
+  if (result) vi.mocked(createService).mockResolvedValue(result);
+  else vi.mocked(createService).mockRejectedValue(new Error("raw"));
   form();
   fill();
   fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
