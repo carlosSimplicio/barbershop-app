@@ -27,6 +27,7 @@ import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/password_recovery"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/catalog"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
@@ -39,7 +40,6 @@ import (
 	"barbershop-app/backend/internal/platform/ratelimit"
 	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
-	"barbershop-app/backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -170,8 +170,8 @@ func newTestApplication(t *testing.T) *testApplication {
 	}
 	t.Cleanup(func() { _ = logoStorage.Close() })
 	publicEstablishmentStore := establishment.NewPostgresPublicEstablishmentStore(integrationPool)
-	catalogStore := services.NewPostgresStore(integrationPool)
-	catalogService := services.NewService(catalogStore, writeEntitlements)
+	catalogStore := catalog.NewPostgresStore(integrationPool)
+	catalogService := catalog.NewService(catalogStore, writeEntitlements)
 	handler := httpapi.NewHandler(
 		health.NewHandler(integrationPool),
 		auth.NewHandler(auth.NewLoginService(authStore, rateLimitStore, passwords, accessTokens, csrfTokens, rateKeys, dummyPasswordHash), sessions,
@@ -194,7 +194,7 @@ func newTestApplication(t *testing.T) *testApplication {
 		),
 		professionals.NewHandler(professionals.NewService(professionals.NewPostgresStore(integrationPool), passwords,
 			writeEntitlements)),
-		services.NewHandler(catalogService),
+		catalog.NewHandler(catalogService),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

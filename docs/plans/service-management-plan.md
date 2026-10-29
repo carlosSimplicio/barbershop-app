@@ -6,7 +6,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** criar uma migration Goose nova para `services` e as queries compartilhadas do catálogo; regenerar `sqlc`.
 - **Motivação:** armazenar serviços com identidade estável e preço e duração próprios, preparando referências históricas sem exclusão física.
-- **Onde:** nova migration em `backend/db/migrations/`, novo `backend/db/query/services.sql`, `backend/db/generated/`, novos testes em `backend/integration/`, `docs/architecture.md` e `docs/implementation-scope.md`, item 3.
+- **Onde:** nova migration em `backend/db/migrations/`, novo `backend/db/query/catalog.sql`, `backend/db/generated/`, novos testes em `backend/integration/`, `docs/architecture.md` e `docs/implementation-scope.md`, item 3.
 - **Base documental:** `docs/architecture.md`, “Banco de dados”; `docs/product.md`, “Localização”, “Agenda e disponibilidade” e “Serviços e profissionais inativos”.
 - **Requisitos de entrega:**
   - `services` persiste UUID aleatório, `establishment_id`, `name`, `price_cents`, `duration_minutes`, `active`, `created_at` e `updated_at`; preço usa inteiro de centavos, sem ponto flutuante.
@@ -18,9 +18,9 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 ### 2. Validar os dados do serviço no domínio
 
-- **O que:** criar validações puras compartilhadas por cadastro e edição no novo slice `backend/internal/services/`.
+- **O que:** criar validações puras compartilhadas por cadastro e edição no novo slice `backend/internal/catalog/`.
 - **Motivação:** aplicar as decisões confirmadas nesta conversa de forma uniforme, sem depender da interface ou de PostgreSQL.
-- **Onde:** novo `backend/internal/services/`, testes Go co-localizados e `docs/product.md`.
+- **Onde:** novo `backend/internal/catalog/`, testes Go co-localizados e `docs/product.md`.
 - **Base documental:** `docs/product.md`, “Agenda e disponibilidade”; `docs/architecture.md`, “Backend”; decisões confirmadas pelo usuário sobre nome, preço e duração. Incorporar essas decisões ao produto nesta subtarefa.
 - **Requisitos de entrega:**
   - Nome obrigatório após remover espaços nas extremidades, com até 120 pontos de código Unicode no valor normalizado; nomes repetidos são permitidos.
@@ -33,7 +33,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** definir `POST /api/v1/services` no OpenAPI e implementar cadastro no slice, com handler, persistência e wiring na aplicação; regenerar Go e TypeScript.
 - **Motivação:** permitir ao proprietário criar um serviço ativo no próprio estabelecimento, sob a política centralizada de escrita.
-- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/services/`, `backend/internal/httpapi/handler.go`, `backend/cmd/api/main.go`, `backend/internal/auth/middleware.go`, `backend/integration/suite_test.go`, novos testes em `backend/integration/`, artefatos gerados, `docs/product.md`, `docs/architecture.md` e `docs/implementation-scope.md`.
+- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/catalog/`, `backend/internal/httpapi/handler.go`, `backend/cmd/api/main.go`, `backend/internal/auth/middleware.go`, `backend/integration/suite_test.go`, novos testes em `backend/integration/`, artefatos gerados, `docs/product.md`, `docs/architecture.md` e `docs/implementation-scope.md`.
 - **Base documental:** `docs/product.md`, “Cadastro, usuários e permissões”, “Planos, assinatura e trial” e “Agenda e disponibilidade”; checklist, itens 6, 10 e 22; decisões confirmadas sobre os campos.
 - **Requisitos de entrega:**
   - A entrada contém `name`, `price_cents` e duração opcional `duration_minutes`; duração omitida ou `null` usa 30 minutos. Resposta `201` contém ID, nome normalizado, preço em centavos, duração efetiva e `active: true`.
@@ -48,7 +48,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** definir e implementar `GET /api/v1/services`, exclusivo do proprietário, com paginação limitada e indicação de escrita disponível; regenerar os contratos.
 - **Motivação:** permitir consultar serviços ativos e inativos sem carregar todo o catálogo em memória.
-- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/services/`, `backend/db/query/services.sql`, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, itens 10 e 22.
+- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/catalog/`, `backend/db/query/catalog.sql`, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, itens 10 e 22.
 - **Base documental:** `docs/architecture.md`, “Multi-tenancy e página pública” e padrão de paginação de “Proprietário e profissional”; `docs/product.md`, “Planos, assinatura e trial”.
 - **Requisitos de entrega:**
   - Listagem filtra pelo tenant do `Principal`, inclui ativos e inativos e ordena por criação decrescente, com desempate pelo ID.
@@ -63,7 +63,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** definir e implementar `GET /api/v1/services/{service_id}` e regenerar os contratos.
 - **Motivação:** carregar o estado persistido do serviço selecionado, inclusive para reconciliação após falha de atualização.
-- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/services/`, `backend/db/query/services.sql`, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, itens 10 e 22.
+- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/catalog/`, `backend/db/query/catalog.sql`, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, itens 10 e 22.
 - **Base documental:** checklist, item 10, “consultar”; `AGENTS.md`, isolamento por estabelecimento; `docs/product.md`, leitura após expiração.
 - **Requisitos de entrega:**
   - Proprietário consulta serviço ativo ou inativo do próprio tenant e recebe os mesmos campos de registro da listagem.
@@ -77,7 +77,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** definir e implementar `PATCH /api/v1/services/{service_id}` para nome, preço e duração, incluindo proteção CSRF do caminho parametrizado; regenerar os contratos.
 - **Motivação:** atualizar o catálogo sem substituir identidade ou alterar registros operacionais históricos.
-- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/services/`, `backend/db/query/services.sql`, `backend/internal/auth/middleware.go` e seus testes, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, item 10.
+- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/catalog/`, `backend/db/query/catalog.sql`, `backend/internal/auth/middleware.go` e seus testes, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, item 10.
 - **Base documental:** `docs/product.md`, “Agenda e disponibilidade”, alterações do catálogo afetam apenas novos agendamentos; `docs/architecture.md`, autenticação, CSRF e snapshots; decisões confirmadas sobre os campos.
 - **Requisitos de entrega:**
   - Apenas o proprietário com origem, CSRF e direito de escrita válidos edita um serviço do próprio tenant, inclusive inativo; resposta `200` devolve o registro atualizado.
@@ -93,7 +93,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** definir e implementar `PUT /api/v1/services/{service_id}/status` com estado desejado explícito, regenerando os contratos e protegendo a rota com CSRF.
 - **Motivação:** administrar a oferta sem exclusão física ou perda de identidade e futuras referências históricas.
-- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/services/`, `backend/db/query/services.sql`, `backend/internal/auth/middleware.go` e seus testes, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, item 10.
+- **Onde:** `backend/openapi/openapi.yaml`, `backend/internal/catalog/`, `backend/db/query/catalog.sql`, `backend/internal/auth/middleware.go` e seus testes, `backend/internal/httpapi/handler.go`, artefatos gerados, novos testes em `backend/integration/`, `docs/product.md`, `docs/architecture.md` e checklist, item 10.
 - **Base documental:** `docs/product.md`, “Serviços e profissionais inativos”; decisão confirmada de entregar ativação e desativação agora e integrar contagem e alertas quando existir agenda. Registrar essa divisão nos documentos, preservando a regra final do MVP.
 - **Requisitos de entrega:**
   - Proprietário com origem, CSRF e direito de escrita válidos envia `{ active: boolean }`; resposta `200` devolve o registro com o estado persistido.
@@ -108,7 +108,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** criar `/painel/servicos` com guarda de proprietário, casca existente, navegação e listagem paginada pelo cliente tipado.
 - **Motivação:** disponibilizar o catálogo no painel com os padrões visuais e de sessão já entregues.
-- **Onde:** nova rota em `frontend/app/(session)/painel/servicos/`, novos componentes em `frontend/components/services/`, novo `frontend/lib/services/services-api.ts`, `frontend/components/session/owner-panel-shell/`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md`, `README.md` e checklist, itens 4 e 10.
+- **Onde:** nova rota em `frontend/app/(session)/painel/servicos/`, novos componentes em `frontend/components/catalog/`, novo `frontend/lib/catalog/catalog-api.ts`, `frontend/components/session/owner-panel-shell/`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md`, `README.md` e checklist, itens 4 e 10.
 - **Base documental:** `docs/architecture.md`, “Frontend”, “Renderização e API” e “Estado”; `AGENTS.md`, design system; checklist, item 10, listagem do catálogo.
 - **Requisitos de entrega:**
   - Página reutiliza `SessionGuard`, `OwnerPanelShell`, `OwnerPanelPage`, `RecordList`, `Button` e `Feedback`; navegação inclui “Serviços” com `aria-current` correto, acessível por teclado e em telas estreitas.
@@ -124,7 +124,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** incorporar formulário de cadastro à página, usando os componentes existentes e conversão exata entre preço digitado e centavos.
 - **Motivação:** concluir o cadastro pelo proprietário sem exigir conhecimento da representação técnica da API.
-- **Onde:** novos componentes em `frontend/components/services/`, modelo puro do formulário em `frontend/lib/services/`, `frontend/lib/services/services-api.ts`, `frontend/app/design-system/`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md` e checklist, item 10.
+- **Onde:** novos componentes em `frontend/components/catalog/`, modelo puro do formulário em `frontend/lib/catalog/`, `frontend/lib/catalog/catalog-api.ts`, `frontend/app/design-system/`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md` e checklist, item 10.
 - **Base documental:** decisões confirmadas de nome, preço e duração; `docs/product.md`, “Localização” e “Agenda e disponibilidade”; `AGENTS.md`, design system e validação autoritativa no backend.
 - **Requisitos de entrega:**
   - Formulário coleta nome, preço e duração, apresenta os limites confirmados e explica o padrão de 30 minutos quando a duração estiver vazia; preço vazio não significa gratuito.
@@ -140,7 +140,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** oferecer edição na própria página, carregando o registro pelo endpoint individual e reutilizando o modelo e os campos do cadastro.
 - **Motivação:** permitir corrigir dados e atualizar o catálogo sem criar outro serviço.
-- **Onde:** `frontend/components/services/`, `frontend/lib/services/`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md` e checklist, item 10.
+- **Onde:** `frontend/components/catalog/`, `frontend/lib/catalog/`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md` e checklist, item 10.
 - **Base documental:** checklist, item 10, consulta e edição; `docs/product.md`, alterações de catálogo preservam os dados já registrados; `docs/architecture.md`, estado e respostas obsoletas.
 - **Requisitos de entrega:**
   - Ação “Editar” consulta o serviço selecionado e oferece carregamento, erro, nova tentativa e cancelamento; troca de seleção descarta respostas antigas.
@@ -155,7 +155,7 @@ Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar servi
 
 - **O que:** adicionar ações de ativação e desativação aos registros, com confirmação na própria página usando os componentes existentes.
 - **Motivação:** completar a gestão de estado do catálogo com informação clara sobre preservação do serviço.
-- **Onde:** `frontend/components/services/`, `frontend/lib/services/services-api.ts`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md`, `README.md` e checklist, item 10.
+- **Onde:** `frontend/components/catalog/`, `frontend/lib/catalog/catalog-api.ts`, testes Vitest co-localizados, `docs/product.md`, `docs/architecture.md`, `docs/operations.md`, `README.md` e checklist, item 10.
 - **Base documental:** `docs/product.md`, “Serviços e profissionais inativos”; decisão confirmada de integrar contagem e alertas apenas quando existir agenda; `AGENTS.md`, preservação histórica e design system.
 - **Requisitos de entrega:**
   - Serviço ativo oferece “Desativar” e inativo oferece “Ativar”; confirmação identifica o serviço e permite cancelar antes do envio.

@@ -2,18 +2,18 @@ package httpapi
 
 import (
 	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/catalog"
 	"barbershop-app/backend/internal/establishment"
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/onboarding"
 	"barbershop-app/backend/internal/professionals"
-	"barbershop-app/backend/internal/services"
 	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type Handler struct {
-	services       *services.Handler
+	catalog        *catalog.Handler
 	health         *health.Handler
 	authentication *auth.Handler
 	onboarding     *onboarding.Handler
@@ -21,8 +21,8 @@ type Handler struct {
 	professionals  *professionals.Handler
 }
 
-func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, servicesHandler *services.Handler) *Handler {
-	return &Handler{services: servicesHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
+func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, catalogHandler *catalog.Handler) *Handler {
+	return &Handler{catalog: catalogHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
 }
 
 func (handler *Handler) GetHealth(c *gin.Context) {
@@ -97,14 +97,14 @@ func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessio
 	handler.professionals.GetProfessionals(c, params)
 }
 
-func (h *Handler) PostServices(c *gin.Context) { h.services.PostServices(c) }
+func (h *Handler) PostServices(c *gin.Context) { h.catalog.PostServices(c) }
 
 func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
-	h.services.GetServices(c, params)
+	h.catalog.GetServices(c, params)
 }
 
-func (h *Handler) GetService(c *gin.Context, id uuid.UUID) { h.services.GetService(c, id) }
+func (h *Handler) GetService(c *gin.Context, id uuid.UUID) { h.catalog.GetService(c, id) }
 
-func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) { h.services.PatchService(c, id) }
+func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) { h.catalog.PatchService(c, id) }
 
-func (h *Handler) PutServiceStatus(c *gin.Context, id uuid.UUID) { h.services.PutServiceStatus(c, id) }
+func (h *Handler) PutServiceStatus(c *gin.Context, id uuid.UUID) { h.catalog.PutServiceStatus(c, id) }

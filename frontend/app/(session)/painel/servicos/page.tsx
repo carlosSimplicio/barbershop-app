@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SessionGuard } from "@/components/session/session-guard/session-guard";
 import { OwnerPanelShell } from "@/components/session/owner-panel-shell/owner-panel-shell";
 import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
-import { ServicesWorkspace } from "@/components/services/services-workspace/services-workspace";
+import { CatalogWorkspace } from "@/components/catalog/catalog-workspace/catalog-workspace";
 
 export const metadata: Metadata = {
   title: "Serviços | Barbershop",
@@ -16,7 +16,7 @@ export default function ServicesPage() {
           title="Serviços"
           description="Organize os serviços, preços e durações do estabelecimento."
         >
-          <ServicesWorkspace />
+          <CatalogWorkspace />
         </OwnerPanelPage>
       </OwnerPanelShell>
     </SessionGuard>
