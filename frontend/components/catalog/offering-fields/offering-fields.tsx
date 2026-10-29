@@ -1,8 +1,9 @@
 import { AffixedInput, Field, TextField } from "@/components/ui";
 import { useFieldControl } from "@/components/ui/field/field";
-import type {
-  FieldErrors,
-  OfferingValues,
+import {
+  offeringFieldHints,
+  type FieldErrors,
+  type OfferingValues,
 } from "@/lib/catalog/offering-form-model";
 
 export function OfferingFields({
@@ -16,8 +17,7 @@ export function OfferingFields({
   disabled: boolean;
   onChange: (field: keyof OfferingValues, value: string) => void;
 }) {
-  const hint =
-    "De R$ 0,00 a R$ 99.999,99. Use vírgula e até duas casas decimais. Zero indica serviço gratuito.";
+  const hint = offeringFieldHints.price;
   const field = useFieldControl({ error: errors.price_cents, hint });
   return (
     <>
@@ -26,7 +26,7 @@ export function OfferingFields({
         name="name"
         value={values.name}
         error={errors.name}
-        hint="Obrigatório, com até 120 caracteres após remover os espaços nas extremidades."
+        hint={offeringFieldHints.name}
         disabled={disabled}
         onChange={(e) => onChange("name", e.target.value)}
       />
@@ -57,7 +57,7 @@ export function OfferingFields({
         value={values.duration}
         error={errors.duration_minutes}
         disabled={disabled}
-        hint="De 1 a 1.440 minutos. Deixe vazio para usar 30 minutos."
+        hint={offeringFieldHints.duration}
         onChange={(e) => onChange("duration", e.target.value)}
       />
     </>

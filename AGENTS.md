@@ -46,6 +46,7 @@ Aplique estas convenções às próximas features e ao código alterado no escop
 
 - Use nomes que expressem intenção e distingam conceitos do domínio de camadas técnicas. Prefira `principal`, `input` e `offeringID` a abreviações ambíguas; abreviações convencionais como `ctx` e `err` continuam adequadas.
 - Use constantes com significado para limites e parâmetros repetidos; derive delas valores relacionados. No backend Go, expresse status HTTP com as constantes `http.Status...`.
+- Defina limites e padrões de negócio no respectivo domínio e reutilize-os nas validações e nos textos que apresentem esses valores. O backend permanece autoritativo; constantes do frontend espelham o contrato para conveniência. Valores numericamente iguais de regras distintas mantêm nomes e definições próprios.
 - Na raiz de composição, instancie stores e casos de uso em variáveis próprias antes de compor handlers, deixando as dependências explícitas.
 - Em módulos TypeScript escritos manualmente, declare tipos e interfaces após os imports e antes das funções.
 - Compartilhe validações puras entre operações que tenham o mesmo contrato de negócio. Preserve validadores próprios quando regras, normalização ou limites forem diferentes entre domínios.

@@ -42,6 +42,7 @@
 - Um slice pode conter handler, entrada/saída, validação, caso de uso e persistência necessários ao fluxo.
 - Na raiz de composição, crie stores e casos de uso em variáveis próprias antes de passá-los aos handlers. Essa composição explícita deve ser mantida também nos testes de integração.
 - Compartilhe validações puras entre cadastro, edição e outras operações quando as regras e a normalização forem as mesmas. Mantenha validadores próprios para contratos distintos, mesmo quando os campos tenham o mesmo nome.
+- Mantenha limites e padrões de negócio em constantes do domínio, reutilizadas por validações, defaults e mensagens. O frontend pode espelhar os valores em seu módulo de domínio para validação de conveniência e textos de ajuda, mantendo OpenAPI e testes sincronizados. A coincidência numérica entre regras de domínios diferentes não justifica uma constante global compartilhada.
 - Cadastro e edição de estabelecimento compartilham as validações puras `establishment.IsNameValid` e `establishment.IsTimeZoneValid`; normalização e tradução para erros de cada fluxo permanecem nas suas bordas.
 - Evite grandes diretórios horizontais globais de handlers, services e repositories.
 - Mantenha regras testáveis sem Gin, `pgx`, rede ou banco reais. A verificação de recuperação de senha decide elegibilidade, expiração, uso único e diferença da nova senha no caso de uso `auth/password_recovery`; o store recebe um preparador de hash, executa-o após bloquear usuário e token nessa ordem e só então persiste consumo, credencial e revogações atomicamente. O adaptador não recebe a nova senha nem o gerenciador de criptografia.
@@ -83,6 +84,7 @@
 ## Catálogo de serviços
 
 - Módulos do catálogo usam `catalog` e seu item de domínio usa `Offering`, distinguindo-o da camada de aplicação `Service`. Queries internas usam nomes como `CreateOffering`; a API `/services`, os schemas OpenAPI, a tabela `services` e migrations permanecem estáveis.
+- `internal/catalog/limits.go` concentra tamanho máximo do nome, faixa de preço em centavos e duração mínima, máxima e padrão. Validações e mensagens HTTP usam esses valores; `frontend/lib/catalog/offering-limits.ts` os espelha para o modelo do formulário, erros e textos de ajuda compartilhados entre cadastro e edição. Valores esperados permanecem explícitos no OpenAPI, nos testes e na documentação do produto.
 
 - O slice `internal/catalog` implementa cadastro, listagem, consulta individual, edição parcial e estado ativo. Todos os endpoints derivam o tenant do `Principal` e autorizam somente `owner`. Escritas exigem origem confiável, CSRF e `entitlements.Service.RequireWrite`. A lista CSRF inclui os caminhos parametrizados com UUID e `/status`, aplicados somente a métodos de escrita.
 - `POST /services` recebe nome, `price_cents` inteiro e duração opcional; omitida ou nula usa 30 minutos. Nome com caractere NUL é recusado pela validação compartilhada de cadastro e edição com `400` e `invalid_name`, antes de chegar ao PostgreSQL. Cria serviço ativo e retorna `201` com ID, nome normalizado, preço, duração e estado.
