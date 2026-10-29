@@ -52,7 +52,7 @@ type LoginResult struct {
 
 type LoginStore interface {
 	FindUserByNormalizedEmail(context.Context, string) (User, error)
-	CreateSession(context.Context, string, string, time.Time) error
+	CreateSession(context.Context, User, string, time.Time) error
 }
 
 type PasswordVerifier interface {
@@ -131,7 +131,10 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 	if err != nil {
 		return LoginResult{}, err
 	}
-	if err := service.store.CreateSession(ctx, user.ID, sessionID, now.Add(SessionLifetime)); err != nil {
+	if err := service.store.CreateSession(ctx, user, sessionID, now.Add(SessionLifetime)); err != nil {
+		if errors.Is(err, ErrInvalidSession) {
+			return LoginResult{}, ErrInvalidCredentials
+		}
 		return LoginResult{}, err
 	}
 

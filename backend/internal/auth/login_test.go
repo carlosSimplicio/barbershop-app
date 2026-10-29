@@ -16,9 +16,11 @@ var testNow = time.Date(2026, time.October, 15, 12, 0, 0, 0, time.UTC)
 type loginStoreStub struct {
 	user             User
 	findErr          error
+	sessionErr       error
 	attempts         map[string][]time.Time
 	releasedAttempts int
 	createdSession   bool
+	expectedUser     User
 	createdUserID    string
 	createdSessionID string
 	createdExpiresAt time.Time
@@ -53,9 +55,13 @@ func loginRetryAfter(events []time.Time, now time.Time) time.Duration {
 	return events[4].Add(15 * time.Minute).Sub(now)
 }
 
-func (stub *loginStoreStub) CreateSession(_ context.Context, userID, sessionID string, expiresAt time.Time) error {
+func (stub *loginStoreStub) CreateSession(_ context.Context, expected User, sessionID string, expiresAt time.Time) error {
+	if stub.sessionErr != nil {
+		return stub.sessionErr
+	}
 	stub.createdSession = true
-	stub.createdUserID = userID
+	stub.createdUserID = expected.ID
+	stub.expectedUser = expected
 	stub.createdSessionID = sessionID
 	stub.createdExpiresAt = expiresAt
 	return nil
@@ -99,7 +105,7 @@ func TestLoginCreatesSessionForConfirmedActiveUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
-	if !store.createdSession || store.createdUserID != "user-1" || uuid.Validate(store.createdSessionID) != nil || !store.createdExpiresAt.Equal(testNow.Add(15*24*time.Hour)) {
+	if store.expectedUser.CredentialVersion != store.user.CredentialVersion || store.expectedUser.EstablishmentID != store.user.EstablishmentID || !store.createdSession || store.createdUserID != "user-1" || uuid.Validate(store.createdSessionID) != nil || !store.createdExpiresAt.Equal(testNow.Add(15*24*time.Hour)) {
 		t.Fatalf("session was not created correctly: %#v", store)
 	}
 	if result.AccessToken != "access-token" || result.CSRFToken != "csrf-token" {
@@ -186,5 +192,27 @@ func validLoginUser() User {
 	return User{
 		ID: "user-1", EstablishmentID: "shop-1", Email: "user@example.com", NormalizedEmail: "user@example.com",
 		Role: "owner", Active: true, EmailConfirmed: true, CredentialVersion: 1, PasswordHash: "stored-hash",
+	}
+}
+
+func TestLoginTranslatesStaleSessionRefusalAndPreservesInfrastructureFailure(t *testing.T) {
+	infrastructureErr := errors.New("session database unavailable")
+	for _, test := range []struct {
+		name             string
+		sessionErr, want error
+	}{
+		{"stale identity", ErrInvalidSession, ErrInvalidCredentials},
+		{"infrastructure", infrastructureErr, infrastructureErr},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := &loginStoreStub{user: validLoginUser(), sessionErr: test.sessionErr}
+			result, err := testLoginService(store, true).Login(context.Background(), LoginInput{Email: "user@example.com", Password: "senha-segura", IP: "192.0.2.1"})
+			if !errors.Is(err, test.want) {
+				t.Fatalf("error=%v, want %v", err, test.want)
+			}
+			if store.createdSession || result.AccessToken != "" || result.CSRFToken != "" {
+				t.Fatal("refused login issued a session")
+			}
+		})
 	}
 }

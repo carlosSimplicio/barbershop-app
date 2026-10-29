@@ -101,3 +101,6 @@ WITH updated_user AS (
     WHERE c.user_id = $1
 )
 SELECT credential_version FROM updated_user;
+
+-- name: LockAuthSessionUser :one
+SELECT id FROM users WHERE id = $1 FOR UPDATE;
