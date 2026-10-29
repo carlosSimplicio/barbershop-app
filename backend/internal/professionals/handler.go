@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"barbershop-app/backend/internal/auth/security"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/httpserver"
+	"barbershop-app/backend/internal/platform/pagination"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -43,16 +45,16 @@ func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessio
 	if !ok {
 		return
 	}
-	limit, offset := int32(20), int32(0)
+	limit, offset := int32(pagination.DefaultLimit), int32(pagination.DefaultOffset)
 	if params.Limit != nil {
-		if *params.Limit < 1 || *params.Limit > 100 {
-			writeFieldError(c, http.StatusBadRequest, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+		if *params.Limit < pagination.MinLimit || *params.Limit > pagination.MaxLimit {
+			writeFieldError(c, http.StatusBadRequest, "limit", "invalid_limit", fmt.Sprintf("Informe um limite entre %d e %d.", pagination.MinLimit, pagination.MaxLimit))
 			return
 		}
 		limit = int32(*params.Limit)
 	}
 	if params.Offset != nil {
-		if *params.Offset < 0 || int64(*params.Offset) > 2147483647 {
+		if *params.Offset < pagination.MinOffset || int64(*params.Offset) > pagination.MaxOffset {
 			writeFieldError(c, http.StatusBadRequest, "offset", "invalid_offset", "Informe um deslocamento válido.")
 			return
 		}
@@ -65,7 +67,7 @@ func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessio
 		case errors.Is(err, ErrForbidden):
 			writeError(c, http.StatusForbidden, "forbidden", "Você não pode consultar profissionais.")
 		case errors.Is(err, ErrInvalidLimit):
-			writeFieldError(c, http.StatusBadRequest, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+			writeFieldError(c, http.StatusBadRequest, "limit", "invalid_limit", fmt.Sprintf("Informe um limite entre %d e %d.", pagination.MinLimit, pagination.MaxLimit))
 		case errors.Is(err, ErrInvalidOffset):
 			writeFieldError(c, http.StatusBadRequest, "offset", "invalid_offset", "Informe um deslocamento válido.")
 		default:

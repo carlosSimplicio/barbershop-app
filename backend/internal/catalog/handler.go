@@ -3,6 +3,7 @@ package catalog
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/httpserver"
+	"barbershop-app/backend/internal/platform/pagination"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -78,7 +80,7 @@ func writeCatalogError(httpContext *gin.Context, err error) {
 	case errors.Is(err, entitlements.ErrReadOnly):
 		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
 	case errors.Is(err, ErrInvalidLimit):
-		writeFieldError(httpContext, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+		writeFieldError(httpContext, "limit", "invalid_limit", fmt.Sprintf("Informe um limite entre %d e %d.", pagination.MinLimit, pagination.MaxLimit))
 	case errors.Is(err, ErrInvalidOffset):
 		writeFieldError(httpContext, "offset", "invalid_offset", "Informe um deslocamento válido.")
 	case errors.Is(err, ErrInvalidName):
@@ -111,7 +113,7 @@ func (handler *Handler) GetServices(httpContext *gin.Context, parameters api.Get
 	if !ok {
 		return
 	}
-	limit, offset := int64(20), int64(0)
+	limit, offset := int64(pagination.DefaultLimit), int64(pagination.DefaultOffset)
 	if parameters.Limit != nil {
 		limit = int64(*parameters.Limit)
 	}

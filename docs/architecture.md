@@ -17,6 +17,7 @@
 - Mantenha um wrapper pequeno sobre `fetch`; não adicione outro cliente HTTP sem necessidade demonstrada.
 - Código gerado não é editado manualmente. A automação deve detectar artefatos desatualizados.
 - Geração não substitui validação em runtime, autenticação, autorização ou regras de negócio.
+- Catálogo e profissionais compartilham os padrões de paginação declarados no OpenAPI: `limit` de 1 a 100, com padrão 20, e `offset` de 0 a 2.147.483.647, com padrão 0. O backend nomeia esses valores em `internal/platform/pagination`, usando `math.MaxInt32` para o teto de offset; handlers, validações e mensagens de limite reutilizam essas constantes. Os painéis reutilizam tamanho padrão e primeiro offset de `frontend/lib/api/pagination.ts`; o catálogo também usa o teto de offset desse módulo. Valores de outros contratos, como limites de agenda, permanecem no respectivo domínio.
 
 ### Erros
 

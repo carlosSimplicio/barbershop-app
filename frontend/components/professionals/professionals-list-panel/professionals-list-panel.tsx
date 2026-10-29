@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import { Button, Feedback, RecordList } from "@/components/ui";
+import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
   listProfessionals,
   type Professional,
@@ -11,8 +12,6 @@ import {
 } from "@/lib/professionals/professionals-api";
 
 import styles from "./professionals-list-panel.module.css";
-
-const PAGE_SIZE = 20;
 
 type View =
   | { status: "loading" | "error" | "unauthorized" }
@@ -29,7 +28,7 @@ export function ProfessionalsListPanel() {
 }
 
 function ProfessionalsRequest() {
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(FIRST_PAGE_OFFSET);
   const [retryKey, setRetryKey] = useState(0);
   const [view, setView] = useState<View>({ status: "loading" });
 
@@ -37,7 +36,7 @@ function ProfessionalsRequest() {
     const controller = new AbortController();
 
     void listProfessionals({
-      limit: PAGE_SIZE,
+      limit: DEFAULT_PAGE_SIZE,
       offset,
       signal: controller.signal,
     })
@@ -100,16 +99,21 @@ function ProfessionalsRequest() {
               <ProfessionalRecord professional={professional} />
             )}
           />
-          {view.page.offset > 0 || view.page.has_more ? (
+          {view.page.offset > FIRST_PAGE_OFFSET || view.page.has_more ? (
             <nav
               aria-label="Paginação de profissionais"
               className={styles.pagination}
             >
               <Button
-                disabled={view.page.offset === 0}
+                disabled={view.page.offset === FIRST_PAGE_OFFSET}
                 onClick={() => {
                   setView({ status: "loading" });
-                  setOffset(Math.max(0, view.page.offset - PAGE_SIZE));
+                  setOffset(
+                    Math.max(
+                      FIRST_PAGE_OFFSET,
+                      view.page.offset - DEFAULT_PAGE_SIZE,
+                    ),
+                  );
                 }}
               >
                 Anterior
