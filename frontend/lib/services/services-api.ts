@@ -18,3 +18,18 @@ export function listServices({
   });
   return apiFetch<ServicePage>(`/api/v1/services?${query}`, { signal });
 }
+
+export type CreateServiceRequest =
+  components["schemas"]["CreateServiceRequest"];
+export function createService(
+  request: CreateServiceRequest,
+  signal?: AbortSignal,
+) {
+  return apiFetch<ServiceRecord>("/api/v1/services", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    csrf: true,
+    signal,
+  });
+}

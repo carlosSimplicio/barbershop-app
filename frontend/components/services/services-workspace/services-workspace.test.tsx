@@ -7,13 +7,20 @@ import {
 } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { listServices, type ServiceRecord } from "@/lib/services/services-api";
+import {
+  createService,
+  listServices,
+  type ServiceRecord,
+} from "@/lib/services/services-api";
 import { ServicesWorkspace } from "./services-workspace";
 
 vi.mock("@/components/session/auth-provider/auth-provider", () => ({
   useAuthSession: vi.fn(),
 }));
-vi.mock("@/lib/services/services-api", () => ({ listServices: vi.fn() }));
+vi.mock("@/lib/services/services-api", () => ({
+  listServices: vi.fn(),
+  createService: vi.fn(),
+}));
 const records: ServiceRecord[] = [
   {
     id: "corte",
@@ -53,6 +60,7 @@ function page(items = records, offset = 0, has_more = false, can_write = true) {
 }
 beforeEach(() => {
   vi.mocked(listServices).mockReset();
+  vi.mocked(createService).mockReset();
   owner();
 });
 test("exibe preço exato, duração, estado e paginação", async () => {
@@ -122,4 +130,29 @@ test("descarta resposta antiga após trocar identidade", async () => {
   expect(await screen.findByText("Barba")).toBeVisible();
   await act(async () => finish(page([records[0]])));
   expect(screen.queryByText("Corte")).not.toBeInTheDocument();
+});
+
+test("mantém criação confirmada quando a recarga da lista falha", async () => {
+  vi.mocked(listServices)
+    .mockResolvedValueOnce(page())
+    .mockRejectedValueOnce(new Error("network"));
+  vi.mocked(createService).mockResolvedValue({
+    state: "success",
+    status: 201,
+    data: records[0],
+  });
+  render(<ServicesWorkspace />);
+  await screen.findByRole("list");
+  fireEvent.change(screen.getByLabelText("Nome do serviço"), {
+    target: { value: "Corte" },
+  });
+  fireEvent.change(screen.getByLabelText("Preço"), {
+    target: { value: "1,00" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
+  expect(
+    await screen.findByText("Não foi possível consultar os serviços"),
+  ).toBeVisible();
+  expect(screen.getByText("Serviço cadastrado")).toBeVisible();
 });

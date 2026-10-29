@@ -217,6 +217,44 @@ export function DesignSystemShowcase() {
                 id="showcase-slug"
               />
             </Field>
+            <Field
+              htmlFor="brl-price"
+              hintId="brl-price-help"
+              label="Preço em BRL"
+              hint="Composição de Field e AffixedInput: teclado decimal, prefixo R$ e texto preservado para validação sem arredondamento."
+            >
+              <AffixedInput
+                id="brl-price"
+                aria-describedby="brl-price-help"
+                affix="R$"
+                inputMode="decimal"
+                defaultValue="35,00"
+              />
+            </Field>
+            <Field
+              htmlFor="brl-price-error"
+              label="Preço com erro"
+              error="Informe até duas casas decimais."
+              errorId="brl-price-error-message"
+            >
+              <AffixedInput
+                id="brl-price-error"
+                affix="R$"
+                inputMode="decimal"
+                defaultValue="35,001"
+                aria-invalid="true"
+                aria-describedby="brl-price-error-message"
+              />
+            </Field>
+            <Field htmlFor="brl-price-disabled" label="Preço indisponível">
+              <AffixedInput
+                id="brl-price-disabled"
+                affix="R$"
+                inputMode="decimal"
+                defaultValue="35,00"
+                disabled
+              />
+            </Field>
             <SelectField
               defaultValue="America/Sao_Paulo"
               hint="Mantenha uma opção inicial válida."

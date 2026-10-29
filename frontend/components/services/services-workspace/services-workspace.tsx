@@ -5,6 +5,7 @@ import { useAuthSession } from "@/components/session/auth-provider/auth-provider
 import { Button, Feedback, RecordList } from "@/components/ui";
 import { listServices, type ServicePage } from "@/lib/services/services-api";
 import { formatServicePrice } from "@/lib/services/money";
+import { CreateServiceForm } from "../create-service-form/create-service-form";
 import styles from "./services-workspace.module.css";
 
 type View =
@@ -23,6 +24,7 @@ export function ServicesWorkspace() {
 }
 
 function ServicesRequest() {
+  const [readOnly, setReadOnly] = useState(false);
   const [offset, setOffset] = useState(0);
   const [version, setVersion] = useState(0);
   const [view, setView] = useState<View>({ status: "loading" });
@@ -55,7 +57,16 @@ function ServicesRequest() {
   if (view.status === "unauthorized") return null;
   return (
     <div className={styles.workspace}>
-      {view.status === "success" && !view.page.can_write ? (
+      <CreateServiceForm
+        canWrite={!readOnly && view.status === "success" && view.page.can_write}
+        onCreated={() => {
+          setOffset(0);
+          refresh();
+        }}
+        onReadOnly={() => setReadOnly(true)}
+        onUnauthorized={() => setView({ status: "unauthorized" })}
+      />
+      {readOnly || (view.status === "success" && !view.page.can_write) ? (
         <Feedback variant="warning" title="Modo somente leitura">
           Você pode consultar os serviços. Alterações ficam disponíveis com
           acesso ativo.
@@ -67,6 +78,9 @@ function ServicesRequest() {
         className={styles.panel}
       >
         <h2>Serviços cadastrados</h2>
+        <Button onClick={refresh} disabled={view.status === "loading"}>
+          Atualizar lista
+        </Button>
         {view.status === "loading" ? (
           <p role="status" aria-live="polite">
             Carregando serviços…

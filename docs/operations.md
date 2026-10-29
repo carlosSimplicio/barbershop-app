@@ -66,7 +66,7 @@
 
 ### Validação local do catálogo de serviços
 
-- Como proprietário, abra “Serviços” em `/painel/servicos`. Confira carregamento, lista vazia ou paginada com nome, preço em BRL, duração e estado ativo, falha com nova tentativa e `aria-current` na navegação. Confira teclado, temas claro/escuro e tela estreita. Com trial expirado, a consulta continua disponível com aviso de somente leitura. Profissionais não acessam a página. Cadastro, edição e mudança de estado pela interface serão integrados nas próximas etapas.
+- Como proprietário, abra “Serviços” em `/painel/servicos`. Confira carregamento, lista vazia ou paginada com nome, preço em BRL, duração e estado ativo, falha com nova tentativa e `aria-current` na navegação. Confira teclado, temas claro/escuro e tela estreita. Com trial expirado, a consulta continua disponível com aviso de somente leitura. Profissionais não acessam a página. Cadastre um serviço gratuito e outro com centavos, confira nome, preço e duração padrão de 30 minutos, erros de campo e atualização da lista. Durante expiração, cadastro permanece bloqueado. Edição e mudança de estado pela interface serão integradas nas próximas etapas.
 
 ### Validação local da página pública
 
