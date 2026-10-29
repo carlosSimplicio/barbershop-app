@@ -144,11 +144,9 @@ test("foca preço inválido da API após habilitar os controles", async () => {
   fill();
   screen.getByLabelText("Nome do serviço").focus();
   fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
-  await waitFor(() =>
-    expect(screen.getByLabelText("Preço")).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    ),
+  await waitFor(() => expect(screen.getByLabelText("Preço")).toHaveFocus());
+  expect(screen.getByLabelText("Preço")).toHaveAttribute(
+    "aria-invalid",
+    "true",
   );
-  expect(screen.getByLabelText("Preço")).toHaveFocus();
 });
