@@ -245,7 +245,7 @@ export function RegistrationForm() {
         autoComplete="new-password"
         readOnly={submitting}
         error={errors.password}
-        hint="Use de 8 a 32 caracteres, sem espaços."
+        hint="Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis."
         label="Crie uma senha"
         onChange={(event) => update("password", event.target.value)}
         ref={passwordRef}

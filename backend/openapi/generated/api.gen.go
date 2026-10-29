@@ -96,14 +96,17 @@ type AuthPrincipal struct {
 
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
+	// NewPassword Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
 	NewPassword string `json:"new_password"`
 }
 
 // CreateProfessionalRequest defines model for CreateProfessionalRequest.
 type CreateProfessionalRequest struct {
-	Email             openapi_types.Email `json:"email"`
-	Name              string              `json:"name"`
-	TemporaryPassword string              `json:"temporary_password"`
+	Email openapi_types.Email `json:"email"`
+	Name  string              `json:"name"`
+
+	// TemporaryPassword Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
+	TemporaryPassword string `json:"temporary_password"`
 }
 
 // EmailConfirmationRequest defines model for EmailConfirmationRequest.
@@ -221,8 +224,10 @@ type HealthResponseStatus string
 
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
-	Email    openapi_types.Email `json:"email"`
-	Password string              `json:"password"`
+	Email openapi_types.Email `json:"email"`
+
+	// Password Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
+	Password string `json:"password"`
 }
 
 // PasswordRecoveryRequest defines model for PasswordRecoveryRequest.
@@ -232,6 +237,7 @@ type PasswordRecoveryRequest struct {
 
 // PasswordRecoveryVerifyRequest defines model for PasswordRecoveryVerifyRequest.
 type PasswordRecoveryVerifyRequest struct {
+	// NewPassword Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
 	NewPassword string `json:"new_password"`
 	Token       string `json:"token"`
 }
@@ -267,9 +273,11 @@ type PublicEstablishmentProfileResponse struct {
 type RegisterRequest struct {
 	Email             openapi_types.Email `json:"email"`
 	EstablishmentName string              `json:"establishment_name"`
-	Password          string              `json:"password"`
-	Slug              string              `json:"slug"`
-	TimeZone          string              `json:"time_zone"`
+
+	// Password Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
+	Password string `json:"password"`
+	Slug     string `json:"slug"`
+	TimeZone string `json:"time_zone"`
 }
 
 // TrialStatus defines model for TrialStatus.

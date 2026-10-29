@@ -111,8 +111,8 @@
 - O e-mail de login é único em toda a plataforma, comparado de forma normalizada e sem diferenciar maiúsculas de minúsculas; não use o estabelecimento para desambiguar contas.
 - O e-mail de login é imutável no MVP; não ofereça endpoint ou ação de interface para alterá-lo.
 - Nunca armazene senha em texto puro nem registre senhas ou tokens.
-- Backend e validação de conveniência do frontend usam a propriedade Unicode `White_Space` para a recusa de espaços em senhas, contando de 8 a 32 pontos de código. `U+0085` é recusado; `U+FEFF` e `U+200B` não pertencem a essa propriedade e permanecem aceitos, preservando credenciais válidas já permitidas pelo backend.
-- Senhas devem ter entre 8 e 32 caracteres e não podem conter espaços ou outros caracteres de whitespace.
+- Backend e validação de conveniência do frontend aceitam senhas de 8 a 32 pontos de código e recusam a união de Unicode `White_Space`, controles (`Cc`), formatação (`Cf`) e `Default_Ignorable_Code_Point`. Isso inclui `U+FEFF`, `U+200B`, joiners, marcadores de direção, seletores de variação e fillers invisíveis; sequências de emoji que dependam desses marcadores também são recusadas. Acentos combinantes normais e símbolos visíveis continuam permitidos. O Go usa `unicode.IsSpace`, `unicode.IsControl` e as tabelas `Cf`, `Other_Default_Ignorable_Code_Point` e `Variation_Selector`; o frontend usa as propriedades Unicode equivalentes. A senha é recusada como recebida, sem trim, remoção, substituição ou normalização. A ampliação considera inexistentes credenciais anteriores; não há migração de senhas.
+- A regra se aplica ao cadastro do proprietário, senha temporária do profissional, login, troca obrigatória e redefinição por recuperação.
 - Não exija combinações obrigatórias de maiúsculas, minúsculas, números ou símbolos e não imponha troca periódica.
 - Não consulte listas de senhas comuns ou credenciais comprometidas no MVP.
 - Armazene senhas com Argon2id, salt único por senha e parâmetros centralizados e ajustáveis; nunca use hash rápido ou criptografia reversível.

@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ErrInvalidPassword     = errors.New("password must contain 8 to 32 characters without whitespace")
+	ErrInvalidPassword     = errors.New("password must contain 8 to 32 characters without whitespace, controls or invisible formatting characters")
 	ErrInvalidPasswordHash = errors.New("invalid password hash")
 )
 
@@ -60,7 +60,10 @@ func ValidatePassword(password string) error {
 		return ErrInvalidPassword
 	}
 	for _, character := range password {
-		if unicode.IsSpace(character) {
+		// Go exposes the components of Default_Ignorable_Code_Point separately.
+		// Rejecting Cf in full also covers the exceptions to that derived property.
+		if unicode.IsSpace(character) || unicode.IsControl(character) ||
+			unicode.In(character, unicode.Cf, unicode.Other_Default_Ignorable_Code_Point, unicode.Variation_Selector) {
 			return ErrInvalidPassword
 		}
 	}

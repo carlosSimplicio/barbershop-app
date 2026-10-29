@@ -227,7 +227,7 @@ export function DesignSystemShowcase() {
             </SelectField>
             <PasswordField
               defaultValue="senhasegura"
-              hint="Use de 8 a 32 caracteres, sem espaços."
+              hint="Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis."
               label="Senha"
             />
           </div>

@@ -65,8 +65,11 @@ test("mostra a troca obrigatória apenas para o profissional com senha temporár
 
 test.each([
   ["", "Informe uma nova senha."],
-  ["curta", "Use de 8 a 32 caracteres, sem espaços."],
-  ["senha com espaço", "Use de 8 a 32 caracteres, sem espaços."],
+  ["curta", "Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis."],
+  [
+    "senha com espaço",
+    "Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.",
+  ],
 ] as const)(
   "valida a nova senha %s antes de enviar e foca o campo inválido",
   async (password, message) => {
@@ -88,7 +91,10 @@ test.each([
 );
 
 test.each([
-  ["invalid_password", "Use de 8 a 32 caracteres, sem espaços."],
+  [
+    "invalid_password",
+    "Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.",
+  ],
   ["password_unchanged", "Escolha uma senha diferente da temporária."],
 ] as const)("mostra o erro %s no campo de senha", async (code, message) => {
   vi.spyOn(globalThis, "fetch")

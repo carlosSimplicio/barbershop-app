@@ -56,7 +56,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - Ao reativar a assinatura, restaure o acesso normal aos agendamentos preservados.
 - Agendamentos cuja data passou durante a expiração continuam como `scheduled`; não aplique transição automática.
 - Após a reativação, alerte o proprietário sobre esses registros para resolução manual como concluído, `no_show` ou cancelado.
-- Proprietários e profissionais entram com e-mail e senha.
+- Proprietários e profissionais entram com e-mail e senha. Senhas têm de 8 a 32 pontos de código e recusam espaços, controles e caracteres invisíveis de formatação ou ignoráveis por padrão, incluindo `U+FEFF` e `U+200B`, sem remover ou normalizar o valor informado. A regra vale para cadastro, login, senha temporária, troca obrigatória e recuperação; acentos combinantes normais e símbolos visíveis continuam permitidos.
 - Cada usuário pertence a exatamente um estabelecimento; garanta essa cardinalidade também no banco.
 - O proprietário administra apenas seu estabelecimento e pode cadastrar e administrar serviços e profissionais.
 - O profissional acessa somente a própria agenda e pode corrigir apenas o nome de clientes relacionados aos seus agendamentos; não pode alterar telefones.
