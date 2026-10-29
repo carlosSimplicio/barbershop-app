@@ -17,6 +17,7 @@ import {
   createProfessional,
   type CreateProfessionalRequest,
 } from "@/lib/professionals/professionals-api";
+import { PROFESSIONAL_NAME_MAX_CODE_POINTS } from "@/lib/professionals/professional-limits";
 
 import styles from "./create-professional-form.module.css";
 
@@ -29,6 +30,7 @@ type FeedbackState = {
 };
 
 const fieldOrder: FieldName[] = ["name", "email", "temporary_password"];
+const invalidNameMessage = `Informe um nome com até ${PROFESSIONAL_NAME_MAX_CODE_POINTS} caracteres.`;
 
 export function CreateProfessionalForm({
   onCreated,
@@ -200,10 +202,8 @@ export function CreateProfessionalForm({
 function validate(values: CreateProfessionalRequest): FieldErrors {
   const errors: FieldErrors = {};
   const name = values.name.trim();
-  if (!name || [...name].length > 120) {
-    errors.name = name
-      ? "Informe um nome com até 120 caracteres."
-      : "Informe o nome do profissional.";
+  if (!name || [...name].length > PROFESSIONAL_NAME_MAX_CODE_POINTS) {
+    errors.name = name ? invalidNameMessage : "Informe o nome do profissional.";
   }
   const email = values.email.trim()
     ? validateEmail(values.email)
@@ -218,7 +218,7 @@ function validate(values: CreateProfessionalRequest): FieldErrors {
 }
 
 const serverMessages: Record<string, string> = {
-  invalid_name: "Informe um nome com até 120 caracteres.",
+  invalid_name: invalidNameMessage,
   invalid_email: INVALID_EMAIL_MESSAGE,
   invalid_password: INVALID_PASSWORD_MESSAGE,
   email_unavailable: "Este e-mail já está cadastrado.",

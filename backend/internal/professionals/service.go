@@ -78,7 +78,7 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 	if principal.Role != "owner" {
 		return Professional{}, ErrForbidden
 	}
-	if !utf8.ValidString(input.Name) || strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > 120 {
+	if !utf8.ValidString(input.Name) || strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > MaxNameCodePoints {
 		return Professional{}, ErrInvalidName
 	}
 	if err := auth.ValidateEmail(input.Email); err != nil {

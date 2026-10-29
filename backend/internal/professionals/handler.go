@@ -130,7 +130,7 @@ func writeCreationError(httpContext *gin.Context, err error) {
 	case errors.Is(err, entitlements.ErrReadOnly):
 		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
 	case errors.Is(err, ErrInvalidName):
-		writeFieldError(httpContext, http.StatusBadRequest, "name", "invalid_name", "Informe um nome com até 120 caracteres.")
+		writeFieldError(httpContext, http.StatusBadRequest, "name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", MaxNameCodePoints))
 	case errors.Is(err, auth.ErrInvalidEmail):
 		writeFieldError(httpContext, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
 	case errors.Is(err, security.ErrInvalidPassword):

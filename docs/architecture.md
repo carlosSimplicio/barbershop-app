@@ -200,6 +200,7 @@
 
 ### Proprietário e profissional
 
+- O limite de nome do profissional é definido em `internal/professionals/limits.go`, usado por validação e mensagens HTTP, e espelhado em `frontend/lib/professionals/professional-limits.ts` para o formulário. Ele permanece independente dos limites de nomes de estabelecimento e catálogo.
 - Proprietário confirma e-mail e recupera senha por link enviado por e-mail.
 - Tokens de confirmação e recuperação são aleatórios, expiram, são de uso único e não ficam armazenados de forma utilizável após vazamento do banco.
 - Respostas de recuperação não revelam se o e-mail existe; aplique rate limiting.
