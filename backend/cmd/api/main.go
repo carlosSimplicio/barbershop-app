@@ -28,6 +28,7 @@ import (
 	"barbershop-app/backend/internal/platform/ratelimit"
 	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
+	"barbershop-app/backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -126,6 +127,7 @@ func run() error {
 		onboarding.NewHandler(registrations, confirmationRequests, confirmationVerification),
 		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads, publicEstablishments, publicEstablishmentLogos),
 		professionals.NewHandler(professionalService),
+		services.NewHandler(services.NewService(services.NewPostgresStore(pool), writeEntitlements)),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())

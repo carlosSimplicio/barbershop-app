@@ -487,6 +487,36 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /services:
+    post:
+      operationId: postServices
+      summary: Cadastra serviço no estabelecimento do proprietário
+      tags: [services]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceRequest"
+      responses:
+        "201":
+          description: Serviço cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -516,6 +546,47 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    CreateServiceRequest:
+      type: object
+      additionalProperties: false
+      required: [name, price_cents]
+      properties:
+        name:
+          type: string
+          description: Trimmed before validation; at most 120 Unicode code points. Duplicate names are allowed.
+        price_cents:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9999999
+        duration_minutes:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 1
+          maximum: 1440
+          description: Omitted or null uses 30 minutes; any whole minute is accepted.
+    ServiceResponse:
+      type: object
+      required: [id, name, price_cents, duration_minutes, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_cents:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9999999
+        duration_minutes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1440
+        active:
+          type: boolean
     CreateProfessionalRequest:
       type: object
       additionalProperties: false

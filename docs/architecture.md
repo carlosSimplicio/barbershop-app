@@ -67,7 +67,7 @@
 - Use transações quando uma operação precisar preservar invariantes entre múltiplas escritas.
 - Use constraints do PostgreSQL para integridade estrutural, como nulabilidade, referências, unicidade, cardinalidade, isolamento relacional e ordenação temporal genérica. Regras de negócio que podem evoluir — formatos e palavras reservadas, limites de produto, papéis permitidos, durações exatas e transições ou imutabilidade de domínio — pertencem ao backend Go e aos seus testes, não a `CHECK` constraints ou triggers.
 
-- A migration `00009_services.sql` persiste o catálogo em `services`, com UUID, tenant, preço em centavos inteiros, duração em minutos, estado ativo e datas. Queries `sqlc` sempre filtram o tenant, inclusive ao consultar ou alterar por ID; listagem ordena por criação e ID. Nome não é único, e limites de produto pertencem ao Go. A persistência está entregue; API e painel serão integrados nas próximas etapas. Serviços não iniciam o marcador de dados operacionais.
+- A migration `00009_services.sql` persiste o catálogo em `services`, com UUID, tenant, preço em centavos inteiros, duração em minutos, estado ativo e datas. Queries `sqlc` sempre filtram o tenant, inclusive ao consultar ou alterar por ID; listagem ordena por criação e ID. Nome não é único, e limites de produto pertencem ao Go. `POST /services` cria serviço ativo com tenant do `Principal`, papel owner, CSRF, origem confiável e `entitlements.Service.RequireWrite`; valida entrada no Go e retorna `201` com ID, nome, preço em centavos, duração e estado. Demais endpoints e painel estão pendentes. Serviços não iniciam o marcador de dados operacionais.
 
 ## Arquivos públicos
 

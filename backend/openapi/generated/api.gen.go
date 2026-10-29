@@ -109,6 +109,16 @@ type CreateProfessionalRequest struct {
 	TemporaryPassword string `json:"temporary_password"`
 }
 
+// CreateServiceRequest defines model for CreateServiceRequest.
+type CreateServiceRequest struct {
+	// DurationMinutes Omitted or null uses 30 minutes; any whole minute is accepted.
+	DurationMinutes *int64 `json:"duration_minutes,omitempty"`
+
+	// Name Trimmed before validation; at most 120 Unicode code points. Duplicate names are allowed.
+	Name       string `json:"name"`
+	PriceCents int64  `json:"price_cents"`
+}
+
 // EmailConfirmationRequest defines model for EmailConfirmationRequest.
 type EmailConfirmationRequest struct {
 	Email openapi_types.Email `json:"email"`
@@ -280,6 +290,15 @@ type RegisterRequest struct {
 	TimeZone string `json:"time_zone"`
 }
 
+// ServiceResponse defines model for ServiceResponse.
+type ServiceResponse struct {
+	Active          bool               `json:"active"`
+	DurationMinutes int64              `json:"duration_minutes"`
+	Id              openapi_types.UUID `json:"id"`
+	Name            string             `json:"name"`
+	PriceCents      int64              `json:"price_cents"`
+}
+
 // TrialStatus defines model for TrialStatus.
 type TrialStatus string
 
@@ -349,6 +368,9 @@ type PatchEstablishmentSettingsJSONRequestBody = EstablishmentSettingsPatchReque
 // PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
 type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
 
+// PostServicesJSONRequestBody defines body for PostServices for application/json ContentType.
+type PostServicesJSONRequestBody = CreateServiceRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
@@ -405,6 +427,9 @@ type ServerInterface interface {
 	// GetPublicEstablishmentLogo Consulta o logo atual de um estabelecimento publicável
 	// (GET /public/establishments/{slug}/logo)
 	GetPublicEstablishmentLogo(c *gin.Context, slug string, params GetPublicEstablishmentLogoParams)
+	// PostServices Cadastra serviço no estabelecimento do proprietário
+	// (POST /services)
+	PostServices(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -720,6 +745,19 @@ func (siw *ServerInterfaceWrapper) GetPublicEstablishmentLogo(c *gin.Context) {
 	siw.Handler.GetPublicEstablishmentLogo(c, slug, params)
 }
 
+// PostServices operation middleware
+func (siw *ServerInterfaceWrapper) PostServices(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostServices(c)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -764,5 +802,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/public/establishments/:slug", wrapper.GetPublicEstablishment)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
+	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

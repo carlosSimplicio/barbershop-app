@@ -44,6 +44,7 @@ var publicPaths = []publicPathRule{
 }
 
 var csrfProtectedPaths = map[string]struct{}{
+	"/api/v1/services":               {},
 	"/api/v1/auth/logout":            {},
 	"/api/v1/auth/password/change":   {},
 	"/api/v1/establishment/settings": {},

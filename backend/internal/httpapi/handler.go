@@ -6,11 +6,13 @@ import (
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/onboarding"
 	"barbershop-app/backend/internal/professionals"
+	"barbershop-app/backend/internal/services"
 	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
+	services       *services.Handler
 	health         *health.Handler
 	authentication *auth.Handler
 	onboarding     *onboarding.Handler
@@ -18,8 +20,8 @@ type Handler struct {
 	professionals  *professionals.Handler
 }
 
-func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler) *Handler {
-	return &Handler{health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
+func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, servicesHandler *services.Handler) *Handler {
+	return &Handler{services: servicesHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
 }
 
 func (handler *Handler) GetHealth(c *gin.Context) {
@@ -93,3 +95,5 @@ func (handler *Handler) PostProfessionals(c *gin.Context) {
 func (handler *Handler) GetProfessionals(c *gin.Context, params api.GetProfessionalsParams) {
 	handler.professionals.GetProfessionals(c, params)
 }
+
+func (h *Handler) PostServices(c *gin.Context) { h.services.PostServices(c) }

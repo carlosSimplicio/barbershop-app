@@ -321,9 +321,17 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 10. Administração de serviços
 
-- [ ] Criar, listar, consultar, editar, ativar e desativar serviços do estabelecimento.
-- [ ] Exigir nome e preço não negativo; permitir serviços gratuitos.
-- [ ] Permitir duração configurável e usar 30 minutos quando não informada.
+- [x] Criar serviço ativo pela API exclusiva ao proprietário, com tenant da sessão, CSRF e direito centralizado de escrita.
+- [ ] Listar serviços pela API com paginação.
+- [ ] Consultar individualmente serviço pela API.
+- [ ] Editar serviço pela API.
+- [ ] Ativar e desativar serviço pela API.
+- [ ] Listar serviços no painel.
+- [ ] Cadastrar serviço no painel.
+- [ ] Consultar e editar serviço no painel.
+- [ ] Ativar e desativar serviço no painel.
+- [x] Validar nome obrigatório normalizado com até 120 pontos de código e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
+- [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.
 - [ ] Preservar serviço e referências históricas após desativação.
 - [ ] Exibir quantidade de agendamentos futuros afetados antes da desativação.
