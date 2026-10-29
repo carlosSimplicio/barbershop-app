@@ -615,6 +615,45 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /services/{service_id}/status:
+    parameters:
+      - name: service_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: putServiceStatus
+      summary: Define o estado ativo do serviço de forma idempotente
+      tags: [services]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceStatusRequest"
+      responses:
+        "200":
+          description: Serviço preservado com o estado desejado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       operationId: getHealth
@@ -644,6 +683,13 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    ServiceStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [active]
+      properties:
+        active:
+          type: boolean
     UpdateServiceRequest:
       type: object
       additionalProperties: false

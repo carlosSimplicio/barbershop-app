@@ -37,6 +37,8 @@ func decodeRequest(c *gin.Context, request any) error {
 				return ErrInvalidName
 			case "price_cents":
 				return ErrInvalidPrice
+			case "active":
+				return ErrInvalidStatus
 			case "duration_minutes":
 				return ErrInvalidDuration
 			}
@@ -84,6 +86,8 @@ func writeServiceError(c *gin.Context, err error) {
 		writeFieldError(c, "price_cents", "invalid_price", "Informe um preço de R$ 0,00 a R$ 99.999,99.")
 	case errors.Is(err, ErrInvalidDuration):
 		writeFieldError(c, "duration_minutes", "invalid_duration", "Informe de 1 a 1.440 minutos inteiros.")
+	case errors.Is(err, ErrInvalidStatus):
+		writeFieldError(c, "active", "invalid_status", "Informe o estado ativo do serviço.")
 	case errors.Is(err, ErrInvalidRequest):
 		writeError(c, 400, "invalid_request", "Verifique os dados informados.")
 	default:
@@ -176,6 +180,27 @@ func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) {
 		return
 	}
 	record, err := h.service.Update(c.Request.Context(), p, id.String(), in)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(200, record)
+}
+
+func (h *Handler) PutServiceStatus(c *gin.Context, id uuid.UUID) {
+	p, ok := auth.PrincipalFromContext(c)
+	if !ok {
+		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	var request struct {
+		Active *bool `json:"active"`
+	}
+	if err := decodeRequest(c, &request); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	record, err := h.service.SetStatus(c.Request.Context(), p, id.String(), request.Active)
 	if err != nil {
 		writeServiceError(c, err)
 		return

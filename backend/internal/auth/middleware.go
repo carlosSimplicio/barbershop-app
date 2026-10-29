@@ -43,7 +43,7 @@ var publicPaths = []publicPathRule{
 	},
 }
 
-var serviceResourceCSRFPath = regexp.MustCompile(`^/api/v1/services/[^/]+$`)
+var serviceResourceCSRFPath = regexp.MustCompile(`^/api/v1/services/[^/]+(?:/status)?$`)
 
 var csrfProtectedPaths = map[string]struct{}{
 	"/api/v1/services":               {},

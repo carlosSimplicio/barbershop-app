@@ -308,6 +308,11 @@ type ServiceResponse struct {
 	PriceCents      int64              `json:"price_cents"`
 }
 
+// ServiceStatusRequest defines model for ServiceStatusRequest.
+type ServiceStatusRequest struct {
+	Active bool `json:"active"`
+}
+
 // TrialStatus defines model for TrialStatus.
 type TrialStatus string
 
@@ -402,6 +407,9 @@ type PostServicesJSONRequestBody = CreateServiceRequest
 // PatchServiceJSONRequestBody defines body for PatchService for application/json ContentType.
 type PatchServiceJSONRequestBody = UpdateServiceRequest
 
+// PutServiceStatusJSONRequestBody defines body for PutServiceStatus for application/json ContentType.
+type PutServiceStatusJSONRequestBody = ServiceStatusRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
@@ -470,6 +478,9 @@ type ServerInterface interface {
 	// PatchService Edita parcialmente um serviço do estabelecimento
 	// (PATCH /services/{service_id})
 	PatchService(c *gin.Context, serviceId openapi_types.UUID)
+	// PutServiceStatus Define o estado ativo do serviço de forma idempotente
+	// (PUT /services/{service_id}/status)
+	PutServiceStatus(c *gin.Context, serviceId openapi_types.UUID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -883,6 +894,31 @@ func (siw *ServerInterfaceWrapper) PatchService(c *gin.Context) {
 	siw.Handler.PatchService(c, serviceId)
 }
 
+// PutServiceStatus operation middleware
+func (siw *ServerInterfaceWrapper) PutServiceStatus(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "service_id" -------------
+	var serviceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "service_id", c.Param("service_id"), &serviceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter service_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PutServiceStatus(c, serviceId)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -931,5 +967,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)
 	router.PATCH(options.BaseURL+"/services/:service_id", wrapper.PatchService)
+	router.PUT(options.BaseURL+"/services/:service_id/status", wrapper.PutServiceStatus)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }

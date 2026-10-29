@@ -90,3 +90,19 @@ func (s *PostgresStore) Update(ctx context.Context, tenant, serviceID string, in
 	}
 	return recordFromRow(row), err
 }
+
+func (s *PostgresStore) SetStatus(ctx context.Context, tenant, serviceID string, active bool) (Record, error) {
+	id, err := tenantUUID(tenant)
+	if err != nil {
+		return Record{}, err
+	}
+	target, err := tenantUUID(serviceID)
+	if err != nil {
+		return Record{}, err
+	}
+	row, err := s.queries.SetServiceStatus(ctx, db.SetServiceStatusParams{ID: target, EstablishmentID: id, Active: active})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Record{}, ErrNotFound
+	}
+	return recordFromRow(row), err
+}

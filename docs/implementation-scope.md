@@ -325,7 +325,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Listar serviços pela API com paginação, ativos e inativos e direito de escrita atual, com leitura após expiração.
 - [x] Consultar individualmente serviço ativo ou inativo pela API, com isolamento e leitura após expiração.
 - [x] Editar nome, preço e duração pela API com PATCH parcial, validação atômica, CSRF em rota parametrizada e preservação da identidade.
-- [ ] Ativar e desativar serviço pela API.
+- [x] Ativar e desativar serviço pela API com estado explícito idempotente, tenant, CSRF e direito de escrita.
 - [ ] Listar serviços no painel.
 - [ ] Cadastrar serviço no painel.
 - [ ] Consultar e editar serviço no painel.
@@ -333,7 +333,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Validar nome obrigatório normalizado com até 120 pontos de código e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
 - [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.
-- [ ] Preservar serviço e referências históricas após desativação.
+- [x] Preservar registro, identidade e dados do serviço após desativação, sem endpoint de exclusão física.
+- [ ] Preservar referências históricas e snapshots dos serviços nos futuros fluxos de agenda e financeiro.
 - [ ] Exibir quantidade de agendamentos futuros afetados antes da desativação.
 - [ ] Impedir novos agendamentos com serviço inativo sem alterar os já existentes.
 

@@ -302,6 +302,25 @@ export interface paths {
         patch: operations["patchService"];
         trace?: never;
     };
+    "/services/{service_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Define o estado ativo do serviço de forma idempotente */
+        put: operations["putServiceStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -323,6 +342,9 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ServiceStatusRequest: {
+            active: boolean;
+        };
         UpdateServiceRequest: {
             /** @description Trimmed before validation; nonempty and at most 120 Unicode code points. */
             name?: string;
@@ -1198,6 +1220,37 @@ export interface operations {
         };
         responses: {
             /** @description Serviço atualizado; campos omitidos permanecem inalterados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    putServiceStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Serviço preservado com o estado desejado */
             200: {
                 headers: {
                     [name: string]: unknown;

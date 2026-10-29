@@ -277,3 +277,67 @@ func TestServicePartialUpdateAndAtomicRefusals(t *testing.T) {
 	expireServiceTrial(t)
 	assertStatus(t, app.request(t, "PATCH", "/api/v1/services/"+own.ID, body), 403)
 }
+
+func TestServiceStatusIsIdempotentAndPreservesCatalog(t *testing.T) {
+	app := newTestApplication(t)
+	registerAndConfirmOwner(t, app, defaultOwnerRegistration())
+	record := createCatalogService(t, app, "Corte", 100)
+	path := "/api/v1/services/" + record.ID
+	statusPath := path + "/status"
+	for _, active := range []bool{false, false, true, true} {
+		r := app.request(t, "PUT", statusPath, map[string]any{"active": active})
+		assertStatus(t, r, 200)
+		var got serviceRecord
+		decodeJSON(t, r, &got)
+		want := record
+		want.Active = active
+		if got != want {
+			t.Fatalf("got=%+v want=%+v", got, want)
+		}
+	}
+	for _, body := range []map[string]any{{}, {"active": nil}, {"active": "false"}, {"active": false, "name": "changed"}} {
+		assertStatus(t, app.request(t, "PUT", statusPath, body), 400)
+	}
+	body := map[string]any{"active": false}
+	assertStatus(t, serviceRawRequest(t, app, "PUT", statusPath, body, trustedOrigin, false, true), 403)
+	assertStatus(t, serviceRawRequest(t, app, "PUT", statusPath, body, "https://external.example.test", true, true), 403)
+	assertStatus(t, serviceRawRequest(t, app, "PUT", statusPath, body, trustedOrigin, true, false), 401)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		r := app.request(t, "PUT", statusPath, body)
+		if r.StatusCode != 200 {
+			t.Errorf("status=%d", r.StatusCode)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		r := app.request(t, "PATCH", path, map[string]any{"price_cents": 300})
+		if r.StatusCode != 200 {
+			t.Errorf("patch=%d", r.StatusCode)
+		}
+	}()
+	wg.Wait()
+	r := app.request(t, "GET", path, nil)
+	assertStatus(t, r, 200)
+	var got serviceRecord
+	decodeJSON(t, r, &got)
+	if got.Active || got.PriceCents != 300 {
+		t.Fatalf("concurrent changes lost=%+v", got)
+	}
+	assertStatus(t, app.request(t, "PUT", "/api/v1/services/771d0b88-237b-4f35-89ad-850ffbd894d3/status", body), 404)
+	assertStatus(t, app.request(t, "DELETE", path, nil), 404)
+	createProfessionalForList(t, app, "Ana", "status-prof@example.test")
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/login", map[string]string{"email": "status-prof@example.test", "password": "senha-temporaria"}), 200)
+	assertStatus(t, app.request(t, "POST", "/api/v1/auth/password/change", map[string]string{"new_password": "senha-definitiva"}), 204)
+	assertStatus(t, app.request(t, "PUT", statusPath, body), 403)
+	other := defaultOwnerRegistration()
+	other.Email = "status-other@example.test"
+	other.Slug = "status-other"
+	registerAndConfirmOwner(t, app, other)
+	assertStatus(t, app.request(t, "PUT", statusPath, body), 404)
+	own := createCatalogService(t, app, "Outro", 0)
+	expireServiceTrial(t)
+	assertStatus(t, app.request(t, "PUT", "/api/v1/services/"+own.ID+"/status", body), 403)
+}

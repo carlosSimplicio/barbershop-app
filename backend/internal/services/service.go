@@ -23,6 +23,7 @@ type CreateInput struct {
 	DurationMinutes *int64
 }
 type Store interface {
+	SetStatus(context.Context, string, string, bool) (Record, error)
 	Update(context.Context, string, string, UpdateInput) (Record, error)
 	Get(context.Context, string, string) (Record, error)
 	Create(context.Context, string, string, int32, int32) (Record, error)
@@ -152,3 +153,18 @@ func (s *Service) Update(ctx context.Context, p auth.Principal, id string, in Up
 }
 
 var ErrInvalidRequest = errors.New("invalid service request")
+
+var ErrInvalidStatus = errors.New("invalid service status")
+
+func (s *Service) SetStatus(ctx context.Context, p auth.Principal, id string, active *bool) (Record, error) {
+	if p.Role != "owner" {
+		return Record{}, ErrForbidden
+	}
+	if active == nil {
+		return Record{}, ErrInvalidStatus
+	}
+	if err := s.writes.RequireWrite(ctx, p.EstablishmentID); err != nil {
+		return Record{}, err
+	}
+	return s.store.SetStatus(ctx, p.EstablishmentID, id, *active)
+}

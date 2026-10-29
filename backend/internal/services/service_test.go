@@ -163,3 +163,29 @@ func TestServiceUpdateRefusesInvalidOrUnauthorizedChanges(t *testing.T) {
 		}
 	}
 }
+
+func (s *testStore) SetStatus(_ context.Context, tenant, id string, active bool) (Record, error) {
+	s.called = true
+	s.tenant = tenant
+	return Record{ID: id, Active: active, Name: s.name, PriceCents: int64(s.price), DurationMinutes: int64(s.duration)}, s.err
+}
+func TestServiceStatusRequiresOwnerWriteAndExplicitState(t *testing.T) {
+	active := false
+	for _, tc := range []struct {
+		role           string
+		active         *bool
+		writeErr, want error
+	}{{"owner", &active, nil, nil}, {"owner", nil, nil, ErrInvalidStatus}, {"professional", &active, nil, ErrForbidden}, {"owner", &active, entitlements.ErrReadOnly, entitlements.ErrReadOnly}} {
+		store := &testStore{name: "Corte", price: 100, duration: 17}
+		record, err := NewService(store, testWrites{tc.writeErr}).SetStatus(context.Background(), auth.Principal{Role: tc.role, EstablishmentID: "tenant"}, "service", tc.active)
+		if !errors.Is(err, tc.want) {
+			t.Fatalf("error=%v want=%v", err, tc.want)
+		}
+		if tc.want == nil && (record.ID != "service" || record.Active || record.PriceCents != 100 || store.tenant != "tenant") {
+			t.Fatalf("record=%+v store=%+v", record, store)
+		}
+		if tc.want != nil && store.called {
+			t.Fatal("refused status persisted")
+		}
+	}
+}

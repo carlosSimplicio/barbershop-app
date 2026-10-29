@@ -258,3 +258,13 @@ func TestServiceUpdatePathRequiresCSRF(t *testing.T) {
 		t.Fatal("read requires CSRF")
 	}
 }
+
+func TestServiceStatusPathRequiresCSRF(t *testing.T) {
+	path := "/api/v1/services/3c0af643-ad5f-4238-9e88-277e3bf40d37/status"
+	if !requiresCSRF("PUT", path) {
+		t.Fatal("service status bypasses CSRF")
+	}
+	if requiresCSRF("GET", path) {
+		t.Fatal("read requires CSRF")
+	}
+}
