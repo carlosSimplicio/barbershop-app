@@ -2,6 +2,10 @@ import { sendRequest, type ApiResult } from "./transport";
 
 export type { ApiError, ApiResult } from "./transport";
 
+export type ApiFetchOptions = RequestInit & {
+  csrf?: boolean;
+};
+
 let onInvalidSession: (() => void) | null = null;
 
 export function configureApiSessionObserver(
@@ -9,10 +13,6 @@ export function configureApiSessionObserver(
 ) {
   onInvalidSession = handler?.onInvalidSession ?? null;
 }
-
-export type ApiFetchOptions = RequestInit & {
-  csrf?: boolean;
-};
 
 export async function apiFetch<T>(
   path: `/api/v1/${string}`,

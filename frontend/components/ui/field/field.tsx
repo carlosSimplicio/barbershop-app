@@ -13,6 +13,14 @@ export type FieldProps = ComponentPropsWithRef<"div"> & {
   label: ReactNode;
 };
 
+type FieldControlOptions = {
+  describedBy?: string;
+  error?: ReactNode;
+  id?: string;
+  invalid?: AriaAttributes["aria-invalid"];
+  hint?: ReactNode;
+};
+
 export function Field({
   children,
   className,
@@ -44,14 +52,6 @@ export function Field({
     </div>
   );
 }
-
-type FieldControlOptions = {
-  describedBy?: string;
-  error?: ReactNode;
-  id?: string;
-  invalid?: AriaAttributes["aria-invalid"];
-  hint?: ReactNode;
-};
 
 export function useFieldControl({
   describedBy,
