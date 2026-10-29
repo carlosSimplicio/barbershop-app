@@ -1,0 +1,4 @@
+interface:
+  display_name: "Revisor de código"
+  short_description: "Revisa arquitetura, fluxos, concorrência, testes e padrões"
+  default_prompt: "Use $barbershop-code-review para revisar estas alterações conforme o AGENTS.md, a documentação e as skills pertinentes, relatando problemas e melhorias com evidências."

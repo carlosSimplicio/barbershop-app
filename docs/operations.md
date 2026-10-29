@@ -186,6 +186,9 @@ A consulta retorna somente os slugs conflitantes. Não registre seus resultados 
 ## Git e pull requests
 
 - Não há formato obrigatório ou Conventional Commits.
+- A skill [barbershop-plan-implementer](../.agents/skills/barbershop-plan-implementer/SKILL.md) executa o plano autorizado por completo em branch dedicada, com verificações, revisão independente por IA e um commit por tarefa. O avanço entre tarefas não depende de revisão ou aprovação manual do usuário; decisões pendentes e bloqueios reais continuam exigindo intervenção. Push e merge exigem solicitação explícita.
+- A skill [barbershop-code-review](../.agents/skills/barbershop-code-review/SKILL.md) pode ser usada diretamente e é exigida pelo implementador de planos na revisão independente por IA. Ela avalia arquitetura, lógica, fluxos, concorrência, bugs, segurança, padrões e contratos, duplicação, testes, legibilidade, refatorações e performance; o relatório registra a cobertura de todos os eixos e separa correções necessárias de melhorias opcionais.
+- O pedido de revisão por IA exige a leitura do `AGENTS.md` e das instruções locais aplicáveis, dos documentos obrigatórios para o escopo e das skills pertinentes. O revisor aplica suas diretrizes à avaliação, sem editar ou criar commits, e registra as referências consultadas, as verificações e as lacunas que impeçam concluir a revisão.
 - O gate obrigatório de pull request executa os testes unitários aplicáveis e os testes de integração do backend.
 - Lint, formato, tipos, geração e builds continuam parte da validação e do pipeline de release.
 - Commits devem ser focados e não misturar alterações não relacionadas.

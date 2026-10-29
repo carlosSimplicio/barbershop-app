@@ -1,4 +1,4 @@
 interface:
   display_name: "Implementador de planos"
-  short_description: "Executa planos com TDD e revisão por tarefa"
-  default_prompt: "Use $barbershop-plan-implementer para implementar este plano tarefa por tarefa."
+  short_description: "Executa planos completos com TDD, revisão por IA e commits"
+  default_prompt: "Use $barbershop-plan-implementer para implementar este plano completo, com revisão por IA e um commit por tarefa, sem aguardar aprovação manual entre tarefas."
