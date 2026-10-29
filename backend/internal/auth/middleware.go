@@ -82,66 +82,66 @@ func NewMiddleware(users AuthUserStore, accessTokens AccessTokenVerifier, csrfTo
 }
 
 func (middleware *Middleware) Handle() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if isUnsafeMethod(c.Request.Method) {
-			if _, allowed := middleware.trustedOrigins[c.GetHeader("Origin")]; !allowed {
-				writeError(c, http.StatusForbidden, "csrf_failed", "Não foi possível validar a origem da solicitação.")
-				c.Abort()
+	return func(httpContext *gin.Context) {
+		if isUnsafeMethod(httpContext.Request.Method) {
+			if _, allowed := middleware.trustedOrigins[httpContext.GetHeader("Origin")]; !allowed {
+				writeError(httpContext, http.StatusForbidden, "csrf_failed", "Não foi possível validar a origem da solicitação.")
+				httpContext.Abort()
 				return
 			}
 		}
-		if requiresCSRF(c.Request.Method, c.Request.URL.Path) && !middleware.validCSRF(c) {
-			writeError(c, http.StatusForbidden, "csrf_failed", "Não foi possível validar a solicitação.")
-			c.Abort()
+		if requiresCSRF(httpContext.Request.Method, httpContext.Request.URL.Path) && !middleware.validCSRF(httpContext) {
+			writeError(httpContext, http.StatusForbidden, "csrf_failed", "Não foi possível validar a solicitação.")
+			httpContext.Abort()
 			return
 		}
-		if requiresAccessToken(c.Request.Method, c.Request.URL.Path) {
-			principal, ok := middleware.authenticate(c)
+		if requiresAccessToken(httpContext.Request.Method, httpContext.Request.URL.Path) {
+			principal, ok := middleware.authenticate(httpContext)
 			if !ok {
-				c.Abort()
+				httpContext.Abort()
 				return
 			}
-			if principal.PasswordChangeRequired && c.Request.URL.Path != "/api/v1/auth/me" && c.Request.URL.Path != "/api/v1/auth/password/change" {
-				writeError(c, http.StatusForbidden, "password_change_required", "Defina uma nova senha para continuar.")
-				c.Abort()
+			if principal.PasswordChangeRequired && httpContext.Request.URL.Path != "/api/v1/auth/me" && httpContext.Request.URL.Path != "/api/v1/auth/password/change" {
+				writeError(httpContext, http.StatusForbidden, "password_change_required", "Defina uma nova senha para continuar.")
+				httpContext.Abort()
 				return
 			}
-			c.Set(principalContextKey, principal)
+			httpContext.Set(principalContextKey, principal)
 		}
-		c.Next()
+		httpContext.Next()
 	}
 }
 
-func (middleware *Middleware) validCSRF(c *gin.Context) bool {
-	cookie, err := c.Cookie(csrfCookieName)
+func (middleware *Middleware) validCSRF(httpContext *gin.Context) bool {
+	cookie, err := httpContext.Cookie(csrfCookieName)
 	if err != nil {
 		return false
 	}
-	header := c.GetHeader("X-CSRF-Token")
+	header := httpContext.GetHeader("X-CSRF-Token")
 	return header != "" && subtle.ConstantTimeCompare([]byte(cookie), []byte(header)) == 1 && middleware.csrfTokens.VerifySignedToken(cookie)
 }
 
-func (middleware *Middleware) authenticate(c *gin.Context) (Principal, bool) {
-	token, err := c.Cookie(accessCookieName)
+func (middleware *Middleware) authenticate(httpContext *gin.Context) (Principal, bool) {
+	token, err := httpContext.Cookie(accessCookieName)
 	if err != nil {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return Principal{}, false
 	}
 	now := middleware.now().UTC()
 	claims, err := middleware.accessTokens.Verify(token, now)
 	if err != nil {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return Principal{}, false
 	}
-	user, err := middleware.users.FindActiveSessionUser(c.Request.Context(), claims.SessionID, now)
+	user, err := middleware.users.FindActiveSessionUser(httpContext.Request.Context(), claims.SessionID, now)
 	if err != nil && !errors.Is(err, ErrInvalidSession) {
-		slog.Error("authentication_session_lookup_failed", "request_id", httpserver.RequestID(c), "error", err)
-		writeError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		slog.Error("authentication_session_lookup_failed", "request_id", httpserver.RequestID(httpContext), "error", err)
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		return Principal{}, false
 	}
 	if err != nil || !userCanAuthenticate(user) || user.ID != claims.Subject || user.EstablishmentID != claims.EstablishmentID ||
 		user.Role != claims.Role || user.CredentialVersion != claims.CredentialVersion {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return Principal{}, false
 	}
 	return Principal{
@@ -150,8 +150,8 @@ func (middleware *Middleware) authenticate(c *gin.Context) (Principal, bool) {
 	}, true
 }
 
-func PrincipalFromContext(c *gin.Context) (Principal, bool) {
-	value, exists := c.Get(principalContextKey)
+func PrincipalFromContext(httpContext *gin.Context) (Principal, bool) {
+	value, exists := httpContext.Get(principalContextKey)
 	principal, ok := value.(Principal)
 	return principal, exists && ok
 }

@@ -28,7 +28,7 @@ export function OfferingFields({
         error={errors.name}
         hint={offeringFieldHints.name}
         disabled={disabled}
-        onChange={(e) => onChange("name", e.target.value)}
+        onChange={(event) => onChange("name", event.target.value)}
       />
       <Field
         label="Preço"
@@ -47,7 +47,7 @@ export function OfferingFields({
           disabled={disabled}
           aria-describedby={field.descriptionIds}
           aria-invalid={field.invalid}
-          onChange={(e) => onChange("price", e.target.value)}
+          onChange={(event) => onChange("price", event.target.value)}
         />
       </Field>
       <TextField
@@ -58,7 +58,7 @@ export function OfferingFields({
         error={errors.duration_minutes}
         disabled={disabled}
         hint={offeringFieldHints.duration}
-        onChange={(e) => onChange("duration", e.target.value)}
+        onChange={(event) => onChange("duration", event.target.value)}
       />
     </>
   );

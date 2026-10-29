@@ -22,15 +22,15 @@ func NewHandler(database Database) *Handler {
 	return &Handler{database: database}
 }
 
-func (h *Handler) GetHealth(c *gin.Context) {
-	if err := h.database.Ping(c.Request.Context()); err != nil {
-		c.JSON(http.StatusServiceUnavailable, api.ErrorResponse{
+func (handler *Handler) GetHealth(httpContext *gin.Context) {
+	if err := handler.database.Ping(httpContext.Request.Context()); err != nil {
+		httpContext.JSON(http.StatusServiceUnavailable, api.ErrorResponse{
 			Code:      "service_unavailable",
 			Message:   "Serviço temporariamente indisponível.",
-			RequestId: httpserver.RequestID(c),
+			RequestId: httpserver.RequestID(httpContext),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, api.HealthResponse{Status: api.Ok})
+	httpContext.JSON(http.StatusOK, api.HealthResponse{Status: api.Ok})
 }

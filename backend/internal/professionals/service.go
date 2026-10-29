@@ -97,14 +97,14 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 
 	name := strings.TrimSpace(input.Name)
 	email := strings.TrimSpace(input.Email)
-	id, err := service.store.Create(ctx, Creation{
+	professionalID, err := service.store.Create(ctx, Creation{
 		EstablishmentID: principal.EstablishmentID, Name: name, Email: email,
 		NormalizedEmail: auth.NormalizeEmail(input.Email), PasswordHash: passwordHash, CreatedAt: service.now().UTC(),
 	})
 	if err != nil {
 		return Professional{}, err
 	}
-	return Professional{ID: id, Name: name, Email: email, Active: true}, nil
+	return Professional{ID: professionalID, Name: name, Email: email, Active: true}, nil
 }
 
 func (service *Service) List(ctx context.Context, principal auth.Principal, limit, offset int32) (ListResult, error) {

@@ -41,132 +41,132 @@ func NewHandler(registrations RegistrationRegistrar, confirmationRequests EmailC
 	return &Handler{registrations: registrations, confirmationRequests: confirmationRequests, confirmationVerifier: confirmationVerifier}
 }
 
-func (handler *Handler) PostAuthEmailConfirmationVerify(c *gin.Context) {
+func (handler *Handler) PostAuthEmailConfirmationVerify(httpContext *gin.Context) {
 	var request api.EmailConfirmationVerifyRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 4096))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		writeOnboardingError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		writeOnboardingError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
-	result, err := handler.confirmationVerifier.Verify(c.Request.Context(), request.Token)
+	result, err := handler.confirmationVerifier.Verify(httpContext.Request.Context(), request.Token)
 	if err != nil {
 		if errors.Is(err, ErrInvalidEmailConfirmation) {
-			writeOnboardingError(c, http.StatusBadRequest, "invalid_email_confirmation", "O link de confirmação é inválido ou expirou.")
+			writeOnboardingError(httpContext, http.StatusBadRequest, "invalid_email_confirmation", "O link de confirmação é inválido ou expirou.")
 			return
 		}
-		slog.Error("email_confirmation_verification_failed", "request_id", httpserver.RequestID(c))
-		writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a confirmação.")
+		slog.Error("email_confirmation_verification_failed", "request_id", httpserver.RequestID(httpContext))
+		writeOnboardingError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a confirmação.")
 		return
 	}
-	if err := auth.WriteSessionResponse(c, result); err != nil {
-		slog.Error("email_confirmation_principal_invalid", "request_id", httpserver.RequestID(c))
-		writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a confirmação.")
+	if err := auth.WriteSessionResponse(httpContext, result); err != nil {
+		slog.Error("email_confirmation_principal_invalid", "request_id", httpserver.RequestID(httpContext))
+		writeOnboardingError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a confirmação.")
 	}
 }
 
-func (handler *Handler) PostAuthEmailConfirmation(c *gin.Context) {
+func (handler *Handler) PostAuthEmailConfirmation(httpContext *gin.Context) {
 	var request api.EmailConfirmationRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 4096))
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 4096))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		writeOnboardingError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		writeOnboardingError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
-	result, err := handler.confirmationRequests.Request(c.Request.Context(), EmailConfirmationRequestInput{
-		Email: string(request.Email), IP: c.ClientIP(),
+	result, err := handler.confirmationRequests.Request(httpContext.Request.Context(), EmailConfirmationRequestInput{
+		Email: string(request.Email), IP: httpContext.ClientIP(),
 	})
 	if err != nil {
 		var rateLimitError ratelimit.Error
 		switch {
 		case errors.Is(err, auth.ErrInvalidEmail):
-			writeOnboardingFieldError(c, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
+			writeOnboardingFieldError(httpContext, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
 		case errors.As(err, &rateLimitError):
-			writeRateLimitError(c, "email_confirmation_rate_limited", rateLimitError)
+			writeRateLimitError(httpContext, "email_confirmation_rate_limited", rateLimitError)
 		default:
-			slog.Error("email_confirmation_request_failed", "request_id", httpserver.RequestID(c))
-			writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+			slog.Error("email_confirmation_request_failed", "request_id", httpserver.RequestID(httpContext))
+			writeOnboardingError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 		}
 		return
 	}
 	if result.DeliveryFailed {
-		slog.Warn("email_confirmation_delivery_failed", "request_id", httpserver.RequestID(c))
+		slog.Warn("email_confirmation_delivery_failed", "request_id", httpserver.RequestID(httpContext))
 	}
-	c.Status(http.StatusAccepted)
-	c.Writer.WriteHeaderNow()
+	httpContext.Status(http.StatusAccepted)
+	httpContext.Writer.WriteHeaderNow()
 }
 
-func (handler *Handler) PostAuthRegister(c *gin.Context) {
+func (handler *Handler) PostAuthRegister(httpContext *gin.Context) {
 	var request api.RegisterRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 8192))
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 8192))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		writeOnboardingError(c, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		writeOnboardingError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return
 	}
 
-	result, err := handler.registrations.Register(c.Request.Context(), RegistrationInput{
+	result, err := handler.registrations.Register(httpContext.Request.Context(), RegistrationInput{
 		EstablishmentName: request.EstablishmentName, Slug: request.Slug, TimeZone: request.TimeZone,
-		Email: string(request.Email), Password: request.Password, IP: c.ClientIP(),
+		Email: string(request.Email), Password: request.Password, IP: httpContext.ClientIP(),
 	})
 	if err != nil {
-		handler.writeRegistrationFailure(c, err)
+		handler.writeRegistrationFailure(httpContext, err)
 		return
 	}
 	if result.DeliveryFailed {
-		slog.Warn("registration_confirmation_delivery_failed", "request_id", httpserver.RequestID(c))
+		slog.Warn("registration_confirmation_delivery_failed", "request_id", httpserver.RequestID(httpContext))
 	}
-	c.Status(http.StatusAccepted)
-	c.Writer.WriteHeaderNow()
+	httpContext.Status(http.StatusAccepted)
+	httpContext.Writer.WriteHeaderNow()
 }
 
-func (handler *Handler) writeRegistrationFailure(c *gin.Context, err error) {
+func (handler *Handler) writeRegistrationFailure(httpContext *gin.Context, err error) {
 	var rateLimitError ratelimit.Error
 	switch {
 	case errors.Is(err, ErrInvalidName):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "establishment_name", "invalid_name", "Informe um nome com até 120 caracteres.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "establishment_name", "invalid_name", "Informe um nome com até 120 caracteres.")
 	case errors.Is(err, ErrInvalidSlug):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "slug", "invalid_slug", "Informe um identificador válido com 3 a 63 caracteres.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "slug", "invalid_slug", "Informe um identificador válido com 3 a 63 caracteres.")
 	case errors.Is(err, ErrReservedSlug):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "slug", "reserved_slug", "Escolha outro identificador.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "slug", "reserved_slug", "Escolha outro identificador.")
 	case errors.Is(err, ErrInvalidTimeZone):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "time_zone", "invalid_time_zone", "Informe um fuso horário válido.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "time_zone", "invalid_time_zone", "Informe um fuso horário válido.")
 	case errors.Is(err, auth.ErrInvalidEmail):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
 	case errors.Is(err, security.ErrInvalidPassword):
-		writeOnboardingFieldError(c, http.StatusBadRequest, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
+		writeOnboardingFieldError(httpContext, http.StatusBadRequest, "password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
 	case errors.Is(err, ErrEmailUnavailable):
-		writeOnboardingFieldError(c, http.StatusConflict, "email", "email_unavailable", "Este e-mail já está cadastrado.")
+		writeOnboardingFieldError(httpContext, http.StatusConflict, "email", "email_unavailable", "Este e-mail já está cadastrado.")
 	case errors.Is(err, ErrSlugUnavailable):
-		writeOnboardingFieldError(c, http.StatusConflict, "slug", "slug_unavailable", "Este identificador não está disponível.")
+		writeOnboardingFieldError(httpContext, http.StatusConflict, "slug", "slug_unavailable", "Este identificador não está disponível.")
 	case errors.As(err, &rateLimitError):
-		writeRateLimitError(c, "registration_rate_limited", rateLimitError)
+		writeRateLimitError(httpContext, "registration_rate_limited", rateLimitError)
 	default:
-		slog.Error("registration_failed", "request_id", httpserver.RequestID(c))
-		writeOnboardingError(c, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
+		slog.Error("registration_failed", "request_id", httpserver.RequestID(httpContext))
+		writeOnboardingError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a solicitação.")
 	}
 }
 
-func writeRateLimitError(c *gin.Context, code string, rateLimitError ratelimit.Error) {
+func writeRateLimitError(httpContext *gin.Context, code string, rateLimitError ratelimit.Error) {
 	retryAfter := int(math.Ceil(rateLimitError.RetryAfter.Seconds()))
 	if retryAfter < 1 {
 		retryAfter = 1
 	}
-	c.Header("Retry-After", strconv.Itoa(retryAfter))
-	writeOnboardingError(c, http.StatusTooManyRequests, code, "Muitas tentativas. Tente novamente mais tarde.")
+	httpContext.Header("Retry-After", strconv.Itoa(retryAfter))
+	writeOnboardingError(httpContext, http.StatusTooManyRequests, code, "Muitas tentativas. Tente novamente mais tarde.")
 }
 
-func writeOnboardingError(c *gin.Context, status int, code, message string) {
-	c.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(c)})
+func writeOnboardingError(httpContext *gin.Context, status int, code, message string) {
+	httpContext.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(httpContext)})
 }
 
-func writeOnboardingFieldError(c *gin.Context, status int, field, code, message string) {
+func writeOnboardingFieldError(httpContext *gin.Context, status int, field, code, message string) {
 	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
 	topLevelCode := "validation_failed"
 	if status == http.StatusConflict {
 		topLevelCode = "conflict"
 	}
-	c.JSON(status, api.ErrorResponse{
-		Code: topLevelCode, Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(c), Fields: &fields,
+	httpContext.JSON(status, api.ErrorResponse{
+		Code: topLevelCode, Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(httpContext), Fields: &fields,
 	})
 }

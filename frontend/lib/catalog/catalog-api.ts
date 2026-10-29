@@ -34,32 +34,38 @@ export function createOffering(
   });
 }
 
-export function getOffering(id: string, signal?: AbortSignal) {
-  return apiFetch<Offering>(`/api/v1/services/${encodeURIComponent(id)}`, {
-    signal,
-  });
+export function getOffering(offeringId: string, signal?: AbortSignal) {
+  return apiFetch<Offering>(
+    `/api/v1/services/${encodeURIComponent(offeringId)}`,
+    {
+      signal,
+    },
+  );
 }
 export function updateOffering(
-  id: string,
+  offeringId: string,
   request: UpdateOfferingRequest,
   signal?: AbortSignal,
 ) {
-  return apiFetch<Offering>(`/api/v1/services/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-    csrf: true,
-    signal,
-  });
+  return apiFetch<Offering>(
+    `/api/v1/services/${encodeURIComponent(offeringId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      csrf: true,
+      signal,
+    },
+  );
 }
 
 export function setOfferingStatus(
-  id: string,
+  offeringId: string,
   active: boolean,
   signal?: AbortSignal,
 ) {
   return apiFetch<Offering>(
-    `/api/v1/services/${encodeURIComponent(id)}/status`,
+    `/api/v1/services/${encodeURIComponent(offeringId)}/status`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

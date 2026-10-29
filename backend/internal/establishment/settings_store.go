@@ -30,21 +30,21 @@ func (store *PostgresSettingsStore) UpdateSettings(ctx context.Context, establis
 	if err != nil {
 		return fmt.Errorf("parse establishment ID: %w", err)
 	}
-	id := pgtype.UUID{Bytes: parsedID, Valid: true}
-	tx, err := store.pool.Begin(ctx)
+	establishmentUUID := pgtype.UUID{Bytes: parsedID, Valid: true}
+	transaction, err := store.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin establishment settings update: %w", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	queries := db.New(tx)
-	locked, err := queries.LockEstablishmentOperationalWrite(ctx, id)
+	defer func() { _ = transaction.Rollback(ctx) }()
+	transactionQueries := db.New(transaction)
+	lockedEstablishment, err := transactionQueries.LockEstablishmentOperationalWrite(ctx, establishmentUUID)
 	if err != nil {
 		return fmt.Errorf("lock establishment for settings update: %w", err)
 	}
-	if patch.TimeZone.Set && patch.TimeZone.Value != locked.TimeZone && locked.OperationalDataStartedAt.Valid {
+	if patch.TimeZone.Set && patch.TimeZone.Value != lockedEstablishment.TimeZone && lockedEstablishment.OperationalDataStartedAt.Valid {
 		return ErrTimeZoneLocked
 	}
-	rowsAffected, err := queries.PatchEstablishmentSettings(ctx, db.PatchEstablishmentSettingsParams{
+	rowsAffected, err := transactionQueries.PatchEstablishmentSettings(ctx, db.PatchEstablishmentSettingsParams{
 		NameSet: patch.Name.Set, Name: patch.Name.Value,
 		TimeZoneSet: patch.TimeZone.Set, TimeZone: patch.TimeZone.Value,
 		DescriptionSet: patch.Description.Set, Description: pgtype.Text{String: patch.Description.Value, Valid: patch.Description.Set && !patch.Description.Null},
@@ -56,7 +56,7 @@ func (store *PostgresSettingsStore) UpdateSettings(ctx context.Context, establis
 		BookingHorizonDays:               pgtype.Int4{Int32: patch.BookingHorizonDays.Value, Valid: patch.BookingHorizonDays.Set && !patch.BookingHorizonDays.Null},
 		CustomerChangeDeadlineMinutesSet: patch.CustomerChangeDeadlineMinutes.Set,
 		CustomerChangeDeadlineMinutes:    pgtype.Int4{Int32: patch.CustomerChangeDeadlineMinutes.Value, Valid: patch.CustomerChangeDeadlineMinutes.Set && !patch.CustomerChangeDeadlineMinutes.Null},
-		EstablishmentID:                  id,
+		EstablishmentID:                  establishmentUUID,
 	})
 	if err != nil {
 		return fmt.Errorf("update establishment settings: %w", err)
@@ -65,18 +65,18 @@ func (store *PostgresSettingsStore) UpdateSettings(ctx context.Context, establis
 		return fmt.Errorf("update establishment settings: expected one row, got %d", rowsAffected)
 	}
 	if patch.SocialLinks.Set {
-		if err := queries.DeleteEstablishmentSocialLinks(ctx, id); err != nil {
+		if err := transactionQueries.DeleteEstablishmentSocialLinks(ctx, establishmentUUID); err != nil {
 			return fmt.Errorf("replace establishment social links: %w", err)
 		}
 		for position, link := range patch.SocialLinks.Value {
-			if err := queries.CreateEstablishmentSocialLink(ctx, db.CreateEstablishmentSocialLinkParams{
-				EstablishmentID: id, Position: int32(position), Label: link.Label, Url: link.URL,
+			if err := transactionQueries.CreateEstablishmentSocialLink(ctx, db.CreateEstablishmentSocialLinkParams{
+				EstablishmentID: establishmentUUID, Position: int32(position), Label: link.Label, Url: link.URL,
 			}); err != nil {
 				return fmt.Errorf("create establishment social link: %w", err)
 			}
 		}
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := transaction.Commit(ctx); err != nil {
 		return fmt.Errorf("commit establishment settings update: %w", err)
 	}
 	return nil
@@ -87,8 +87,8 @@ func (store *PostgresSettingsStore) GetSettingsByID(ctx context.Context, establi
 	if err != nil {
 		return EstablishmentSettings{}, fmt.Errorf("parse establishment ID: %w", err)
 	}
-	queryID := pgtype.UUID{Bytes: parsedID, Valid: true}
-	row, err := store.queries.GetEstablishmentSettingsByID(ctx, queryID)
+	establishmentUUID := pgtype.UUID{Bytes: parsedID, Valid: true}
+	row, err := store.queries.GetEstablishmentSettingsByID(ctx, establishmentUUID)
 	if err != nil {
 		return EstablishmentSettings{}, fmt.Errorf("query establishment settings: %w", err)
 	}

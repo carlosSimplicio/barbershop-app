@@ -46,7 +46,7 @@
 - Cadastro e edição de estabelecimento compartilham as validações puras `establishment.IsNameValid` e `establishment.IsTimeZoneValid`; normalização e tradução para erros de cada fluxo permanecem nas suas bordas.
 - Evite grandes diretórios horizontais globais de handlers, services e repositories.
 - Mantenha regras testáveis sem Gin, `pgx`, rede ou banco reais. A verificação de recuperação de senha decide elegibilidade, expiração, uso único e diferença da nova senha no caso de uso `auth/password_recovery`; o store recebe um preparador de hash, executa-o após bloquear usuário e token nessa ordem e só então persiste consumo, credencial e revogações atomicamente. O adaptador não recebe a nova senha nem o gerenciador de criptografia.
-- Gin fica na borda HTTP; `pgx` e `sqlc`, na borda de persistência. Os handlers autenticados reutilizam `auth.RequirePrincipal` para obter a identidade já validada pelo middleware e emitir o mesmo `401` quando ela estiver ausente; papel, tenant e propriedade continuam sendo validados pelos casos de uso.
+- Gin fica na borda HTTP; `pgx` e `sqlc`, na borda de persistência. Nos adaptadores, nomes como `httpContext`, `transaction`, `establishmentUUID` e `offeringUUID` distinguem contexto HTTP, transação e identidade de cada recurso. Os handlers autenticados reutilizam `auth.RequirePrincipal` para obter a identidade já validada pelo middleware e emitir o mesmo `401` quando ela estiver ausente; papel, tenant e propriedade continuam sendo validados pelos casos de uso.
 - Compartilhe apenas abstrações de domínio estáveis ou necessidades transversais reais; evite utilitários genéricos.
 - Não adote CQRS formal, command/query bus, mediator ou event bus sem necessidade concreta.
 
