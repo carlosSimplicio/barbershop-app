@@ -248,3 +248,13 @@ func runMiddlewareRequest(t *testing.T, middleware *Middleware, method, path str
 	router.ServeHTTP(recorder, request)
 	return recorder.Code
 }
+
+func TestServiceUpdatePathRequiresCSRF(t *testing.T) {
+	path := "/api/v1/services/3c0af643-ad5f-4238-9e88-277e3bf40d37"
+	if !requiresCSRF("PATCH", path) {
+		t.Fatal("service update bypasses CSRF")
+	}
+	if requiresCSRF("GET", path) {
+		t.Fatal("read requires CSRF")
+	}
+}

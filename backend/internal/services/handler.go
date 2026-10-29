@@ -1,24 +1,24 @@
 package services
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
+	"net/http"
+
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/httpserver"
 	api "barbershop-app/backend/openapi/generated"
-	"encoding/json"
-	"errors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"io"
-	"log/slog"
-	"net/http"
 )
 
 type Handler struct{ service *Service }
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
-
-var ErrInvalidRequest = errors.New("invalid service request")
 
 type createRequest struct {
 	Name            string `json:"name"`
@@ -127,6 +127,55 @@ func (h *Handler) GetService(c *gin.Context, id uuid.UUID) {
 		return
 	}
 	record, err := h.service.Get(c.Request.Context(), p, id.String())
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(200, record)
+}
+
+type patchRequest struct {
+	Name            json.RawMessage `json:"name"`
+	PriceCents      json.RawMessage `json:"price_cents"`
+	DurationMinutes json.RawMessage `json:"duration_minutes"`
+}
+
+func decodePatch(c *gin.Context) (UpdateInput, error) {
+	var raw patchRequest
+	var in UpdateInput
+	if err := decodeRequest(c, &raw); err != nil {
+		return in, err
+	}
+	if raw.Name != nil {
+		if err := json.Unmarshal(raw.Name, &in.Name); err != nil || in.Name == nil {
+			return in, ErrInvalidName
+		}
+	}
+	if raw.PriceCents != nil {
+		if err := json.Unmarshal(raw.PriceCents, &in.PriceCents); err != nil || in.PriceCents == nil {
+			return in, ErrInvalidPrice
+		}
+	}
+	if raw.DurationMinutes != nil {
+		in.SetDuration = true
+		if err := json.Unmarshal(raw.DurationMinutes, &in.DurationMinutes); err != nil {
+			return in, ErrInvalidDuration
+		}
+	}
+	return in, nil
+}
+func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) {
+	p, ok := auth.PrincipalFromContext(c)
+	if !ok {
+		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	in, err := decodePatch(c)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	record, err := h.service.Update(c.Request.Context(), p, id.String(), in)
 	if err != nil {
 		writeServiceError(c, err)
 		return

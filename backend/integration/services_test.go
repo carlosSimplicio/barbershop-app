@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 )
@@ -212,4 +213,67 @@ func TestServiceIndividualReadHidesOtherTenants(t *testing.T) {
 	assertStatus(t, app.request(t, "POST", "/api/v1/auth/login", map[string]string{"email": "get-prof@example.test", "password": "senha-temporaria"}), 200)
 	assertStatus(t, app.request(t, "POST", "/api/v1/auth/password/change", map[string]string{"new_password": "senha-definitiva"}), 204)
 	assertStatus(t, app.request(t, "GET", path, nil), 403)
+}
+
+func TestServicePartialUpdateAndAtomicRefusals(t *testing.T) {
+	app := newTestApplication(t)
+	registerAndConfirmOwner(t, app, defaultOwnerRegistration())
+	record := createCatalogService(t, app, "Corte", 100)
+	path := "/api/v1/services/" + record.ID
+	if _, err := integrationPool.Exec(context.Background(), `UPDATE services SET active=false WHERE id=$1`, record.ID); err != nil {
+		t.Fatal(err)
+	}
+	body := map[string]any{"name": " Barba ", "duration_minutes": 17}
+	r := app.request(t, "PATCH", path, body)
+	assertStatus(t, r, 200)
+	var got serviceRecord
+	decodeJSON(t, r, &got)
+	if got.Name != "Barba" || got.PriceCents != 100 || got.DurationMinutes != 17 || got.Active || got.ID != record.ID {
+		t.Fatalf("updated=%+v", got)
+	}
+	r = app.request(t, "PATCH", path, map[string]any{"duration_minutes": nil})
+	assertStatus(t, r, 200)
+	decodeJSON(t, r, &got)
+	if got.DurationMinutes != 30 {
+		t.Fatalf("reset=%+v", got)
+	}
+	for _, invalid := range []map[string]any{{}, {"name": nil}, {"price_cents": nil}, {"price_cents": 0.1}, {"name": "changed", "duration_minutes": 0}, {"active": true}, {"establishment_id": "foreign"}} {
+		assertStatus(t, app.request(t, "PATCH", path, invalid), 400)
+	}
+	r = app.request(t, "GET", path, nil)
+	assertStatus(t, r, 200)
+	decodeJSON(t, r, &got)
+	if got.Name != "Barba" || got.PriceCents != 100 || got.Active {
+		t.Fatalf("invalid changed state=%+v", got)
+	}
+	assertStatus(t, serviceRawRequest(t, app, "PATCH", path, body, trustedOrigin, false, true), 403)
+	assertStatus(t, serviceRawRequest(t, app, "PATCH", path, body, "https://external.example.test", true, true), 403)
+	assertStatus(t, serviceRawRequest(t, app, "PATCH", path, body, trustedOrigin, true, false), 401)
+	var wg sync.WaitGroup
+	for _, change := range []map[string]any{{"name": "Novo nome"}, {"price_cents": 200}} {
+		wg.Add(1)
+		go func(payload map[string]any) {
+			defer wg.Done()
+			response := app.request(t, "PATCH", path, payload)
+			if response.StatusCode != 200 {
+				t.Errorf("concurrent patch=%d", response.StatusCode)
+			}
+		}(change)
+	}
+	wg.Wait()
+	r = app.request(t, "GET", path, nil)
+	assertStatus(t, r, 200)
+	decodeJSON(t, r, &got)
+	if got.Name != "Novo nome" || got.PriceCents != 200 {
+		t.Fatalf("lost update=%+v", got)
+	}
+	assertStatus(t, app.request(t, "PATCH", "/api/v1/services/771d0b88-237b-4f35-89ad-850ffbd894d3", body), 404)
+	other := defaultOwnerRegistration()
+	other.Email = "patch-other@example.test"
+	other.Slug = "patch-other"
+	registerAndConfirmOwner(t, app, other)
+	assertStatus(t, app.request(t, "PATCH", path, body), 404)
+	own := createCatalogService(t, app, "Outro", 0)
+	expireServiceTrial(t)
+	assertStatus(t, app.request(t, "PATCH", "/api/v1/services/"+own.ID, body), 403)
 }

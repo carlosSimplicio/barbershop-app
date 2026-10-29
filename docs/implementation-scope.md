@@ -324,7 +324,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar serviço ativo pela API exclusiva ao proprietário, com tenant da sessão, CSRF e direito centralizado de escrita.
 - [x] Listar serviços pela API com paginação, ativos e inativos e direito de escrita atual, com leitura após expiração.
 - [x] Consultar individualmente serviço ativo ou inativo pela API, com isolamento e leitura após expiração.
-- [ ] Editar serviço pela API.
+- [x] Editar nome, preço e duração pela API com PATCH parcial, validação atômica, CSRF em rota parametrizada e preservação da identidade.
 - [ ] Ativar e desativar serviço pela API.
 - [ ] Listar serviços no painel.
 - [ ] Cadastrar serviço no painel.

@@ -1,11 +1,12 @@
 package services
 
 import (
-	"barbershop-app/backend/internal/auth"
-	"barbershop-app/backend/internal/entitlements"
 	"context"
 	"errors"
 	"testing"
+
+	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/entitlements"
 )
 
 type testStore struct {
@@ -110,6 +111,55 @@ func TestServiceGetAuthorizesAndPropagatesMissingResource(t *testing.T) {
 		}
 		if tc.role != "owner" && store.called {
 			t.Fatal("professional read store")
+		}
+	}
+}
+
+func (s *testStore) Update(_ context.Context, tenant, id string, in UpdateInput) (Record, error) {
+	s.called = true
+	s.tenant = tenant
+	if in.Name != nil {
+		s.name = *in.Name
+	}
+	if in.PriceCents != nil {
+		s.price = int32(*in.PriceCents)
+	}
+	if in.SetDuration && in.DurationMinutes != nil {
+		s.duration = int32(*in.DurationMinutes)
+	}
+	return Record{ID: id, Name: s.name, PriceCents: int64(s.price), DurationMinutes: int64(s.duration)}, s.err
+}
+func TestServiceUpdateNormalizesAndPreservesOmittedFields(t *testing.T) {
+	name := " Corte "
+	store := &testStore{price: 100, duration: 17}
+	record, err := NewService(store, testWrites{}).Update(context.Background(), auth.Principal{Role: "owner", EstablishmentID: "tenant"}, "service", UpdateInput{Name: &name})
+	if err != nil || record.Name != "Corte" || record.PriceCents != 100 || record.DurationMinutes != 17 || store.tenant != "tenant" {
+		t.Fatalf("record=%+v err=%v", record, err)
+	}
+	record, err = NewService(store, testWrites{}).Update(context.Background(), auth.Principal{Role: "owner"}, "service", UpdateInput{SetDuration: true})
+	if err != nil || record.DurationMinutes != 30 {
+		t.Fatalf("default=%+v err=%v", record, err)
+	}
+}
+func TestServiceUpdateRefusesInvalidOrUnauthorizedChanges(t *testing.T) {
+	blank := " "
+	name := "Corte"
+	for _, tc := range []struct {
+		role           string
+		in             UpdateInput
+		writeErr, want error
+	}{
+		{"owner", UpdateInput{}, nil, ErrInvalidRequest},
+		{"owner", UpdateInput{Name: &blank}, nil, ErrInvalidName},
+		{"owner", UpdateInput{PriceCents: ptr(-1)}, nil, ErrInvalidPrice},
+		{"owner", UpdateInput{SetDuration: true, DurationMinutes: ptr(0)}, nil, ErrInvalidDuration},
+		{"professional", UpdateInput{Name: &name}, nil, ErrForbidden},
+		{"owner", UpdateInput{Name: &name}, entitlements.ErrReadOnly, entitlements.ErrReadOnly},
+	} {
+		store := &testStore{}
+		_, err := NewService(store, testWrites{tc.writeErr}).Update(context.Background(), auth.Principal{Role: tc.role}, "service", tc.in)
+		if !errors.Is(err, tc.want) || store.called {
+			t.Fatalf("err=%v want=%v persisted=%v", err, tc.want, store.called)
 		}
 	}
 }

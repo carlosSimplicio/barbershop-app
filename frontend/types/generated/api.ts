@@ -298,7 +298,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Edita parcialmente um serviço do estabelecimento */
+        patch: operations["patchService"];
         trace?: never;
     };
     "/health": {
@@ -322,6 +323,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        UpdateServiceRequest: {
+            /** @description Trimmed before validation; nonempty and at most 120 Unicode code points. */
+            name?: string;
+            /** Format: int64 */
+            price_cents?: number;
+            /**
+             * Format: int64
+             * @description Omitted preserves duration; null resets to 30 minutes.
+             */
+            duration_minutes?: number | null;
+        };
         ServiceListResponse: {
             items: components["schemas"]["ServiceResponse"][];
             limit: number;
@@ -1155,6 +1167,37 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Serviço ativo ou inativo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    patchService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Serviço atualizado; campos omitidos permanecem inalterados */
             200: {
                 headers: {
                     [name: string]: unknown;

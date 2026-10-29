@@ -1,9 +1,11 @@
 package services
 
 import (
-	db "barbershop-app/backend/db/generated"
 	"context"
 	"errors"
+
+	db "barbershop-app/backend/db/generated"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -57,6 +59,32 @@ func (s *PostgresStore) Get(ctx context.Context, tenant, serviceID string) (Reco
 		return Record{}, err
 	}
 	row, err := s.queries.GetService(ctx, db.GetServiceParams{ID: target, EstablishmentID: id})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Record{}, ErrNotFound
+	}
+	return recordFromRow(row), err
+}
+
+func (s *PostgresStore) Update(ctx context.Context, tenant, serviceID string, in UpdateInput) (Record, error) {
+	id, err := tenantUUID(tenant)
+	if err != nil {
+		return Record{}, err
+	}
+	target, err := tenantUUID(serviceID)
+	if err != nil {
+		return Record{}, err
+	}
+	params := db.UpdateServiceParams{ID: target, EstablishmentID: id, SetName: in.Name != nil, SetPrice: in.PriceCents != nil, SetDuration: in.SetDuration}
+	if in.Name != nil {
+		params.Name = *in.Name
+	}
+	if in.PriceCents != nil {
+		params.PriceCents = int32(*in.PriceCents)
+	}
+	if in.DurationMinutes != nil {
+		params.DurationMinutes = int32(*in.DurationMinutes)
+	}
+	row, err := s.queries.UpdateService(ctx, params)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Record{}, ErrNotFound
 	}

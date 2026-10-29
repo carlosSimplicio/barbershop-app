@@ -43,6 +43,8 @@ var publicPaths = []publicPathRule{
 	},
 }
 
+var serviceResourceCSRFPath = regexp.MustCompile(`^/api/v1/services/[^/]+$`)
+
 var csrfProtectedPaths = map[string]struct{}{
 	"/api/v1/services":               {},
 	"/api/v1/auth/logout":            {},
@@ -162,6 +164,9 @@ func isUnsafeMethod(method string) bool {
 func requiresCSRF(method, path string) bool {
 	if !isUnsafeMethod(method) {
 		return false
+	}
+	if serviceResourceCSRFPath.MatchString(path) {
+		return true
 	}
 	_, protected := csrfProtectedPaths[path]
 	return protected

@@ -104,3 +104,5 @@ func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
 }
 
 func (h *Handler) GetService(c *gin.Context, id uuid.UUID) { h.services.GetService(c, id) }
+
+func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) { h.services.PatchService(c, id) }

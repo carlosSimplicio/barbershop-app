@@ -1,10 +1,11 @@
 package services
 
 import (
-	"barbershop-app/backend/internal/auth"
-	"barbershop-app/backend/internal/entitlements"
 	"context"
 	"errors"
+
+	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/entitlements"
 )
 
 var ErrForbidden = errors.New("service operation forbidden")
@@ -22,6 +23,7 @@ type CreateInput struct {
 	DurationMinutes *int64
 }
 type Store interface {
+	Update(context.Context, string, string, UpdateInput) (Record, error)
 	Get(context.Context, string, string) (Record, error)
 	Create(context.Context, string, string, int32, int32) (Record, error)
 	List(context.Context, string, int32, int32) ([]Record, error)
@@ -108,3 +110,45 @@ func (s *Service) Get(ctx context.Context, p auth.Principal, id string) (Record,
 	}
 	return s.store.Get(ctx, p.EstablishmentID, id)
 }
+
+type UpdateInput struct {
+	Name            *string
+	PriceCents      *int64
+	DurationMinutes *int64
+	SetDuration     bool
+}
+
+func (s *Service) Update(ctx context.Context, p auth.Principal, id string, in UpdateInput) (Record, error) {
+	if p.Role != "owner" {
+		return Record{}, ErrForbidden
+	}
+	if in.Name == nil && in.PriceCents == nil && !in.SetDuration {
+		return Record{}, ErrInvalidRequest
+	}
+	if in.Name != nil {
+		name, err := normalizeName(*in.Name)
+		if err != nil {
+			return Record{}, err
+		}
+		in.Name = &name
+	}
+	if in.PriceCents != nil {
+		if err := validatePrice(*in.PriceCents); err != nil {
+			return Record{}, err
+		}
+	}
+	if in.SetDuration {
+		duration, err := normalizeDuration(in.DurationMinutes)
+		if err != nil {
+			return Record{}, err
+		}
+		v := int64(duration)
+		in.DurationMinutes = &v
+	}
+	if err := s.writes.RequireWrite(ctx, p.EstablishmentID); err != nil {
+		return Record{}, err
+	}
+	return s.store.Update(ctx, p.EstablishmentID, id, in)
+}
+
+var ErrInvalidRequest = errors.New("invalid service request")

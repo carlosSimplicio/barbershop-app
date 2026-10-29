@@ -311,6 +311,16 @@ type ServiceResponse struct {
 // TrialStatus defines model for TrialStatus.
 type TrialStatus string
 
+// UpdateServiceRequest defines model for UpdateServiceRequest.
+type UpdateServiceRequest struct {
+	// DurationMinutes Omitted preserves duration; null resets to 30 minutes.
+	DurationMinutes *int64 `json:"duration_minutes,omitempty"`
+
+	// Name Trimmed before validation; nonempty and at most 120 Unicode code points.
+	Name       *string `json:"name,omitempty"`
+	PriceCents *int64  `json:"price_cents,omitempty"`
+}
+
 // UserRole defines model for UserRole.
 type UserRole string
 
@@ -389,6 +399,9 @@ type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
 // PostServicesJSONRequestBody defines body for PostServices for application/json ContentType.
 type PostServicesJSONRequestBody = CreateServiceRequest
 
+// PatchServiceJSONRequestBody defines body for PatchService for application/json ContentType.
+type PatchServiceJSONRequestBody = UpdateServiceRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// PostAuthEmailConfirmation Solicita confirmação do e-mail do proprietário
@@ -454,6 +467,9 @@ type ServerInterface interface {
 	// GetService Consulta serviço do estabelecimento do proprietário
 	// (GET /services/{service_id})
 	GetService(c *gin.Context, serviceId openapi_types.UUID)
+	// PatchService Edita parcialmente um serviço do estabelecimento
+	// (PATCH /services/{service_id})
+	PatchService(c *gin.Context, serviceId openapi_types.UUID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -842,6 +858,31 @@ func (siw *ServerInterfaceWrapper) GetService(c *gin.Context) {
 	siw.Handler.GetService(c, serviceId)
 }
 
+// PatchService operation middleware
+func (siw *ServerInterfaceWrapper) PatchService(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "service_id" -------------
+	var serviceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "service_id", c.Param("service_id"), &serviceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter service_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PatchService(c, serviceId)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -889,5 +930,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/services", wrapper.GetServices)
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)
+	router.PATCH(options.BaseURL+"/services/:service_id", wrapper.PatchService)
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
 }
