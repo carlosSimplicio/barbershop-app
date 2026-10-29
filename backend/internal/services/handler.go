@@ -52,9 +52,8 @@ func decodeRequest(httpContext *gin.Context, request any) error {
 }
 
 func (handler *Handler) PostServices(httpContext *gin.Context) {
-	principal, ok := auth.PrincipalFromContext(httpContext)
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
-		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request createRequest
@@ -108,9 +107,8 @@ func writeFieldError(httpContext *gin.Context, field, code, message string) {
 }
 
 func (handler *Handler) GetServices(httpContext *gin.Context, parameters api.GetServicesParams) {
-	principal, ok := auth.PrincipalFromContext(httpContext)
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
-		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	limit, offset := int64(20), int64(0)
@@ -129,9 +127,8 @@ func (handler *Handler) GetServices(httpContext *gin.Context, parameters api.Get
 }
 
 func (handler *Handler) GetService(httpContext *gin.Context, offeringID uuid.UUID) {
-	principal, ok := auth.PrincipalFromContext(httpContext)
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
-		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	record, err := handler.service.Get(httpContext.Request.Context(), principal, offeringID.String())
@@ -176,9 +173,8 @@ func decodePatch(httpContext *gin.Context) (UpdateInput, error) {
 }
 
 func (handler *Handler) PatchService(httpContext *gin.Context, offeringID uuid.UUID) {
-	principal, ok := auth.PrincipalFromContext(httpContext)
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
-		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	input, err := decodePatch(httpContext)
@@ -195,9 +191,8 @@ func (handler *Handler) PatchService(httpContext *gin.Context, offeringID uuid.U
 }
 
 func (handler *Handler) PutServiceStatus(httpContext *gin.Context, offeringID uuid.UUID) {
-	principal, ok := auth.PrincipalFromContext(httpContext)
+	principal, ok := auth.RequirePrincipal(httpContext)
 	if !ok {
-		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request struct {

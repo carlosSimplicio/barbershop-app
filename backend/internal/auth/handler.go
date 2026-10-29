@@ -154,9 +154,8 @@ func (handler *Handler) PostAuthLogout(c *gin.Context) {
 }
 
 func (handler *Handler) GetAuthMe(c *gin.Context) {
-	principal, ok := PrincipalFromContext(c)
+	principal, ok := RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	response, err := principalResponse(principal)
@@ -169,9 +168,8 @@ func (handler *Handler) GetAuthMe(c *gin.Context) {
 }
 
 func (handler *Handler) PostAuthPasswordChange(c *gin.Context) {
-	principal, ok := PrincipalFromContext(c)
+	principal, ok := RequirePrincipal(c)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request api.ChangePasswordRequest
