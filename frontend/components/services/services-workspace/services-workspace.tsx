@@ -14,6 +14,9 @@ import { EditServicePanel } from "../edit-service-panel/edit-service-panel";
 import { ServiceStatusAction } from "../service-status-action/service-status-action";
 import styles from "./services-workspace.module.css";
 
+const PAGE_SIZE = 20;
+const MAX_OFFSET = 2_147_483_647;
+
 type View =
   | { status: "loading" | "error" | "unauthorized" }
   | { status: "success"; page: ServicePage };
@@ -50,7 +53,7 @@ function ServicesRequest() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void listServices({ limit: 20, offset, signal: controller.signal })
+    void listServices({ limit: PAGE_SIZE, offset, signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) return;
         if (result.status === 401) setView({ status: "unauthorized" });
@@ -212,14 +215,18 @@ function ServicesRequest() {
             >
               <Button
                 disabled={writing || offset === 0}
-                onClick={() => changePage(Math.max(0, offset - 20))}
+                onClick={() => changePage(Math.max(0, offset - PAGE_SIZE))}
               >
                 Anterior
               </Button>
-              <span>Página {Math.floor(offset / 20) + 1}</span>
+              <span>Página {Math.floor(offset / PAGE_SIZE) + 1}</span>
               <Button
-                disabled={writing || !view.page.has_more || offset > 2147483627}
-                onClick={() => changePage(offset + 20)}
+                disabled={
+                  writing ||
+                  !view.page.has_more ||
+                  offset > MAX_OFFSET - PAGE_SIZE
+                }
+                onClick={() => changePage(offset + PAGE_SIZE)}
               >
                 Próxima
               </Button>
