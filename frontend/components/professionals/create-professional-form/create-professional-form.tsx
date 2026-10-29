@@ -183,7 +183,7 @@ export function CreateProfessionalForm({
         <PasswordField
           autoComplete="new-password"
           error={errors.temporary_password}
-          hint="Use de 8 a 32 caracteres, sem espaços ou caracteres invisíveis. A troca será obrigatória no primeiro acesso."
+          hint={`${INVALID_PASSWORD_MESSAGE} A troca será obrigatória no primeiro acesso.`}
           label="Senha temporária"
           onChange={(event) => update("temporary_password", event.target.value)}
           readOnly={submitting}

@@ -134,7 +134,7 @@ func writeCreationError(httpContext *gin.Context, err error) {
 	case errors.Is(err, auth.ErrInvalidEmail):
 		writeFieldError(httpContext, http.StatusBadRequest, "email", "invalid_email", "Informe um e-mail válido.")
 	case errors.Is(err, security.ErrInvalidPassword):
-		writeFieldError(httpContext, http.StatusBadRequest, "temporary_password", "invalid_password", "A senha deve ter de 8 a 32 caracteres, sem espaços ou caracteres invisíveis.")
+		writeFieldError(httpContext, http.StatusBadRequest, "temporary_password", "invalid_password", auth.PasswordRequirementsMessage())
 	case errors.Is(err, ErrEmailUnavailable):
 		writeFieldError(httpContext, http.StatusConflict, "email", "email_unavailable", "Este e-mail já está cadastrado.")
 	default:
