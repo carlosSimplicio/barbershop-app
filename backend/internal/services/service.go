@@ -40,28 +40,29 @@ type Service struct {
 func NewService(store Store, writes WriteEntitlements) *Service {
 	return &Service{store: store, writes: writes}
 }
-func (s *Service) Create(ctx context.Context, p auth.Principal, in CreateInput) (Record, error) {
-	if p.Role != "owner" {
+
+func (service *Service) Create(ctx context.Context, principal auth.Principal, input CreateInput) (Record, error) {
+	if principal.Role != "owner" {
 		return Record{}, ErrForbidden
 	}
-	name, err := normalizeName(in.Name)
+	name, err := normalizeName(input.Name)
 	if err != nil {
 		return Record{}, err
 	}
-	if in.PriceCents == nil {
+	if input.PriceCents == nil {
 		return Record{}, ErrInvalidPrice
 	}
-	if err := validatePrice(*in.PriceCents); err != nil {
+	if err := validatePrice(*input.PriceCents); err != nil {
 		return Record{}, err
 	}
-	duration, err := normalizeDuration(in.DurationMinutes)
+	duration, err := normalizeDuration(input.DurationMinutes)
 	if err != nil {
 		return Record{}, err
 	}
-	if err := s.writes.RequireWrite(ctx, p.EstablishmentID); err != nil {
+	if err := service.writes.RequireWrite(ctx, principal.EstablishmentID); err != nil {
 		return Record{}, err
 	}
-	return s.store.Create(ctx, p.EstablishmentID, name, int32(*in.PriceCents), duration)
+	return service.store.Create(ctx, principal.EstablishmentID, name, int32(*input.PriceCents), duration)
 }
 
 var ErrInvalidLimit = errors.New("invalid service limit")
@@ -75,8 +76,8 @@ type ListResult struct {
 	CanWrite bool     `json:"can_write"`
 }
 
-func (s *Service) List(ctx context.Context, p auth.Principal, limit, offset int64) (ListResult, error) {
-	if p.Role != "owner" {
+func (service *Service) List(ctx context.Context, principal auth.Principal, limit, offset int64) (ListResult, error) {
+	if principal.Role != "owner" {
 		return ListResult{}, ErrForbidden
 	}
 	if limit < 1 || limit > 100 {
@@ -85,31 +86,31 @@ func (s *Service) List(ctx context.Context, p auth.Principal, limit, offset int6
 	if offset < 0 || offset > 2147483647 {
 		return ListResult{}, ErrInvalidOffset
 	}
-	writeErr := s.writes.RequireWrite(ctx, p.EstablishmentID)
+	writeErr := service.writes.RequireWrite(ctx, principal.EstablishmentID)
 	if writeErr != nil && !errors.Is(writeErr, entitlements.ErrReadOnly) {
 		return ListResult{}, writeErr
 	}
-	items, err := s.store.List(ctx, p.EstablishmentID, int32(limit+1), int32(offset))
+	items, err := service.store.List(ctx, principal.EstablishmentID, int32(limit+1), int32(offset))
 	if err != nil {
 		return ListResult{}, err
 	}
-	more := len(items) > int(limit)
-	if more {
+	hasMore := len(items) > int(limit)
+	if hasMore {
 		items = items[:limit]
 	}
 	if items == nil {
 		items = []Record{}
 	}
-	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: more, CanWrite: writeErr == nil}, nil
+	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore, CanWrite: writeErr == nil}, nil
 }
 
 var ErrNotFound = errors.New("service not found")
 
-func (s *Service) Get(ctx context.Context, p auth.Principal, id string) (Record, error) {
-	if p.Role != "owner" {
+func (service *Service) Get(ctx context.Context, principal auth.Principal, offeringID string) (Record, error) {
+	if principal.Role != "owner" {
 		return Record{}, ErrForbidden
 	}
-	return s.store.Get(ctx, p.EstablishmentID, id)
+	return service.store.Get(ctx, principal.EstablishmentID, offeringID)
 }
 
 type UpdateInput struct {
@@ -119,52 +120,52 @@ type UpdateInput struct {
 	SetDuration     bool
 }
 
-func (s *Service) Update(ctx context.Context, p auth.Principal, id string, in UpdateInput) (Record, error) {
-	if p.Role != "owner" {
+func (service *Service) Update(ctx context.Context, principal auth.Principal, offeringID string, input UpdateInput) (Record, error) {
+	if principal.Role != "owner" {
 		return Record{}, ErrForbidden
 	}
-	if in.Name == nil && in.PriceCents == nil && !in.SetDuration {
+	if input.Name == nil && input.PriceCents == nil && !input.SetDuration {
 		return Record{}, ErrInvalidRequest
 	}
-	if in.Name != nil {
-		name, err := normalizeName(*in.Name)
+	if input.Name != nil {
+		name, err := normalizeName(*input.Name)
 		if err != nil {
 			return Record{}, err
 		}
-		in.Name = &name
+		input.Name = &name
 	}
-	if in.PriceCents != nil {
-		if err := validatePrice(*in.PriceCents); err != nil {
+	if input.PriceCents != nil {
+		if err := validatePrice(*input.PriceCents); err != nil {
 			return Record{}, err
 		}
 	}
-	if in.SetDuration {
-		duration, err := normalizeDuration(in.DurationMinutes)
+	if input.SetDuration {
+		duration, err := normalizeDuration(input.DurationMinutes)
 		if err != nil {
 			return Record{}, err
 		}
-		v := int64(duration)
-		in.DurationMinutes = &v
+		normalizedDuration := int64(duration)
+		input.DurationMinutes = &normalizedDuration
 	}
-	if err := s.writes.RequireWrite(ctx, p.EstablishmentID); err != nil {
+	if err := service.writes.RequireWrite(ctx, principal.EstablishmentID); err != nil {
 		return Record{}, err
 	}
-	return s.store.Update(ctx, p.EstablishmentID, id, in)
+	return service.store.Update(ctx, principal.EstablishmentID, offeringID, input)
 }
 
 var ErrInvalidRequest = errors.New("invalid service request")
 
 var ErrInvalidStatus = errors.New("invalid service status")
 
-func (s *Service) SetStatus(ctx context.Context, p auth.Principal, id string, active *bool) (Record, error) {
-	if p.Role != "owner" {
+func (service *Service) SetStatus(ctx context.Context, principal auth.Principal, offeringID string, active *bool) (Record, error) {
+	if principal.Role != "owner" {
 		return Record{}, ErrForbidden
 	}
 	if active == nil {
 		return Record{}, ErrInvalidStatus
 	}
-	if err := s.writes.RequireWrite(ctx, p.EstablishmentID); err != nil {
+	if err := service.writes.RequireWrite(ctx, principal.EstablishmentID); err != nil {
 		return Record{}, err
 	}
-	return s.store.SetStatus(ctx, p.EstablishmentID, id, *active)
+	return service.store.SetStatus(ctx, principal.EstablishmentID, offeringID, *active)
 }

@@ -26,13 +26,13 @@ type createRequest struct {
 	DurationMinutes *int64 `json:"duration_minutes"`
 }
 
-func decodeRequest(c *gin.Context, request any) error {
-	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 8192))
+func decodeRequest(httpContext *gin.Context, request any) error {
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 8192))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(request); err != nil {
-		var field *json.UnmarshalTypeError
-		if errors.As(err, &field) {
-			switch field.Field {
+		var typeError *json.UnmarshalTypeError
+		if errors.As(err, &typeError) {
+			switch typeError.Field {
 			case "name":
 				return ErrInvalidName
 			case "price_cents":
@@ -50,160 +50,167 @@ func decodeRequest(c *gin.Context, request any) error {
 	}
 	return nil
 }
-func (h *Handler) PostServices(c *gin.Context) {
-	p, ok := auth.PrincipalFromContext(c)
+
+func (handler *Handler) PostServices(httpContext *gin.Context) {
+	principal, ok := auth.PrincipalFromContext(httpContext)
 	if !ok {
-		writeError(c, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request createRequest
-	if err := decodeRequest(c, &request); err != nil {
-		writeServiceError(c, err)
+	if err := decodeRequest(httpContext, &request); err != nil {
+		writeServiceError(httpContext, err)
 		return
 	}
-	record, err := h.service.Create(c.Request.Context(), p, CreateInput{Name: request.Name, PriceCents: request.PriceCents, DurationMinutes: request.DurationMinutes})
+	record, err := handler.service.Create(httpContext.Request.Context(), principal, CreateInput{Name: request.Name, PriceCents: request.PriceCents, DurationMinutes: request.DurationMinutes})
 	if err != nil {
-		writeServiceError(c, err)
+		writeServiceError(httpContext, err)
 		return
 	}
-	c.JSON(http.StatusCreated, record)
-}
-func writeServiceError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, ErrNotFound):
-		writeError(c, 404, "not_found", "Serviço não encontrado.")
-	case errors.Is(err, ErrForbidden):
-		writeError(c, 403, "forbidden", "Você não pode administrar serviços.")
-	case errors.Is(err, entitlements.ErrReadOnly):
-		writeError(c, 403, "read_only", "O estabelecimento está em modo somente leitura.")
-	case errors.Is(err, ErrInvalidLimit):
-		writeFieldError(c, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
-	case errors.Is(err, ErrInvalidOffset):
-		writeFieldError(c, "offset", "invalid_offset", "Informe um deslocamento válido.")
-	case errors.Is(err, ErrInvalidName):
-		writeFieldError(c, "name", "invalid_name", "Informe um nome com até 120 caracteres.")
-	case errors.Is(err, ErrInvalidPrice):
-		writeFieldError(c, "price_cents", "invalid_price", "Informe um preço de R$ 0,00 a R$ 99.999,99.")
-	case errors.Is(err, ErrInvalidDuration):
-		writeFieldError(c, "duration_minutes", "invalid_duration", "Informe de 1 a 1.440 minutos inteiros.")
-	case errors.Is(err, ErrInvalidStatus):
-		writeFieldError(c, "active", "invalid_status", "Informe o estado ativo do serviço.")
-	case errors.Is(err, ErrInvalidRequest):
-		writeError(c, 400, "invalid_request", "Verifique os dados informados.")
-	default:
-		slog.Error("service_operation_failed", "request_id", httpserver.RequestID(c))
-		writeError(c, 500, "internal_error", "Não foi possível concluir a operação.")
-	}
-}
-func writeError(c *gin.Context, status int, code, message string) {
-	c.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(c)})
-}
-func writeFieldError(c *gin.Context, field, code, message string) {
-	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
-	c.JSON(400, api.ErrorResponse{Code: "validation_failed", Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(c), Fields: &fields})
+	httpContext.JSON(http.StatusCreated, record)
 }
 
-func (h *Handler) GetServices(c *gin.Context, params api.GetServicesParams) {
-	p, ok := auth.PrincipalFromContext(c)
+func writeServiceError(httpContext *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrNotFound):
+		writeError(httpContext, http.StatusNotFound, "not_found", "Serviço não encontrado.")
+	case errors.Is(err, ErrForbidden):
+		writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode administrar serviços.")
+	case errors.Is(err, entitlements.ErrReadOnly):
+		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
+	case errors.Is(err, ErrInvalidLimit):
+		writeFieldError(httpContext, "limit", "invalid_limit", "Informe um limite entre 1 e 100.")
+	case errors.Is(err, ErrInvalidOffset):
+		writeFieldError(httpContext, "offset", "invalid_offset", "Informe um deslocamento válido.")
+	case errors.Is(err, ErrInvalidName):
+		writeFieldError(httpContext, "name", "invalid_name", "Informe um nome com até 120 caracteres.")
+	case errors.Is(err, ErrInvalidPrice):
+		writeFieldError(httpContext, "price_cents", "invalid_price", "Informe um preço de R$ 0,00 a R$ 99.999,99.")
+	case errors.Is(err, ErrInvalidDuration):
+		writeFieldError(httpContext, "duration_minutes", "invalid_duration", "Informe de 1 a 1.440 minutos inteiros.")
+	case errors.Is(err, ErrInvalidStatus):
+		writeFieldError(httpContext, "active", "invalid_status", "Informe o estado ativo do serviço.")
+	case errors.Is(err, ErrInvalidRequest):
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+	default:
+		slog.Error("service_operation_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir a operação.")
+	}
+}
+
+func writeError(httpContext *gin.Context, status int, code, message string) {
+	httpContext.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(httpContext)})
+}
+
+func writeFieldError(httpContext *gin.Context, field, code, message string) {
+	fields := []api.FieldError{{Field: field, Code: code, Message: message}}
+	httpContext.JSON(http.StatusBadRequest, api.ErrorResponse{Code: "validation_failed", Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(httpContext), Fields: &fields})
+}
+
+func (handler *Handler) GetServices(httpContext *gin.Context, parameters api.GetServicesParams) {
+	principal, ok := auth.PrincipalFromContext(httpContext)
 	if !ok {
-		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	limit, offset := int64(20), int64(0)
-	if params.Limit != nil {
-		limit = int64(*params.Limit)
+	if parameters.Limit != nil {
+		limit = int64(*parameters.Limit)
 	}
-	if params.Offset != nil {
-		offset = int64(*params.Offset)
+	if parameters.Offset != nil {
+		offset = int64(*parameters.Offset)
 	}
-	page, err := h.service.List(c.Request.Context(), p, limit, offset)
+	page, err := handler.service.List(httpContext.Request.Context(), principal, limit, offset)
 	if err != nil {
-		writeServiceError(c, err)
+		writeServiceError(httpContext, err)
 		return
 	}
-	c.JSON(200, page)
+	httpContext.JSON(http.StatusOK, page)
 }
 
-func (h *Handler) GetService(c *gin.Context, id uuid.UUID) {
-	p, ok := auth.PrincipalFromContext(c)
+func (handler *Handler) GetService(httpContext *gin.Context, offeringID uuid.UUID) {
+	principal, ok := auth.PrincipalFromContext(httpContext)
 	if !ok {
-		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
-	record, err := h.service.Get(c.Request.Context(), p, id.String())
+	record, err := handler.service.Get(httpContext.Request.Context(), principal, offeringID.String())
 	if err != nil {
-		writeServiceError(c, err)
+		writeServiceError(httpContext, err)
 		return
 	}
-	c.JSON(200, record)
+	httpContext.JSON(http.StatusOK, record)
 }
 
+// RawMessage preserves omitted fields separately from explicit null until each
+// field is decoded into the typed update input.
 type patchRequest struct {
 	Name            json.RawMessage `json:"name"`
 	PriceCents      json.RawMessage `json:"price_cents"`
 	DurationMinutes json.RawMessage `json:"duration_minutes"`
 }
 
-func decodePatch(c *gin.Context) (UpdateInput, error) {
-	var raw patchRequest
-	var in UpdateInput
-	if err := decodeRequest(c, &raw); err != nil {
-		return in, err
+func decodePatch(httpContext *gin.Context) (UpdateInput, error) {
+	var requestFields patchRequest
+	var input UpdateInput
+	if err := decodeRequest(httpContext, &requestFields); err != nil {
+		return input, err
 	}
-	if raw.Name != nil {
-		if err := json.Unmarshal(raw.Name, &in.Name); err != nil || in.Name == nil {
-			return in, ErrInvalidName
+	if requestFields.Name != nil {
+		if err := json.Unmarshal(requestFields.Name, &input.Name); err != nil || input.Name == nil {
+			return input, ErrInvalidName
 		}
 	}
-	if raw.PriceCents != nil {
-		if err := json.Unmarshal(raw.PriceCents, &in.PriceCents); err != nil || in.PriceCents == nil {
-			return in, ErrInvalidPrice
+	if requestFields.PriceCents != nil {
+		if err := json.Unmarshal(requestFields.PriceCents, &input.PriceCents); err != nil || input.PriceCents == nil {
+			return input, ErrInvalidPrice
 		}
 	}
-	if raw.DurationMinutes != nil {
-		in.SetDuration = true
-		if err := json.Unmarshal(raw.DurationMinutes, &in.DurationMinutes); err != nil {
-			return in, ErrInvalidDuration
+	if requestFields.DurationMinutes != nil {
+		input.SetDuration = true
+		if err := json.Unmarshal(requestFields.DurationMinutes, &input.DurationMinutes); err != nil {
+			return input, ErrInvalidDuration
 		}
 	}
-	return in, nil
-}
-func (h *Handler) PatchService(c *gin.Context, id uuid.UUID) {
-	p, ok := auth.PrincipalFromContext(c)
-	if !ok {
-		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
-		return
-	}
-	in, err := decodePatch(c)
-	if err != nil {
-		writeServiceError(c, err)
-		return
-	}
-	record, err := h.service.Update(c.Request.Context(), p, id.String(), in)
-	if err != nil {
-		writeServiceError(c, err)
-		return
-	}
-	c.JSON(200, record)
+	return input, nil
 }
 
-func (h *Handler) PutServiceStatus(c *gin.Context, id uuid.UUID) {
-	p, ok := auth.PrincipalFromContext(c)
+func (handler *Handler) PatchService(httpContext *gin.Context, offeringID uuid.UUID) {
+	principal, ok := auth.PrincipalFromContext(httpContext)
 	if !ok {
-		writeError(c, 401, "authentication_required", "Entre novamente para continuar.")
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
+		return
+	}
+	input, err := decodePatch(httpContext)
+	if err != nil {
+		writeServiceError(httpContext, err)
+		return
+	}
+	record, err := handler.service.Update(httpContext.Request.Context(), principal, offeringID.String(), input)
+	if err != nil {
+		writeServiceError(httpContext, err)
+		return
+	}
+	httpContext.JSON(http.StatusOK, record)
+}
+
+func (handler *Handler) PutServiceStatus(httpContext *gin.Context, offeringID uuid.UUID) {
+	principal, ok := auth.PrincipalFromContext(httpContext)
+	if !ok {
+		writeError(httpContext, http.StatusUnauthorized, "authentication_required", "Entre novamente para continuar.")
 		return
 	}
 	var request struct {
 		Active *bool `json:"active"`
 	}
-	if err := decodeRequest(c, &request); err != nil {
-		writeServiceError(c, err)
+	if err := decodeRequest(httpContext, &request); err != nil {
+		writeServiceError(httpContext, err)
 		return
 	}
-	record, err := h.service.SetStatus(c.Request.Context(), p, id.String(), request.Active)
+	record, err := handler.service.SetStatus(httpContext.Request.Context(), principal, offeringID.String(), request.Active)
 	if err != nil {
-		writeServiceError(c, err)
+		writeServiceError(httpContext, err)
 		return
 	}
-	c.JSON(200, record)
+	httpContext.JSON(http.StatusOK, record)
 }
