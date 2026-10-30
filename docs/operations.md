@@ -57,6 +57,11 @@
 
 ### Validação local do onboarding pela interface
 
+O [checklist de validação local](local-validation-checklist.md) consolida as
+funcionalidades entregues em fluxos sequenciais, incluindo preparação do ambiente,
+dados fictícios, resultados esperados, falhas, isolamento e verificações automatizadas.
+Os roteiros abaixo detalham os procedimentos por área.
+
 - Com `make dev` em execução e as migrations aplicadas, abra `https://localhost:8443` e siga da home para `/cadastro`.
 - Use um e-mail fictício exclusivo, confira as quatro opções brasileiras do seletor de fuso e confirme que um fuso de dispositivo fora da lista usa `America/Sao_Paulo`. Confira a mensagem no Mailpit e abra o link de confirmação no navegador. A página remove o token do endereço antes de chamar a API; a confirmação cria a sessão e leva o proprietário a `/painel`. Sem logo, essa entrada deve encaminhar para Configurações; depois de enviar o logo, novo login ou acesso a `/painel` deve encaminhar para Profissionais. Simule uma falha temporária na consulta de configurações e confirme a mensagem de erro, a nova tentativa e a permanência da sessão.
 - No painel, abra “Profissionais”, cadastre um nome, e-mail fictício exclusivo e senha temporária de teste. A resposta deve aparecer na lista, e o campo da senha deve ser limpo; guarde a senha somente para o login de teste, sem colocá-la em logs, URLs ou capturas públicas. Se o trial estiver expirado, confirme que a lista continua visível e a interface explica o bloqueio de novos cadastros. Saia da sessão do proprietário, entre com o e-mail do profissional e a senha temporária; o login deve abrir `/testes` e exigir a troca da senha antes de liberar recursos de domínio. Confira que a senha temporária não funciona novamente após a troca.

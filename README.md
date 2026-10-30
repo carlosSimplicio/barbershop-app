@@ -201,6 +201,10 @@ O gate de pull request executa os testes unitários e a integração do backend.
 As verificações completas rodam na branch principal e podem ser executadas
 localmente antes de uma release.
 
+Para validar as funcionalidades entregues em sequência, siga o
+[checklist de validação local](docs/local-validation-checklist.md), organizado
+por fluxo, com preparação dos dados e resultados esperados.
+
 ## Estrutura
 
 ```text
