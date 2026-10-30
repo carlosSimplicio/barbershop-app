@@ -250,7 +250,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir que o proprietário cadastre profissional pela API com senha temporária e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [x] Reativar profissional pela API com senha temporária válida inclusive igual ao valor anterior, novo hash, troca obrigatória e invalidação de sessões/tokens anteriores.
-- [ ] Oferecer reativação com senha temporária pelo painel.
+- [x] Oferecer reativação com senha temporária pelo painel, inclusive reutilizando o valor anterior, sem expor a entrada nem afirmar credencial aplicada após consulta de resultado incerto.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
 - [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
 - [x] Estender a limitação progressiva à solicitação de recuperação por IP e e-mail normalizado.
@@ -265,7 +265,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Garantir ao proprietário administração completa apenas do próprio estabelecimento.
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.
 - [ ] Impedir profissional de acessar despesas, resultado geral ou dados financeiros de colegas.
-- [x] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado, com serialização contra login e troca obrigatória.
+- [x] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado, com serialização contra login e troca obrigatória, inclusive requisição autenticada antes de um ciclo de desativação/reativação.
 - [x] Criar componente reutilizável que decide o direito de escrita a partir do trial persistido, incluindo o início e excluindo o fim.
 - [x] Exigir esse direito de escrita na API de cadastro de profissionais.
 - [x] Informar `can_write` na listagem de profissionais pelo componente central, preservando leitura sem trial ativo e distinguindo falhas de infraestrutura.
@@ -318,7 +318,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
 - [x] Consultar individualmente e editar o nome de profissionais ativos e inativos pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e reconciliação de resultado incerto.
 - [x] Desativar profissionais pelo painel com confirmação de perda de acesso, envio único, sincronização de lista/editor e consulta após resultado incerto.
-- [ ] Reativar profissionais pelo painel.
+- [x] Reativar profissionais pelo painel com confirmação, senha temporária, conflito seguro, limpeza de entrada, coordenação e reconciliação do estado.
 - [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
@@ -532,7 +532,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário no cadastro autenticado de profissionais.
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário na listagem autenticada de profissionais.
 - [x] Validar tenant, papel do proprietário e perfil profissional na consulta individual, sem expor credenciais ou sessões.
-- [x] Validar tenant e papel na desativação e revogar o acesso sem destruir registros existentes.
+- [x] Validar tenant e papel na desativação e reativação e invalidar acessos anteriores sem destruir registros existentes.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.

@@ -87,14 +87,14 @@ func TestTemporaryPasswordChangeRevokesOldCredentialAndReissuesSession(t *testin
 	store := &sessionStoreStub{user: user}
 	service := testSessionService(store, false)
 
-	result, err := service.ChangeTemporaryPassword(context.Background(), Principal{UserID: user.ID}, "nova-senha-segura")
+	result, err := service.ChangeTemporaryPassword(context.Background(), sessionPrincipal(user), "nova-senha-segura")
 	if err != nil {
 		t.Fatalf("change temporary password: %v", err)
 	}
 	if !store.changed || store.expectedVersion != 3 || store.newPasswordHash != "new-password-hash" || store.newSessionID == "" || !store.newExpiresAt.Equal(testNow.Add(15*24*time.Hour)) {
 		t.Fatalf("unexpected persistence call: %#v", store)
 	}
-	if result.Principal.PasswordChangeRequired || result.AccessToken == "" || result.CSRFToken == "" {
+	if result.Principal.CredentialVersion != user.CredentialVersion+1 || result.Principal.PasswordChangeRequired || result.AccessToken == "" || result.CSRFToken == "" {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 }
@@ -103,7 +103,7 @@ func TestTemporaryPasswordChangeRejectsSamePassword(t *testing.T) {
 	user := validSessionUser()
 	user.PasswordChangeRequired = true
 	store := &sessionStoreStub{user: user}
-	_, err := testSessionService(store, true).ChangeTemporaryPassword(context.Background(), Principal{UserID: user.ID}, "senha-temporaria")
+	_, err := testSessionService(store, true).ChangeTemporaryPassword(context.Background(), sessionPrincipal(user), "senha-temporaria")
 	if !errors.Is(err, ErrPasswordUnchanged) || store.changed {
 		t.Fatalf("error = %v, changed = %v", err, store.changed)
 	}
@@ -129,5 +129,33 @@ func validSessionUser() User {
 		ID: "018f47d2-e886-7f1c-8e8d-8b38eaf16463", EstablishmentID: "018f47d2-e886-7f1c-8e8d-8b38eaf16464",
 		Email: "user@example.com", NormalizedEmail: "user@example.com", Role: "professional", Active: true,
 		EmailConfirmed: true, CredentialVersion: 3, PasswordHash: "temporary-password-hash",
+	}
+}
+
+func sessionPrincipal(user User) Principal {
+	return Principal{UserID: user.ID, EstablishmentID: user.EstablishmentID, Role: user.Role, Email: user.Email, PasswordChangeRequired: user.PasswordChangeRequired, CredentialVersion: user.CredentialVersion}
+}
+func TestTemporaryPasswordChangeRejectsDifferentAuthenticatedIdentity(t *testing.T) {
+	user := validSessionUser()
+	user.PasswordChangeRequired = true
+	for _, test := range []struct {
+		name   string
+		change func(*Principal)
+	}{
+		{"user", func(principal *Principal) { principal.UserID = "other-user" }},
+		{"tenant", func(principal *Principal) { principal.EstablishmentID = "other-tenant" }},
+		{"role", func(principal *Principal) { principal.Role = "owner" }},
+		{"credential version", func(principal *Principal) { principal.CredentialVersion-- }},
+		{"password state", func(principal *Principal) { principal.PasswordChangeRequired = false }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := &sessionStoreStub{user: user}
+			principal := sessionPrincipal(user)
+			test.change(&principal)
+			result, err := testSessionService(store, false).ChangeTemporaryPassword(context.Background(), principal, "nova-senha-segura")
+			if !errors.Is(err, ErrPasswordChangeDenied) || store.changed || result.AccessToken != "" || result.CSRFToken != "" {
+				t.Fatal("password change adopted identity from a newer lookup")
+			}
+		})
 	}
 }

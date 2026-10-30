@@ -147,7 +147,7 @@ func (middleware *Middleware) authenticate(httpContext *gin.Context) (Principal,
 	}
 	return Principal{
 		UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
-		Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
+		Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired, CredentialVersion: claims.CredentialVersion,
 	}, true
 }
 

@@ -36,6 +36,7 @@ type Principal struct {
 	Email                  string
 	Role                   string
 	PasswordChangeRequired bool
+	CredentialVersion      int64
 }
 
 type LoginInput struct {
@@ -141,7 +142,7 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 	return LoginResult{
 		Principal: Principal{
 			UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
-			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
+			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired, CredentialVersion: user.CredentialVersion,
 		},
 		AccessToken: accessToken, CSRFToken: csrfToken,
 	}, nil

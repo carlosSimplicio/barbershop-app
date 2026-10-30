@@ -10,6 +10,9 @@ export type CreateProfessionalRequest =
 export type UpdateProfessionalRequest =
   components["schemas"]["UpdateProfessionalRequest"];
 
+export type ReactivateProfessionalRequest =
+  components["schemas"]["ReactivateProfessionalRequest"];
+
 export function createProfessional(
   request: CreateProfessionalRequest,
   signal?: AbortSignal,
@@ -69,5 +72,22 @@ export function deactivateProfessional(id: string, signal?: AbortSignal) {
   return apiFetch<Professional>(
     `/api/v1/professionals/${encodeURIComponent(id)}/deactivation`,
     { method: "POST", signal, csrf: true },
+  );
+}
+
+export function reactivateProfessional(
+  id: string,
+  request: ReactivateProfessionalRequest,
+  signal?: AbortSignal,
+) {
+  return apiFetch<Professional>(
+    `/api/v1/professionals/${encodeURIComponent(id)}/reactivation`,
+    {
+      method: "POST",
+      signal,
+      csrf: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    },
   );
 }

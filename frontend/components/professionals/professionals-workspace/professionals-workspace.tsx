@@ -9,6 +9,7 @@ import {
   type Professional,
 } from "@/lib/professionals/professionals-api";
 import { isProfessionalList } from "@/lib/professionals/professional-operation-result";
+import { ProfessionalReactivationPanel } from "../professional-reactivation-panel/professional-reactivation-panel";
 import { ProfessionalDeactivationPanel } from "../professional-deactivation-panel/professional-deactivation-panel";
 import { CreateProfessionalForm } from "../create-professional-form/create-professional-form";
 import { EditProfessionalPanel } from "../edit-professional-panel/edit-professional-panel";
@@ -17,6 +18,11 @@ import {
   type ProfessionalsView,
 } from "../professionals-list-panel/professionals-list-panel";
 import styles from "./professionals-workspace.module.css";
+
+type ProfessionalStateAction = {
+  kind: "deactivation" | "reactivation";
+  record: Professional;
+};
 
 export function ProfessionalsWorkspace() {
   const { state } = useAuthSession();
@@ -36,7 +42,8 @@ function ProfessionalsRequest() {
   const [pendingOperations, setPendingOperations] = useState(0);
   const [reconciling, setReconciling] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
-  const [deactivating, setDeactivating] = useState<Professional | null>(null);
+  const [stateAction, setStateAction] =
+    useState<ProfessionalStateAction | null>(null);
   const [editorVersion, setEditorVersion] = useState(0);
   const statusOrigin = useRef<HTMLButtonElement | null>(null);
   const restoreStatusFocus = useRef(false);
@@ -75,13 +82,13 @@ function ProfessionalsRequest() {
     );
   }, []);
   useEffect(() => {
-    if (!deactivating && restoreStatusFocus.current) {
+    if (!stateAction && restoreStatusFocus.current) {
       restoreStatusFocus.current = false;
       if (statusOrigin.current?.isConnected && !statusOrigin.current.disabled)
         statusOrigin.current.focus();
       else list.current?.focus();
     }
-  }, [deactivating, reconciling]);
+  }, [stateAction, reconciling]);
   useEffect(() => {
     if (!selected && restoreEditorFocus.current) {
       restoreEditorFocus.current = false;
@@ -143,13 +150,27 @@ function ProfessionalsRequest() {
     setSelected(null);
     setReconciling(false);
   }
+  function confirmStateRecord(record: Professional) {
+    acceptRecord(record);
+    setStateAction((current) =>
+      current && current.record.id === record.id
+        ? { ...current, record }
+        : current,
+    );
+    if (record.id === selected) setEditorVersion((value) => value + 1);
+  }
+  function closeStateAction() {
+    restoreStatusFocus.current = true;
+    setStateAction(null);
+    setReconciling(false);
+  }
   if (view.status === "unauthorized") return null;
   const canWrite =
     !busy && !readOnly && view.status === "success" && view.page.can_write;
   return (
     <div className={styles.workspace}>
       <CreateProfessionalForm
-        canWrite={canWrite && !deactivating}
+        canWrite={canWrite && !stateAction}
         onCreated={() => {
           setOffset(FIRST_PAGE_OFFSET);
           refresh();
@@ -168,8 +189,8 @@ function ProfessionalsRequest() {
         <EditProfessionalPanel
           key={selected}
           professionalId={selected}
-          canWrite={canWrite && !deactivating}
-          blocked={busy || !!deactivating}
+          canWrite={canWrite && !stateAction}
+          blocked={busy || !!stateAction}
           reloadVersion={editorVersion}
           onRecordConfirmed={acceptRecord}
           onClose={closeEditor}
@@ -179,42 +200,61 @@ function ProfessionalsRequest() {
           onReconciliationChange={setReconciling}
         />
       ) : null}
-      {deactivating ? (
+      {stateAction?.kind === "deactivation" ? (
         <ProfessionalDeactivationPanel
-          key={`deactivation:${deactivating.id}`}
-          record={deactivating}
+          key={`deactivation:${stateAction.record.id}`}
+          record={stateAction.record}
           canWrite={canWrite}
           onBusyChange={trackOperation}
           onReconciliationChange={setReconciling}
           onReadOnly={onReadOnly}
           onUnauthorized={onUnauthorized}
-          onRecordConfirmed={(record) => {
-            acceptRecord(record);
-            if (record.id === selected) setEditorVersion((value) => value + 1);
-          }}
-          onClose={() => {
-            restoreStatusFocus.current = true;
-            setDeactivating(null);
-            setReconciling(false);
-          }}
+          onRecordConfirmed={confirmStateRecord}
+          onClose={closeStateAction}
+        />
+      ) : null}
+      {stateAction?.kind === "reactivation" ? (
+        <ProfessionalReactivationPanel
+          key={`reactivation:${stateAction.record.id}`}
+          record={stateAction.record}
+          canWrite={canWrite}
+          onBusyChange={trackOperation}
+          onReconciliationChange={setReconciling}
+          onReadOnly={onReadOnly}
+          onUnauthorized={onUnauthorized}
+          onRecordConfirmed={confirmStateRecord}
+          onClose={closeStateAction}
         />
       ) : null}
       <ProfessionalsListPanel
         view={view}
-        busy={busy || !!deactivating}
+        busy={busy || !!stateAction}
         renderActions={(record) =>
           record.active ? (
             <Button
-              disabled={!canWrite || !!deactivating}
+              key="deactivation"
+              disabled={!canWrite || !!stateAction}
               aria-label={`Desativar ${record.name}`}
               onClick={(event) => {
                 statusOrigin.current = event.currentTarget;
-                setDeactivating(record);
+                setStateAction({ kind: "deactivation", record });
               }}
             >
               Desativar
             </Button>
-          ) : null
+          ) : (
+            <Button
+              key="reactivation"
+              disabled={!canWrite || !!stateAction}
+              aria-label={`Reativar ${record.name}`}
+              onClick={(event) => {
+                statusOrigin.current = event.currentTarget;
+                setStateAction({ kind: "reactivation", record });
+              }}
+            >
+              Reativar
+            </Button>
+          )
         }
         listRef={list}
         onRefresh={refresh}

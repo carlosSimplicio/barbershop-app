@@ -10,7 +10,12 @@ type ProfessionalOperationResult =
   | { state: "validation"; fields: ProfessionalFieldErrors }
   | {
       state:
-        "unauthorized" | "missing" | "read_only" | "uncertain" | "rejected";
+        | "unauthorized"
+        | "missing"
+        | "read_only"
+        | "uncertain"
+        | "rejected"
+        | "already_active";
     };
 
 export function isProfessional(value: unknown): value is Professional {
@@ -51,6 +56,11 @@ export function classifyProfessionalOperation(
     return { state: "confirmed", record: result.data };
   if (result.state === "error" && result.status < 500) {
     if (result.error.code === "read_only") return { state: "read_only" };
+    if (
+      result.status === 409 &&
+      result.error.code === "professional_already_active"
+    )
+      return { state: "already_active" };
     const fields = professionalFieldErrors(result.error.fields);
     if (Object.keys(fields).length) return { state: "validation", fields };
   }

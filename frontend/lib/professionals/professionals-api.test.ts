@@ -134,3 +134,37 @@ test("desativa por POST sem corpo com CSRF e cancelamento", async () => {
   );
   document.cookie = "__Secure-barbershop_csrf=; Max-Age=0";
 });
+
+test("reativa com senha somente no corpo, CSRF e cancelamento", async () => {
+  const { reactivateProfessional } = await import("./professionals-api");
+  document.cookie =
+    "__Secure-barbershop_csrf=csrf-test-token; Secure; SameSite=Strict; Path=/";
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        id: "id",
+        name: "Ana",
+        email: "ana@example.test",
+        active: true,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  );
+  const controller = new AbortController();
+  await reactivateProfessional(
+    "id",
+    { temporary_password: "senha-temporaria" },
+    controller.signal,
+  );
+  const [path, init] = fetchMock.mock.calls[0];
+  expect(path).toBe("/api/v1/professionals/id/reactivation");
+  expect(init?.method).toBe("POST");
+  expect(init?.signal).toBe(controller.signal);
+  expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe(
+    "csrf-test-token",
+  );
+  expect(JSON.parse(String(init?.body))).toEqual({
+    temporary_password: "senha-temporaria",
+  });
+  document.cookie = "__Secure-barbershop_csrf=; Max-Age=0";
+});
