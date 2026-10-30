@@ -106,3 +106,31 @@ test("consulta e edita nome com cancelamento e CSRF somente na escrita", async (
   expect(JSON.parse(String(patchInit?.body))).toEqual({ name: "Ana" });
   document.cookie = "__Secure-barbershop_csrf=; Max-Age=0";
 });
+
+test("desativa por POST sem corpo com CSRF e cancelamento", async () => {
+  const { deactivateProfessional } = await import("./professionals-api");
+  document.cookie =
+    "__Secure-barbershop_csrf=csrf-test-token; Secure; SameSite=Strict; Path=/";
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        id: "id",
+        name: "Ana",
+        email: "ana@example.test",
+        active: false,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  );
+  const controller = new AbortController();
+  await deactivateProfessional("id", controller.signal);
+  const [path, init] = fetchMock.mock.calls[0];
+  expect(path).toBe("/api/v1/professionals/id/deactivation");
+  expect(init?.method).toBe("POST");
+  expect(init?.body).toBeUndefined();
+  expect(init?.signal).toBe(controller.signal);
+  expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe(
+    "csrf-test-token",
+  );
+  document.cookie = "__Secure-barbershop_csrf=; Max-Age=0";
+});

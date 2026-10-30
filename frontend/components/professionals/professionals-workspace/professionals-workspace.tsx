@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Feedback } from "@/components/ui";
+import { Button, Feedback } from "@/components/ui";
 import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
   listProfessionals,
   type Professional,
 } from "@/lib/professionals/professionals-api";
 import { isProfessionalList } from "@/lib/professionals/professional-operation-result";
+import { ProfessionalDeactivationPanel } from "../professional-deactivation-panel/professional-deactivation-panel";
 import { CreateProfessionalForm } from "../create-professional-form/create-professional-form";
 import { EditProfessionalPanel } from "../edit-professional-panel/edit-professional-panel";
 import {
@@ -35,6 +36,10 @@ function ProfessionalsRequest() {
   const [pendingOperations, setPendingOperations] = useState(0);
   const [reconciling, setReconciling] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [deactivating, setDeactivating] = useState<Professional | null>(null);
+  const [editorVersion, setEditorVersion] = useState(0);
+  const statusOrigin = useRef<HTMLButtonElement | null>(null);
+  const restoreStatusFocus = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const restoreEditorFocus = useRef(false);
@@ -69,6 +74,14 @@ function ProfessionalsRequest() {
         : current,
     );
   }, []);
+  useEffect(() => {
+    if (!deactivating && restoreStatusFocus.current) {
+      restoreStatusFocus.current = false;
+      if (statusOrigin.current?.isConnected && !statusOrigin.current.disabled)
+        statusOrigin.current.focus();
+      else list.current?.focus();
+    }
+  }, [deactivating, reconciling]);
   useEffect(() => {
     if (!selected && restoreEditorFocus.current) {
       restoreEditorFocus.current = false;
@@ -136,7 +149,7 @@ function ProfessionalsRequest() {
   return (
     <div className={styles.workspace}>
       <CreateProfessionalForm
-        canWrite={canWrite}
+        canWrite={canWrite && !deactivating}
         onCreated={() => {
           setOffset(FIRST_PAGE_OFFSET);
           refresh();
@@ -155,8 +168,9 @@ function ProfessionalsRequest() {
         <EditProfessionalPanel
           key={selected}
           professionalId={selected}
-          canWrite={canWrite}
-          blocked={busy}
+          canWrite={canWrite && !deactivating}
+          blocked={busy || !!deactivating}
+          reloadVersion={editorVersion}
           onRecordConfirmed={acceptRecord}
           onClose={closeEditor}
           onReadOnly={onReadOnly}
@@ -165,9 +179,43 @@ function ProfessionalsRequest() {
           onReconciliationChange={setReconciling}
         />
       ) : null}
+      {deactivating ? (
+        <ProfessionalDeactivationPanel
+          key={`deactivation:${deactivating.id}`}
+          record={deactivating}
+          canWrite={canWrite}
+          onBusyChange={trackOperation}
+          onReconciliationChange={setReconciling}
+          onReadOnly={onReadOnly}
+          onUnauthorized={onUnauthorized}
+          onRecordConfirmed={(record) => {
+            acceptRecord(record);
+            if (record.id === selected) setEditorVersion((value) => value + 1);
+          }}
+          onClose={() => {
+            restoreStatusFocus.current = true;
+            setDeactivating(null);
+            setReconciling(false);
+          }}
+        />
+      ) : null}
       <ProfessionalsListPanel
         view={view}
-        busy={busy}
+        busy={busy || !!deactivating}
+        renderActions={(record) =>
+          record.active ? (
+            <Button
+              disabled={!canWrite || !!deactivating}
+              aria-label={`Desativar ${record.name}`}
+              onClick={(event) => {
+                statusOrigin.current = event.currentTarget;
+                setDeactivating(record);
+              }}
+            >
+              Desativar
+            </Button>
+          ) : null
+        }
         listRef={list}
         onRefresh={refresh}
         onPageChange={(next) => {

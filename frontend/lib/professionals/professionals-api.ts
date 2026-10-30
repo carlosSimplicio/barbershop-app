@@ -64,3 +64,10 @@ export function updateProfessional(
     },
   );
 }
+
+export function deactivateProfessional(id: string, signal?: AbortSignal) {
+  return apiFetch<Professional>(
+    `/api/v1/professionals/${encodeURIComponent(id)}/deactivation`,
+    { method: "POST", signal, csrf: true },
+  );
+}

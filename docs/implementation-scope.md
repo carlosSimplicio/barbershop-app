@@ -317,7 +317,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Desativar profissionais pela API atomicamente com revogação de acesso e repetição segura.
 - [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
 - [x] Consultar individualmente e editar o nome de profissionais ativos e inativos pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e reconciliação de resultado incerto.
-- [ ] Ativar e desativar profissionais pelo painel.
+- [x] Desativar profissionais pelo painel com confirmação de perda de acesso, envio único, sincronização de lista/editor e consulta após resultado incerto.
+- [ ] Reativar profissionais pelo painel.
 - [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
