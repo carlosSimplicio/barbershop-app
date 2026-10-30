@@ -58,6 +58,7 @@
 - Use `httptest` com TLS para preservar o comportamento dos cookies `Secure`. Substitua somente dependências externas ao backend, como o transporte de e-mail, por fakes locais controlados; não substitua banco, stores ou casos de uso nos testes de integração.
 - Mantenha a suíte de integração sob a build tag `integration`. Testes unitários não exigem Docker; a suíte de integração e o gate de pull request exigem Docker disponível.
 - Não adote testes E2E nem integração de frontend sem nova decisão. Evite duplicar nos testes de integração todas as combinações já protegidas unitariamente; priorize jornadas reais, contratos entre camadas, persistência, autorização e invariantes transacionais.
+- Nos testes de pré-visualização de logos, aguarde a chamada de `URL.revokeObjectURL` com `waitFor`: a remoção da imagem no DOM pode anteceder a limpeza do efeito React que libera a URL `blob:`. A verificação continua exigindo a liberação da URL correta, sem atrasos fixos ou repetição automática do teste.
 
 ## Banco de dados
 
