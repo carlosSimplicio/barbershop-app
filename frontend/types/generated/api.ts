@@ -264,6 +264,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/professionals/{professional_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        /** Consulta profissional ativo ou inativo do estabelecimento do proprietário */
+        get: operations["getProfessional"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Altera somente o nome do profissional ativo ou inativo */
+        patch: operations["patchProfessional"];
+        trace?: never;
+    };
+    "/professionals/{professional_id}/deactivation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desativa profissional e revoga seu acesso atomicamente
+         * @description Sem corpo. Repetir para inativo retorna o registro sem novo incremento de versão ou alteração de credencial. Preserva o perfil e suas referências.
+         */
+        post: operations["postProfessionalDeactivation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/professionals/{professional_id}/reactivation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reativa profissional com senha temporária e troca obrigatória
+         * @description Aceita senha temporária válida inclusive igual à anterior, gera novo hash e invalida sessões e tokens antigos. Não autentica o profissional. Alvo já ativo retorna conflito sem efeitos.
+         */
+        post: operations["postProfessionalReactivation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/services": {
         parameters: {
             query?: never;
@@ -391,6 +455,14 @@ export interface components {
             /** @description Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization. */
             temporary_password: string;
         };
+        ReactivateProfessionalRequest: {
+            /** @description Sem espaços ou caracteres proibidos, sem normalização. Pode repetir o valor anterior; não é retornada nem recuperável. */
+            temporary_password: string;
+        };
+        UpdateProfessionalRequest: {
+            /** @description Nome obrigatório, sem NUL; remove espaços nas extremidades. Omitido, nulo ou vazio é recusado. */
+            name: string;
+        };
         ProfessionalResponse: {
             /** Format: uuid */
             id: string;
@@ -404,6 +476,8 @@ export interface components {
             limit: number;
             offset: number;
             has_more: boolean;
+            /** @description Direito de escrita resolvido centralmente; leitura permanece disponível sem trial ativo. */
+            can_write: boolean;
         };
         PasswordRecoveryRequest: {
             /** Format: email */
@@ -1119,6 +1193,163 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cadastro do profissional, disponível inclusive sem trial ativo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Profissional inexistente ou de outro estabelecimento */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    patchProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfessionalRequest"];
+            };
+        };
+        responses: {
+            /** @description Registro persistido; identidade, e-mail, estado e credenciais preservados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Profissional inexistente ou de outro estabelecimento */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    postProfessionalDeactivation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Profissional inativo, com acesso revogado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Profissional inexistente ou de outro estabelecimento */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    postProfessionalReactivation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateProfessionalRequest"];
+            };
+        };
+        responses: {
+            /** @description Profissional reativado com troca obrigatória no próximo login */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Profissional inexistente ou de outro estabelecimento */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description professional_already_active; credencial, versão e sessões permanecem inalteradas */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             500: components["responses"]["InternalServerError"];
         };
     };

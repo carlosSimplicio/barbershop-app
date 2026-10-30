@@ -7,9 +7,19 @@ export type ProfessionalList =
 export type CreateProfessionalRequest =
   components["schemas"]["CreateProfessionalRequest"];
 
-export function createProfessional(request: CreateProfessionalRequest) {
+export type UpdateProfessionalRequest =
+  components["schemas"]["UpdateProfessionalRequest"];
+
+export type ReactivateProfessionalRequest =
+  components["schemas"]["ReactivateProfessionalRequest"];
+
+export function createProfessional(
+  request: CreateProfessionalRequest,
+  signal?: AbortSignal,
+) {
   return apiFetch<Professional>("/api/v1/professionals", {
     method: "POST",
+    signal,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
     csrf: true,
@@ -33,4 +43,51 @@ export function listProfessionals({
   return apiFetch<ProfessionalList>(`/api/v1/professionals?${query}`, {
     signal,
   });
+}
+
+export function getProfessional(id: string, signal?: AbortSignal) {
+  return apiFetch<Professional>(
+    `/api/v1/professionals/${encodeURIComponent(id)}`,
+    { signal },
+  );
+}
+export function updateProfessional(
+  id: string,
+  request: UpdateProfessionalRequest,
+  signal?: AbortSignal,
+) {
+  return apiFetch<Professional>(
+    `/api/v1/professionals/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      signal,
+      csrf: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function deactivateProfessional(id: string, signal?: AbortSignal) {
+  return apiFetch<Professional>(
+    `/api/v1/professionals/${encodeURIComponent(id)}/deactivation`,
+    { method: "POST", signal, csrf: true },
+  );
+}
+
+export function reactivateProfessional(
+  id: string,
+  request: ReactivateProfessionalRequest,
+  signal?: AbortSignal,
+) {
+  return apiFetch<Professional>(
+    `/api/v1/professionals/${encodeURIComponent(id)}/reactivation`,
+    {
+      method: "POST",
+      signal,
+      csrf: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    },
+  );
 }

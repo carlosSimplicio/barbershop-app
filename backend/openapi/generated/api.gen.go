@@ -254,10 +254,12 @@ type PasswordRecoveryVerifyRequest struct {
 
 // ProfessionalListResponse defines model for ProfessionalListResponse.
 type ProfessionalListResponse struct {
-	HasMore bool                   `json:"has_more"`
-	Items   []ProfessionalResponse `json:"items"`
-	Limit   int                    `json:"limit"`
-	Offset  int                    `json:"offset"`
+	// CanWrite Direito de escrita resolvido centralmente; leitura permanece disponível sem trial ativo.
+	CanWrite bool                   `json:"can_write"`
+	HasMore  bool                   `json:"has_more"`
+	Items    []ProfessionalResponse `json:"items"`
+	Limit    int                    `json:"limit"`
+	Offset   int                    `json:"offset"`
 }
 
 // ProfessionalResponse defines model for ProfessionalResponse.
@@ -277,6 +279,12 @@ type PublicEstablishmentProfileResponse struct {
 	Name         string                     `json:"name"`
 	Slug         string                     `json:"slug"`
 	SocialLinks  *[]EstablishmentSocialLink `json:"social_links,omitempty"`
+}
+
+// ReactivateProfessionalRequest defines model for ReactivateProfessionalRequest.
+type ReactivateProfessionalRequest struct {
+	// TemporaryPassword Sem espaços ou caracteres proibidos, sem normalização. Pode repetir o valor anterior; não é retornada nem recuperável.
+	TemporaryPassword string `json:"temporary_password"`
 }
 
 // RegisterRequest defines model for RegisterRequest.
@@ -315,6 +323,12 @@ type ServiceStatusRequest struct {
 
 // TrialStatus defines model for TrialStatus.
 type TrialStatus string
+
+// UpdateProfessionalRequest defines model for UpdateProfessionalRequest.
+type UpdateProfessionalRequest struct {
+	// Name Nome obrigatório, sem NUL; remove espaços nas extremidades. Omitido, nulo ou vazio é recusado.
+	Name string `json:"name"`
+}
 
 // UpdateServiceRequest defines model for UpdateServiceRequest.
 type UpdateServiceRequest struct {
@@ -401,6 +415,12 @@ type PatchEstablishmentSettingsJSONRequestBody = EstablishmentSettingsPatchReque
 // PostProfessionalsJSONRequestBody defines body for PostProfessionals for application/json ContentType.
 type PostProfessionalsJSONRequestBody = CreateProfessionalRequest
 
+// PatchProfessionalJSONRequestBody defines body for PatchProfessional for application/json ContentType.
+type PatchProfessionalJSONRequestBody = UpdateProfessionalRequest
+
+// PostProfessionalReactivationJSONRequestBody defines body for PostProfessionalReactivation for application/json ContentType.
+type PostProfessionalReactivationJSONRequestBody = ReactivateProfessionalRequest
+
 // PostServicesJSONRequestBody defines body for PostServices for application/json ContentType.
 type PostServicesJSONRequestBody = CreateServiceRequest
 
@@ -460,6 +480,18 @@ type ServerInterface interface {
 	// PostProfessionals Cadastra um profissional no estabelecimento do proprietário
 	// (POST /professionals)
 	PostProfessionals(c *gin.Context)
+	// GetProfessional Consulta profissional ativo ou inativo do estabelecimento do proprietário
+	// (GET /professionals/{professional_id})
+	GetProfessional(c *gin.Context, professionalId openapi_types.UUID)
+	// PatchProfessional Altera somente o nome do profissional ativo ou inativo
+	// (PATCH /professionals/{professional_id})
+	PatchProfessional(c *gin.Context, professionalId openapi_types.UUID)
+	// PostProfessionalDeactivation Desativa profissional e revoga seu acesso atomicamente
+	// (POST /professionals/{professional_id}/deactivation)
+	PostProfessionalDeactivation(c *gin.Context, professionalId openapi_types.UUID)
+	// PostProfessionalReactivation Reativa profissional com senha temporária e troca obrigatória
+	// (POST /professionals/{professional_id}/reactivation)
+	PostProfessionalReactivation(c *gin.Context, professionalId openapi_types.UUID)
 	// GetPublicEstablishment Consulta o perfil informativo de um estabelecimento publicável
 	// (GET /public/establishments/{slug})
 	GetPublicEstablishment(c *gin.Context, slug string)
@@ -722,6 +754,106 @@ func (siw *ServerInterfaceWrapper) PostProfessionals(c *gin.Context) {
 	siw.Handler.PostProfessionals(c)
 }
 
+// GetProfessional operation middleware
+func (siw *ServerInterfaceWrapper) GetProfessional(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetProfessional(c, professionalId)
+}
+
+// PatchProfessional operation middleware
+func (siw *ServerInterfaceWrapper) PatchProfessional(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PatchProfessional(c, professionalId)
+}
+
+// PostProfessionalDeactivation operation middleware
+func (siw *ServerInterfaceWrapper) PostProfessionalDeactivation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostProfessionalDeactivation(c, professionalId)
+}
+
+// PostProfessionalReactivation operation middleware
+func (siw *ServerInterfaceWrapper) PostProfessionalReactivation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostProfessionalReactivation(c, professionalId)
+}
+
 // GetPublicEstablishment operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicEstablishment(c *gin.Context) {
 
@@ -963,6 +1095,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/public/establishments/:slug", wrapper.GetPublicEstablishment)
 	router.GET(options.BaseURL+"/professionals", wrapper.GetProfessionals)
 	router.POST(options.BaseURL+"/professionals", wrapper.PostProfessionals)
+	router.GET(options.BaseURL+"/professionals/:professional_id", wrapper.GetProfessional)
+	router.PATCH(options.BaseURL+"/professionals/:professional_id", wrapper.PatchProfessional)
+	router.POST(options.BaseURL+"/professionals/:professional_id/deactivation", wrapper.PostProfessionalDeactivation)
+	router.POST(options.BaseURL+"/professionals/:professional_id/reactivation", wrapper.PostProfessionalReactivation)
 	router.GET(options.BaseURL+"/services", wrapper.GetServices)
 	router.POST(options.BaseURL+"/services", wrapper.PostServices)
 	router.GET(options.BaseURL+"/services/:service_id", wrapper.GetService)

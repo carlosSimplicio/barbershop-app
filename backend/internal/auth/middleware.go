@@ -51,6 +51,7 @@ var csrfProtectedPaths = []pathRule{
 	{path: "/api/v1/establishment/settings"},
 	{path: "/api/v1/establishment/logo"},
 	{path: "/api/v1/professionals"},
+	{pattern: regexp.MustCompile(`^/api/v1/professionals/[^/]+(?:/(?:deactivation|reactivation))?$`)},
 }
 
 type AccessTokenVerifier interface {
@@ -146,7 +147,7 @@ func (middleware *Middleware) authenticate(httpContext *gin.Context) (Principal,
 	}
 	return Principal{
 		UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
-		Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
+		Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired, CredentialVersion: claims.CredentialVersion,
 	}, true
 }
 

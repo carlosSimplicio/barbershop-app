@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/entitlements"
@@ -27,8 +28,8 @@ func TestListProfessionalsLimitsPageAndDerivesTenantFromOwner(t *testing.T) {
 	if store.establishmentID != establishmentID || store.limit != 3 || store.offset != 3 {
 		t.Fatalf("query tenant=%q limit=%d offset=%d", store.establishmentID, store.limit, store.offset)
 	}
-	if writes.establishmentID != "" {
-		t.Fatal("read unexpectedly checked write entitlement")
+	if writes.establishmentID != establishmentID {
+		t.Fatal("read did not resolve write entitlement")
 	}
 }
 
@@ -83,4 +84,43 @@ func (stub *listStoreStub) List(_ context.Context, establishmentID string, limit
 	stub.limit = limit
 	stub.offset = offset
 	return stub.items, nil
+}
+
+func TestListProfessionalsDistinguishesReadOnlyFromInfrastructureFailure(t *testing.T) {
+	infrastructureErr := errors.New("entitlements unavailable")
+	for _, test := range []struct {
+		name     string
+		writeErr error
+		wantErr  error
+	}{
+		{name: "active"}, {name: "read only", writeErr: entitlements.ErrReadOnly},
+		{name: "infrastructure", writeErr: infrastructureErr, wantErr: infrastructureErr},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			service := NewService(&listStoreStub{}, &passwordHasherStub{}, &writeEntitlementsStub{err: test.writeErr})
+			result, err := service.List(context.Background(), auth.Principal{Role: "owner", EstablishmentID: establishmentID}, 20, 0)
+			if err == nil && result.CanWrite != (test.writeErr == nil) {
+				t.Fatalf("can write = %v", result.CanWrite)
+			}
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("error = %v, want %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func (*listStoreStub) Get(context.Context, string, string) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*listStoreStub) UpdateName(context.Context, string, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*listStoreStub) Deactivate(context.Context, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*listStoreStub) Reactivate(context.Context, string, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
 }

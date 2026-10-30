@@ -234,6 +234,17 @@ func (q *Queries) GetAuthUserByNormalizedEmail(ctx context.Context, normalizedEm
 	return i, err
 }
 
+const lockAuthSessionUser = `-- name: LockAuthSessionUser :one
+SELECT id FROM users WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockAuthSessionUser(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, lockAuthSessionUser, id)
+	var id_2 pgtype.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const revokeAllUserSessions = `-- name: RevokeAllUserSessions :exec
 UPDATE auth_sessions
 SET revoked_at = COALESCE(revoked_at, $2),

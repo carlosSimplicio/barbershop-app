@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	db "barbershop-app/backend/db/generated"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,4 +82,145 @@ func (store *PostgresStore) List(ctx context.Context, establishmentID string, li
 		})
 	}
 	return items, nil
+}
+
+func (store *PostgresStore) Get(ctx context.Context, establishmentID, professionalID string) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	row, err := db.New(store.pool).GetProfessional(ctx, db.GetProfessionalParams{
+		UserID: pgtype.UUID{Bytes: professionalUUID, Valid: true}, EstablishmentID: pgtype.UUID{Bytes: tenant, Valid: true},
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("get professional: %w", err)
+	}
+	return Professional{ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active}, nil
+}
+
+func (store *PostgresStore) UpdateName(ctx context.Context, establishmentID, professionalID, name string, at time.Time) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	// Lock the user before the profile so RETURNING cannot combine a new name
+	// with an active state from before a concurrent state transition.
+	row, err := db.New(store.pool).UpdateProfessionalName(ctx, db.UpdateProfessionalNameParams{
+		ID: pgtype.UUID{Bytes: professionalUUID, Valid: true}, EstablishmentID: pgtype.UUID{Bytes: tenant, Valid: true}, Name: name, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true},
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("update professional name: %w", err)
+	}
+	return Professional{ID: uuid.UUID(row.UserID.Bytes).String(), Name: row.Name, Email: row.Email, Active: row.Active}, nil
+}
+
+func (store *PostgresStore) Deactivate(ctx context.Context, establishmentID, professionalID string, at time.Time) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	tenantID := pgtype.UUID{Bytes: tenant, Valid: true}
+	userID := pgtype.UUID{Bytes: professionalUUID, Valid: true}
+	transaction, err := store.pool.Begin(ctx)
+	if err != nil {
+		return Professional{}, fmt.Errorf("begin deactivation: %w", err)
+	}
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := db.New(transaction)
+	// Serialize state transitions with login and password changes before reading
+	// the profile or writing credentials and session revocations.
+	if _, err = queries.LockProfessionalUser(ctx, db.LockProfessionalUserParams{ID: userID, EstablishmentID: tenantID}); errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	} else if err != nil {
+		return Professional{}, fmt.Errorf("lock professional: %w", err)
+	}
+	row, err := queries.GetProfessional(ctx, db.GetProfessionalParams{UserID: userID, EstablishmentID: tenantID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("read professional for deactivation: %w", err)
+	}
+	if row.Active {
+		if err = queries.DeactivateProfessionalUser(ctx, db.DeactivateProfessionalUserParams{ID: userID, EstablishmentID: tenantID, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}}); err != nil {
+			return Professional{}, fmt.Errorf("deactivate professional: %w", err)
+		}
+		if err = queries.RevokeAllUserSessions(ctx, db.RevokeAllUserSessionsParams{UserID: userID, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}}); err != nil {
+			return Professional{}, fmt.Errorf("revoke professional sessions: %w", err)
+		}
+	}
+	if err = transaction.Commit(ctx); err != nil {
+		return Professional{}, fmt.Errorf("commit deactivation: %w", err)
+	}
+	return Professional{ID: professionalID, Name: row.Name, Email: row.Email, Active: false}, nil
+}
+
+func (store *PostgresStore) Reactivate(ctx context.Context, establishmentID, professionalID, passwordHash string, at time.Time) (Professional, error) {
+	tenant, err := uuid.Parse(establishmentID)
+	if err != nil {
+		return Professional{}, fmt.Errorf("parse establishment ID: %w", err)
+	}
+	professionalUUID, err := uuid.Parse(professionalID)
+	if err != nil {
+		return Professional{}, ErrNotFound
+	}
+	tenantID := pgtype.UUID{Bytes: tenant, Valid: true}
+	userID := pgtype.UUID{Bytes: professionalUUID, Valid: true}
+	transaction, err := store.pool.Begin(ctx)
+	if err != nil {
+		return Professional{}, fmt.Errorf("begin reactivation: %w", err)
+	}
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := db.New(transaction)
+	if _, err = queries.LockProfessionalUser(ctx, db.LockProfessionalUserParams{ID: userID, EstablishmentID: tenantID}); errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	} else if err != nil {
+		return Professional{}, fmt.Errorf("lock professional: %w", err)
+	}
+	row, err := queries.GetProfessional(ctx, db.GetProfessionalParams{UserID: userID, EstablishmentID: tenantID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Professional{}, ErrNotFound
+	}
+	if err != nil {
+		return Professional{}, fmt.Errorf("read professional for reactivation: %w", err)
+	}
+	if row.Active {
+		return Professional{}, ErrAlreadyActive
+	}
+	updatedAt := pgtype.Timestamptz{Time: at, Valid: true}
+	if err = queries.ReactivateProfessionalUser(ctx, db.ReactivateProfessionalUserParams{ID: userID, EstablishmentID: tenantID, UpdatedAt: updatedAt}); err != nil {
+		return Professional{}, fmt.Errorf("reactivate professional: %w", err)
+	}
+	affected, err := queries.ReplaceProfessionalCredential(ctx, db.ReplaceProfessionalCredentialParams{UserID: userID, PasswordHash: passwordHash, UpdatedAt: updatedAt})
+	if err != nil {
+		return Professional{}, fmt.Errorf("replace professional credential: %w", err)
+	}
+	if affected != 1 {
+		return Professional{}, errors.New("professional credential missing")
+	}
+	if err = queries.RevokeAllUserSessions(ctx, db.RevokeAllUserSessionsParams{UserID: userID, UpdatedAt: updatedAt}); err != nil {
+		return Professional{}, fmt.Errorf("revoke professional sessions: %w", err)
+	}
+	if err = transaction.Commit(ctx); err != nil {
+		return Professional{}, fmt.Errorf("commit reactivation: %w", err)
+	}
+	return Professional{ID: professionalID, Name: row.Name, Email: row.Email, Active: true}, nil
 }

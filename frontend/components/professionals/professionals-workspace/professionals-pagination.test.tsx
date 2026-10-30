@@ -10,13 +10,16 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
 import { listProfessionals } from "@/lib/professionals/professionals-api";
 
-import { ProfessionalsListPanel } from "./professionals-list-panel";
+import { ProfessionalsWorkspace } from "./professionals-workspace";
 
 vi.mock("@/components/session/auth-provider/auth-provider", () => ({
   useAuthSession: vi.fn(),
 }));
 vi.mock("@/lib/professionals/professionals-api", () => ({
   listProfessionals: vi.fn(),
+  createProfessional: vi.fn(),
+  getProfessional: vi.fn(),
+  updateProfessional: vi.fn(),
 }));
 
 const records = [
@@ -45,7 +48,7 @@ test("mostra carregamento e os dados públicos da página recebida", async () =>
       }),
   );
 
-  render(<ProfessionalsListPanel />);
+  render(<ProfessionalsWorkspace />);
 
   expect(screen.getByRole("status")).toHaveTextContent(
     "Carregando profissionais",
@@ -65,7 +68,7 @@ test("mostra carregamento e os dados públicos da página recebida", async () =>
 test("apresenta estado vazio quando a resposta não tem profissionais", async () => {
   vi.mocked(listProfessionals).mockResolvedValue(successPage([]));
 
-  render(<ProfessionalsListPanel />);
+  render(<ProfessionalsWorkspace />);
 
   expect(
     await screen.findByText("Nenhum profissional cadastrado."),
@@ -78,7 +81,7 @@ test("pagina a lista e impede avançar além da última página", async () => {
     .mockResolvedValueOnce(successPage(records, 0, true))
     .mockResolvedValueOnce(successPage([records[1]], 20, false));
 
-  render(<ProfessionalsListPanel />);
+  render(<ProfessionalsWorkspace />);
 
   expect(await screen.findByRole("list")).toHaveTextContent("Ana Lima");
   fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
@@ -115,7 +118,7 @@ test("mostra erro genérico e permite tentar novamente", async () => {
     })
     .mockResolvedValueOnce(successPage(records));
 
-  render(<ProfessionalsListPanel />);
+  render(<ProfessionalsWorkspace />);
 
   expect(
     await screen.findByText("Não foi possível consultar os profissionais"),
@@ -140,7 +143,7 @@ test("remove a lista quando a API encerra a sessão", async () => {
       },
     });
 
-  render(<ProfessionalsListPanel />);
+  render(<ProfessionalsWorkspace />);
 
   expect(await screen.findByRole("list")).toHaveTextContent("Ana Lima");
   fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
@@ -160,10 +163,10 @@ test("descarta resposta antiga após trocar a identidade do proprietário", asyn
     });
   });
 
-  const view = render(<ProfessionalsListPanel />);
+  const view = render(<ProfessionalsWorkspace />);
   await waitFor(() => expect(pending).toHaveLength(1));
   setOwnerSession({ user_id: "other-user", establishment_id: "other-shop" });
-  view.rerender(<ProfessionalsListPanel />);
+  view.rerender(<ProfessionalsWorkspace />);
   await waitFor(() => expect(pending).toHaveLength(2));
   expect(pending[0].signal.aborted).toBe(true);
 
@@ -210,6 +213,6 @@ function successPage(items: typeof records, offset = 0, has_more = false) {
   return {
     state: "success" as const,
     status: 200,
-    data: { items, limit: 20, offset, has_more },
+    data: { items, limit: 20, offset, has_more, can_write: true },
   };
 }

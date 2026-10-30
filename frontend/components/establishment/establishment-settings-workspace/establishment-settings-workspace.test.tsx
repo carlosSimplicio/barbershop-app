@@ -508,7 +508,9 @@ test("pré-visualiza e envia o logo, atualiza a publicação e limpa a seleção
     "/api/v1/public/establishments/estudio-aurora/logo?version=1",
   );
   expect(input).toHaveValue("");
-  expect(revokeObjectURL).toHaveBeenCalledWith("blob:logo-preview");
+  await waitFor(() =>
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:logo-preview"),
+  );
 });
 
 test("limpa o arquivo selecionado sem remover o logo publicado", async () => {
@@ -562,7 +564,9 @@ test("limpa o arquivo selecionado sem remover o logo publicado", async () => {
   ).toHaveAttribute("src", "/api/v1/public/establishments/estudio-aurora/logo");
   expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
   expect(uploadLogoMock).not.toHaveBeenCalled();
-  expect(revokeObjectURL).toHaveBeenCalledWith("blob:temporary-logo");
+  await waitFor(() =>
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:temporary-logo"),
+  );
 });
 
 test("mantém o logo publicado após falha e permite tentar novamente", async () => {
@@ -668,7 +672,8 @@ test.each([
       screen.queryByRole("img", { name: "Pré-visualização do logo" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
-    expect(revoke).toHaveBeenCalledWith("blob:first-logo");
+    // Removing the preview can precede the passive effect that releases its URL.
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith("blob:first-logo"));
     expect(
       screen.queryByText("backend internal message"),
     ).not.toBeInTheDocument();

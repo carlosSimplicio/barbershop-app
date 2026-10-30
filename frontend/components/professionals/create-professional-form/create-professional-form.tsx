@@ -1,23 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
 import {
   EMAIL_MAX_LENGTH,
-  INVALID_EMAIL_MESSAGE,
   validateEmail,
 } from "@/lib/auth/email-validation/email-validation";
-import {
-  INVALID_PASSWORD_MESSAGE,
-  validatePassword,
-} from "@/lib/auth/password-validation/password-validation";
+import { validatePassword } from "@/lib/auth/password-validation/password-validation";
 import {
   createProfessional,
   type CreateProfessionalRequest,
 } from "@/lib/professionals/professionals-api";
-import { PROFESSIONAL_NAME_MAX_CODE_POINTS } from "@/lib/professionals/professional-limits";
+import {
+  validateProfessionalName,
+  PROFESSIONAL_NAME_HINT,
+  TEMPORARY_PASSWORD_HINT,
+} from "@/lib/professionals/professional-form-model";
+import { classifyProfessionalOperation } from "@/lib/professionals/professional-operation-result";
 
 import styles from "./create-professional-form.module.css";
 
@@ -30,12 +31,19 @@ type FeedbackState = {
 };
 
 const fieldOrder: FieldName[] = ["name", "email", "temporary_password"];
-const invalidNameMessage = `Informe um nome com até ${PROFESSIONAL_NAME_MAX_CODE_POINTS} caracteres.`;
 
 export function CreateProfessionalForm({
   onCreated,
+  canWrite = true,
+  onReadOnly,
+  onUnauthorized,
+  onBusyChange,
 }: {
   onCreated: () => void;
+  canWrite?: boolean;
+  onReadOnly?: () => void;
+  onUnauthorized?: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [values, setValues] = useState<CreateProfessionalRequest>({
     name: "",
@@ -46,6 +54,17 @@ export function CreateProfessionalForm({
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const controller = useRef<AbortController | null>(null);
+  const [uncertain, setUncertain] = useState(false);
+  const [verification, setVerification] = useState(false);
+  const focusAfterResponse = useRef(false);
+  useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    if (!submitting && focusAfterResponse.current) {
+      focusAfterResponse.current = false;
+      focusFirstError(errors);
+    }
+  }, [submitting, errors]);
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -68,7 +87,7 @@ export function CreateProfessionalForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submittingRef.current) return;
+    if (submittingRef.current || !canWrite || uncertain) return;
 
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -78,15 +97,27 @@ export function CreateProfessionalForm({
     }
 
     submittingRef.current = true;
+    onBusyChange?.(true);
+    const requestController = new AbortController();
+    controller.current = requestController;
     setSubmitting(true);
     setFeedback(null);
     try {
-      const result = await createProfessional({
-        ...values,
-        name: values.name.trim(),
-        email: values.email.trim(),
-      });
-      if (result.status === 201 && result.state === "success") {
+      const result = await createProfessional(
+        {
+          ...values,
+          name: values.name.trim(),
+          email: values.email.trim(),
+        },
+        requestController.signal,
+      );
+      if (requestController.signal.aborted) return;
+      const outcome = classifyProfessionalOperation(result, 201);
+      if (outcome.state === "unauthorized") {
+        onUnauthorized?.();
+        return;
+      }
+      if (outcome.state === "confirmed") {
         setValues((current) => ({ ...current, temporary_password: "" }));
         setErrors({});
         setFeedback({
@@ -98,27 +129,30 @@ export function CreateProfessionalForm({
         onCreated();
         return;
       }
-      if (result.state === "error") {
-        if (result.error.code === "read_only") {
-          setFeedback({
-            variant: "warning",
-            title: "Cadastro indisponível",
-            message:
-              "O período de avaliação não está ativo. Você ainda pode consultar a lista, mas novos cadastros estão bloqueados.",
-          });
-          return;
-        }
-        const serverErrors: FieldErrors = {};
-        for (const issue of result.error.fields ?? []) {
-          if (!fieldOrder.includes(issue.field as FieldName)) continue;
-          const message = serverMessages[issue.code];
-          if (message) serverErrors[issue.field as FieldName] = message;
-        }
-        if (fieldOrder.some((field) => serverErrors[field])) {
-          setErrors(serverErrors);
-          focusFirstError(serverErrors);
-          return;
-        }
+      if (outcome.state === "read_only") {
+        onReadOnly?.();
+        setFeedback({
+          variant: "warning",
+          title: "Cadastro indisponível",
+          message:
+            "O período de avaliação não está ativo. Você ainda pode consultar a lista, mas novos cadastros estão bloqueados.",
+        });
+        return;
+      }
+      if (outcome.state === "validation") {
+        setErrors(outcome.fields);
+        focusAfterResponse.current = true;
+        return;
+      }
+      if (outcome.state === "uncertain") {
+        setUncertain(true);
+        setFeedback({
+          variant: "warning",
+          title: "Não foi possível confirmar o cadastro",
+          message:
+            "Atualize a lista para conferir se o profissional foi criado antes de tentar novamente.",
+        });
+        return;
       }
       setFeedback({
         variant: "error",
@@ -126,14 +160,21 @@ export function CreateProfessionalForm({
         message: "Tente novamente mais tarde.",
       });
     } catch {
-      setFeedback({
-        variant: "error",
-        title: "Não foi possível cadastrar o profissional",
-        message: "Verifique sua conexão e tente novamente.",
-      });
+      if (!requestController.signal.aborted) {
+        setUncertain(true);
+        setFeedback({
+          variant: "warning",
+          title: "Não foi possível confirmar o cadastro",
+          message:
+            "Verifique sua conexão e atualize a lista para conferir o cadastro antes de tentar novamente.",
+        });
+      }
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      onBusyChange?.(false);
+      if (!requestController.signal.aborted) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }
 
@@ -151,6 +192,28 @@ export function CreateProfessionalForm({
           {feedback.message}
         </Feedback>
       ) : null}
+      {uncertain ? (
+        <Button
+          disabled={!canWrite}
+          onClick={() => {
+            onCreated();
+            setVerification(true);
+          }}
+        >
+          Conferir lista antes de novo cadastro
+        </Button>
+      ) : null}
+      {uncertain && verification && canWrite ? (
+        <Button
+          onClick={() => {
+            setUncertain(false);
+            setVerification(false);
+            setFeedback(null);
+          }}
+        >
+          Conferi a lista e desejo preencher outro cadastro
+        </Button>
+      ) : null}
       <form
         className={styles.form}
         noValidate
@@ -159,9 +222,10 @@ export function CreateProfessionalForm({
         <TextField
           autoComplete="name"
           error={errors.name}
+          hint={PROFESSIONAL_NAME_HINT}
           label="Nome"
           onChange={(event) => update("name", event.target.value)}
-          readOnly={submitting}
+          disabled={submitting || !canWrite || uncertain}
           ref={nameRef}
           required
           value={values.name}
@@ -173,7 +237,7 @@ export function CreateProfessionalForm({
           label="E-mail"
           maxLength={EMAIL_MAX_LENGTH}
           onChange={(event) => update("email", event.target.value)}
-          readOnly={submitting}
+          disabled={submitting || !canWrite || uncertain}
           ref={emailRef}
           required
           spellCheck={false}
@@ -183,15 +247,15 @@ export function CreateProfessionalForm({
         <PasswordField
           autoComplete="new-password"
           error={errors.temporary_password}
-          hint={`${INVALID_PASSWORD_MESSAGE} A troca será obrigatória no primeiro acesso.`}
+          hint={TEMPORARY_PASSWORD_HINT}
           label="Senha temporária"
           onChange={(event) => update("temporary_password", event.target.value)}
-          readOnly={submitting}
+          disabled={submitting || !canWrite || uncertain}
           ref={passwordRef}
           required
           value={values.temporary_password}
         />
-        <Button disabled={submitting} type="submit">
+        <Button disabled={submitting || !canWrite || uncertain} type="submit">
           {submitting ? "Cadastrando…" : "Cadastrar profissional"}
         </Button>
       </form>
@@ -201,10 +265,8 @@ export function CreateProfessionalForm({
 
 function validate(values: CreateProfessionalRequest): FieldErrors {
   const errors: FieldErrors = {};
-  const name = values.name.trim();
-  if (!name || [...name].length > PROFESSIONAL_NAME_MAX_CODE_POINTS) {
-    errors.name = name ? invalidNameMessage : "Informe o nome do profissional.";
-  }
+  const nameError = validateProfessionalName(values.name);
+  if (nameError) errors.name = nameError;
   const email = values.email.trim()
     ? validateEmail(values.email)
     : "Informe o e-mail do profissional.";
@@ -216,10 +278,3 @@ function validate(values: CreateProfessionalRequest): FieldErrors {
   if (password) errors.temporary_password = password;
   return errors;
 }
-
-const serverMessages: Record<string, string> = {
-  invalid_name: invalidNameMessage,
-  invalid_email: INVALID_EMAIL_MESSAGE,
-  invalid_password: INVALID_PASSWORD_MESSAGE,
-  email_unavailable: "Este e-mail já está cadastrado.",
-};

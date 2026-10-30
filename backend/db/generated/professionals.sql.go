@@ -77,6 +77,54 @@ func (q *Queries) CreateProfessionalUser(ctx context.Context, arg CreateProfessi
 	return id, err
 }
 
+const deactivateProfessionalUser = `-- name: DeactivateProfessionalUser :exec
+UPDATE users
+SET active = false, credential_version = credential_version + 1, updated_at = $3
+WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = true
+`
+
+type DeactivateProfessionalUserParams struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) DeactivateProfessionalUser(ctx context.Context, arg DeactivateProfessionalUserParams) error {
+	_, err := q.db.Exec(ctx, deactivateProfessionalUser, arg.ID, arg.EstablishmentID, arg.UpdatedAt)
+	return err
+}
+
+const getProfessional = `-- name: GetProfessional :one
+SELECT p.user_id, p.name, u.email, u.active
+FROM professionals AS p
+JOIN users AS u ON u.id = p.user_id AND u.establishment_id = p.establishment_id
+WHERE p.user_id = $1 AND p.establishment_id = $2 AND u.role = 'professional'
+`
+
+type GetProfessionalParams struct {
+	UserID          pgtype.UUID `json:"user_id"`
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+}
+
+type GetProfessionalRow struct {
+	UserID pgtype.UUID `json:"user_id"`
+	Name   string      `json:"name"`
+	Email  string      `json:"email"`
+	Active bool        `json:"active"`
+}
+
+func (q *Queries) GetProfessional(ctx context.Context, arg GetProfessionalParams) (GetProfessionalRow, error) {
+	row := q.db.QueryRow(ctx, getProfessional, arg.UserID, arg.EstablishmentID)
+	var i GetProfessionalRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Active,
+	)
+	return i, err
+}
+
 const listProfessionalsByEstablishment = `-- name: ListProfessionalsByEstablishment :many
 SELECT p.user_id, p.name, u.email, u.active
 FROM professionals AS p
@@ -123,4 +171,106 @@ func (q *Queries) ListProfessionalsByEstablishment(ctx context.Context, arg List
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockProfessionalUser = `-- name: LockProfessionalUser :one
+SELECT u.id
+FROM users AS u
+WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
+FOR UPDATE OF u
+`
+
+type LockProfessionalUserParams struct {
+	ID              pgtype.UUID `json:"id"`
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+}
+
+func (q *Queries) LockProfessionalUser(ctx context.Context, arg LockProfessionalUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, lockProfessionalUser, arg.ID, arg.EstablishmentID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const reactivateProfessionalUser = `-- name: ReactivateProfessionalUser :exec
+UPDATE users
+SET active = true, password_change_required = true,
+    credential_version = credential_version + 1, updated_at = $3
+WHERE id = $1 AND establishment_id = $2 AND role = 'professional' AND active = false
+`
+
+type ReactivateProfessionalUserParams struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ReactivateProfessionalUser(ctx context.Context, arg ReactivateProfessionalUserParams) error {
+	_, err := q.db.Exec(ctx, reactivateProfessionalUser, arg.ID, arg.EstablishmentID, arg.UpdatedAt)
+	return err
+}
+
+const replaceProfessionalCredential = `-- name: ReplaceProfessionalCredential :execrows
+UPDATE user_credentials
+SET password_hash = $2, updated_at = $3
+WHERE user_id = $1
+`
+
+type ReplaceProfessionalCredentialParams struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	PasswordHash string             `json:"password_hash"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ReplaceProfessionalCredential(ctx context.Context, arg ReplaceProfessionalCredentialParams) (int64, error) {
+	result, err := q.db.Exec(ctx, replaceProfessionalCredential, arg.UserID, arg.PasswordHash, arg.UpdatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateProfessionalName = `-- name: UpdateProfessionalName :one
+WITH professional_user AS MATERIALIZED (
+    SELECT u.id, u.establishment_id, u.email, u.active
+    FROM users AS u
+    WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
+    FOR UPDATE OF u
+)
+UPDATE professionals AS p
+SET name = $3, updated_at = $4
+FROM professional_user AS u
+WHERE p.user_id = u.id AND p.establishment_id = u.establishment_id
+RETURNING p.user_id, p.name, u.email, u.active
+`
+
+type UpdateProfessionalNameParams struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	Name            string             `json:"name"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UpdateProfessionalNameRow struct {
+	UserID pgtype.UUID `json:"user_id"`
+	Name   string      `json:"name"`
+	Email  string      `json:"email"`
+	Active bool        `json:"active"`
+}
+
+func (q *Queries) UpdateProfessionalName(ctx context.Context, arg UpdateProfessionalNameParams) (UpdateProfessionalNameRow, error) {
+	row := q.db.QueryRow(ctx, updateProfessionalName,
+		arg.ID,
+		arg.EstablishmentID,
+		arg.Name,
+		arg.UpdatedAt,
+	)
+	var i UpdateProfessionalNameRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Active,
+	)
+	return i, err
 }

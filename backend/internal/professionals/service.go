@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"barbershop-app/backend/internal/auth"
 	"barbershop-app/backend/internal/auth/security"
+	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/pagination"
 )
 
 var (
+	ErrAlreadyActive    = errors.New("professional already active")
+	ErrNotFound         = errors.New("professional not found")
 	ErrForbidden        = errors.New("professional operation forbidden")
 	ErrInvalidName      = errors.New("invalid professional name")
 	ErrEmailUnavailable = errors.New("professional email unavailable")
@@ -35,10 +37,11 @@ type Professional struct {
 }
 
 type ListResult struct {
-	Items   []Professional
-	Limit   int32
-	Offset  int32
-	HasMore bool
+	Items    []Professional
+	Limit    int32
+	Offset   int32
+	HasMore  bool
+	CanWrite bool
 }
 
 type Creation struct {
@@ -51,6 +54,10 @@ type Creation struct {
 }
 
 type Store interface {
+	Reactivate(context.Context, string, string, string, time.Time) (Professional, error)
+	Deactivate(context.Context, string, string, time.Time) (Professional, error)
+	UpdateName(context.Context, string, string, string, time.Time) (Professional, error)
+	Get(context.Context, string, string) (Professional, error)
 	Create(context.Context, Creation) (string, error)
 	List(context.Context, string, int32, int32) ([]Professional, error)
 }
@@ -78,7 +85,7 @@ func (service *Service) Create(ctx context.Context, principal auth.Principal, in
 	if principal.Role != "owner" {
 		return Professional{}, ErrForbidden
 	}
-	if !utf8.ValidString(input.Name) || strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > MaxNameCodePoints {
+	if !IsNameValid(input.Name) {
 		return Professional{}, ErrInvalidName
 	}
 	if err := auth.ValidateEmail(input.Email); err != nil {
@@ -117,6 +124,10 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, limi
 	if offset < pagination.MinOffset {
 		return ListResult{}, ErrInvalidOffset
 	}
+	writeErr := service.entitlements.RequireWrite(ctx, principal.EstablishmentID)
+	if writeErr != nil && !errors.Is(writeErr, entitlements.ErrReadOnly) {
+		return ListResult{}, writeErr
+	}
 	items, err := service.store.List(ctx, principal.EstablishmentID, limit+1, offset)
 	if err != nil {
 		return ListResult{}, fmt.Errorf("list professionals: %w", err)
@@ -128,5 +139,52 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, limi
 	if items == nil {
 		items = []Professional{}
 	}
-	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore}, nil
+	return ListResult{Items: items, Limit: limit, Offset: offset, HasMore: hasMore, CanWrite: writeErr == nil}, nil
+}
+
+func (service *Service) Get(ctx context.Context, principal auth.Principal, professionalID string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	return service.store.Get(ctx, principal.EstablishmentID, professionalID)
+}
+
+func (service *Service) UpdateName(ctx context.Context, principal auth.Principal, professionalID, name string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	if !IsNameValid(name) {
+		return Professional{}, ErrInvalidName
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Professional{}, err
+	}
+	return service.store.UpdateName(ctx, principal.EstablishmentID, professionalID, strings.TrimSpace(name), service.now().UTC())
+}
+
+func (service *Service) Deactivate(ctx context.Context, principal auth.Principal, professionalID string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Professional{}, err
+	}
+	return service.store.Deactivate(ctx, principal.EstablishmentID, professionalID, service.now().UTC())
+}
+
+func (service *Service) Reactivate(ctx context.Context, principal auth.Principal, professionalID, temporaryPassword string) (Professional, error) {
+	if principal.Role != "owner" {
+		return Professional{}, ErrForbidden
+	}
+	if err := security.ValidatePassword(temporaryPassword); err != nil {
+		return Professional{}, err
+	}
+	if err := service.entitlements.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Professional{}, err
+	}
+	passwordHash, err := service.passwords.Hash(temporaryPassword)
+	if err != nil {
+		return Professional{}, err
+	}
+	return service.store.Reactivate(ctx, principal.EstablishmentID, professionalID, passwordHash, service.now().UTC())
 }

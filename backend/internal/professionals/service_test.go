@@ -46,6 +46,7 @@ func TestCreateProfessionalRejectsInvalidFieldsBeforeWrite(t *testing.T) {
 		input CreateInput
 		want  error
 	}{
+		{name: "NUL name", input: CreateInput{Name: "Ana\x00", Email: "ana@example.test", TemporaryPassword: "senha-segura"}, want: ErrInvalidName},
 		{name: "blank name", input: CreateInput{Name: "  ", Email: "ana@example.test", TemporaryPassword: "senha-segura"}, want: ErrInvalidName},
 		{name: "long name", input: CreateInput{Name: strings.Repeat("a", 121), Email: "ana@example.test", TemporaryPassword: "senha-segura"}, want: ErrInvalidName},
 		{name: "invalid email", input: CreateInput{Name: "Ana", Email: "invalid", TemporaryPassword: "senha-segura"}, want: auth.ErrInvalidEmail},
@@ -122,4 +123,20 @@ type writeEntitlementsStub struct {
 func (stub *writeEntitlementsStub) RequireWrite(_ context.Context, establishmentID string) error {
 	stub.establishmentID = establishmentID
 	return stub.err
+}
+
+func (*createStoreStub) Get(context.Context, string, string) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*createStoreStub) UpdateName(context.Context, string, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*createStoreStub) Deactivate(context.Context, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
+}
+
+func (*createStoreStub) Reactivate(context.Context, string, string, string, time.Time) (Professional, error) {
+	return Professional{}, nil
 }
