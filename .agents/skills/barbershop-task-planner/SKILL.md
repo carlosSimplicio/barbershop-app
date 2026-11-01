@@ -1,6 +1,6 @@
 ---
 name: barbershop-task-planner
-description: Produz planos concisos para implementar funcionalidades, correções ou mudanças técnicas no barbershop-app, com requisitos de entrega objetivos em cada subtarefa. Use para planejar, não para executar a implementação.
+description: Produz planos concisos para implementar funcionalidades, correções ou mudanças técnicas no barbershop-app, considerando refatorações pertinentes ao escopo e requisitos de entrega objetivos em cada subtarefa. Use para planejar, não para executar a implementação.
 ---
 
 # Planejar tarefas do barbershop-app
@@ -35,6 +35,13 @@ Planeje somente. Não altere implementação, contrato, migrations, documentaç�
 - Se o arquivo já existir, leia-o antes e atualize o plano completo, sem criar versões paralelas ou sobrescrever conteúdo não relacionado.
 - Não grave um plano apresentado como concluído enquanto houver decisões pendentes. Durante a fase de perguntas, não crie rascunhos no repositório, salvo solicitação explícita.
 - Ao finalizar, informe o caminho do arquivo criado ou atualizado.
+
+## Refatorações no escopo
+
+- Durante a inspeção, avalie oportunidades concretas de reduzir complexidade, acoplamento ou duplicação nos fluxos e módulos afetados. Compare com os padrões existentes e evite abstrações especulativas ou reescritas sem benefício demonstrável.
+- Inclua nas subtarefas as refatorações necessárias à entrega ou à correção de uma violação concreta das regras do projeto. Explicite o problema atual, os trechos afetados, o benefício e os comportamentos e contratos que devem ser preservados.
+- Separe uma refatoração em subtarefa própria quando ela tiver resultado e verificação independentes; mantenha-a junto da mudança funcional quando forem inseparáveis. Indique os testes existentes que protegem o comportamento e planeje cobertura adicional somente para lacunas relevantes.
+- Registre melhorias opcionais ou fora do escopo separadamente, com localização e benefício esperado, sem incluí-las automaticamente como requisitos de entrega ou dependências. Não crie uma etapa de refatoração quando a inspeção não justificar nenhuma.
 
 ## Como decompor
 
@@ -76,7 +83,7 @@ Comece com o título da tarefa e uma frase descrevendo o resultado esperado. Em 
 - **Verificação:** testes e checagens concretas que demonstram o atendimento dos requisitos de entrega, sem repetir a lista.
 - **Dependências:** somente quando existirem.
 
-Ao final, inclua **Verificação conjunta** somente quando houver comandos ou checagens que façam sentido apenas para o conjunto da entrega. Não entregue o plano como concluído enquanto houver decisões pendentes; pergunte e aguarde as respostas primeiro.
+Ao final, inclua **Verificação conjunta** somente quando houver comandos ou checagens que façam sentido apenas para o conjunto da entrega. Quando identificar refatorações opcionais não incluídas nas subtarefas, registre-as em **Oportunidades de refatoração**, deixando explícito que não fazem parte da entrega planejada. Não entregue o plano como concluído enquanto houver decisões pendentes; pergunte e aguarde as respostas primeiro.
 
 Não acrescente introduções longas, estimativas não solicitadas, pseudocódigo, alternativas irrelevantes ou listas genéricas de boas práticas.
 

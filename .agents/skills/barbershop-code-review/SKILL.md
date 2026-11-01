@@ -33,6 +33,16 @@ Não edite arquivos, aplique correções, crie commits ou execute operações so
 | Possíveis refatorações | Identifique mudanças locais que reduzam complexidade, acoplamento ou duplicação sem alterar contratos. Indique o trecho, o benefício e os testes que preservariam o comportamento. Separe refatoração necessária para resolver um problema de melhoria opcional; evite reescritas e generalizações especulativas. |
 | Performance e recursos | Procure consultas repetidas ou sem filtros adequados, paginação ausente, trabalho redundante, renderizações excessivas, recursos não liberados e crescimento não limitado de memória ou dados. Justifique o impacto pelo caminho executado e pelo volume plausível, sem exigir otimização sem evidência. |
 
+## Passagem específica de manutenção e refatorações
+
+Após analisar correção funcional e contratos, faça uma passagem específica de manutenção antes de concluir a revisão, mesmo quando não houver bugs. Mantenha o escopo solicitado e inclua os consumidores e implementações equivalentes necessários para avaliar os pontos abaixo:
+
+1. Compare mecanismos e fluxos semelhantes nos módulos afetados. Procure trechos repetidos com o mesmo contrato, como ciclo de requisições, cancelamento, controle de atividade, foco, decodificação HTTP, projeção de respostas e preparação de operações transacionais. Verifique se compartilhar o mecanismo reduziria manutenção sem misturar regras de domínios distintos.
+2. Confira variantes, parâmetros, condicionais e estados contra seus consumidores reais. Identifique caminhos sem uso, modos legados, estilos associados e comportamento já concentrado em uma primitiva compartilhada que ainda esteja repetido nos consumidores.
+3. Avalie responsabilidades acumuladas em funções, componentes e módulos. Procure estado, efeitos e composição que pertençam a uma responsabilidade coesa e possam ser extraídos ou simplificados; justifique pelo acoplamento e pela dificuldade de manutenção, sem usar tamanho do arquivo como critério isolado.
+
+Registre as evidências dessa passagem no relatório. Ausência de bug não justifica omitir uma oportunidade concreta de manutenção; avaliar uma oportunidade não obriga recomendá-la. Não imponha quantidade mínima de refatorações nem transforme essa passagem em auditoria de código fora do escopo.
+
 ## Verificações e evidências
 
 - Confira as verificações exigidas pelo `AGENTS.md` e pelo plano para as camadas afetadas. Diferencie resultados fornecidos pelo implementador de comandos executados pelo revisor; não repita suítes já comprovadas sem uma dúvida concreta que a execução resolva.
@@ -51,6 +61,7 @@ Separe os problemas que precisam de correção das oportunidades opcionais de ar
 
 Depois dos achados, inclua:
 
+- Uma seção **Oportunidades de refatoração**, separada das correções necessárias. Para cada oportunidade, indique arquivos e símbolos, evidência do problema de manutenção, mudança proposta, benefício, comportamentos e contratos a preservar e testes existentes ou lacunas relevantes. Não exija um defeito funcional ou uma severidade de bug para relatar uma melhoria opcional; sinalize quando ela estiver fora do escopo da entrega. Se nenhuma oportunidade justificar recomendação, registre quais trechos, consumidores e implementações foram comparados e por que mantê-los; se a inspeção não puder ser feita, explicite a limitação.
 - Uma tabela curta de cobertura dos eixos obrigatórios, indicando `avaliado`, `não se aplica` ou `não verificado`, com evidência ou justificativa. `Avaliado` indica análise realizada, não ausência de problemas.
 - Verificações executadas, resultados fornecidos e limitações; instruções, documentos e skills efetivamente consultados.
 - Uma conclusão que indique se há correções necessárias, se não foram encontrados problemas no escopo ou se a revisão ficou parcial. Se houver lacunas que impeçam concluir, explicite-as; não declare aprovação nem ausência garantida de bugs.
