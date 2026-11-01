@@ -145,19 +145,9 @@ func (store *PostgresStore) Deactivate(ctx context.Context, establishmentID, pro
 	}
 	defer func() { _ = transaction.Rollback(ctx) }()
 	queries := db.New(transaction)
-	// Serialize state transitions with login and password changes before reading
-	// the profile or writing credentials and session revocations.
-	if _, err = queries.LockProfessionalUser(ctx, db.LockProfessionalUserParams{ID: userID, EstablishmentID: tenantID}); errors.Is(err, pgx.ErrNoRows) {
-		return Professional{}, ErrNotFound
-	} else if err != nil {
-		return Professional{}, fmt.Errorf("lock professional: %w", err)
-	}
-	row, err := queries.GetProfessional(ctx, db.GetProfessionalParams{UserID: userID, EstablishmentID: tenantID})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Professional{}, ErrNotFound
-	}
+	row, err := lockProfessional(ctx, queries, tenantID, userID)
 	if err != nil {
-		return Professional{}, fmt.Errorf("read professional for deactivation: %w", err)
+		return Professional{}, fmt.Errorf("prepare professional deactivation: %w", err)
 	}
 	if row.Active {
 		if err = queries.DeactivateProfessionalUser(ctx, db.DeactivateProfessionalUserParams{ID: userID, EstablishmentID: tenantID, UpdatedAt: pgtype.Timestamptz{Time: at, Valid: true}}); err != nil {
@@ -190,17 +180,9 @@ func (store *PostgresStore) Reactivate(ctx context.Context, establishmentID, pro
 	}
 	defer func() { _ = transaction.Rollback(ctx) }()
 	queries := db.New(transaction)
-	if _, err = queries.LockProfessionalUser(ctx, db.LockProfessionalUserParams{ID: userID, EstablishmentID: tenantID}); errors.Is(err, pgx.ErrNoRows) {
-		return Professional{}, ErrNotFound
-	} else if err != nil {
-		return Professional{}, fmt.Errorf("lock professional: %w", err)
-	}
-	row, err := queries.GetProfessional(ctx, db.GetProfessionalParams{UserID: userID, EstablishmentID: tenantID})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Professional{}, ErrNotFound
-	}
+	row, err := lockProfessional(ctx, queries, tenantID, userID)
 	if err != nil {
-		return Professional{}, fmt.Errorf("read professional for reactivation: %w", err)
+		return Professional{}, fmt.Errorf("prepare professional reactivation: %w", err)
 	}
 	if row.Active {
 		return Professional{}, ErrAlreadyActive
@@ -223,4 +205,23 @@ func (store *PostgresStore) Reactivate(ctx context.Context, establishmentID, pro
 		return Professional{}, fmt.Errorf("commit reactivation: %w", err)
 	}
 	return Professional{ID: professionalID, Name: row.Name, Email: row.Email, Active: true}, nil
+}
+
+func lockProfessional(ctx context.Context, queries *db.Queries, establishmentID, professionalID pgtype.UUID) (db.GetProfessionalRow, error) {
+	// Use the caller's transaction and two statements: after waiting for the
+	// user lock, READ COMMITTED must take a fresh snapshot of the profile/state.
+	// Login and password changes acquire the user lock in the same order.
+	if _, err := queries.LockProfessionalUser(ctx, db.LockProfessionalUserParams{ID: professionalID, EstablishmentID: establishmentID}); errors.Is(err, pgx.ErrNoRows) {
+		return db.GetProfessionalRow{}, ErrNotFound
+	} else if err != nil {
+		return db.GetProfessionalRow{}, fmt.Errorf("lock professional: %w", err)
+	}
+	row, err := queries.GetProfessional(ctx, db.GetProfessionalParams{UserID: professionalID, EstablishmentID: establishmentID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.GetProfessionalRow{}, ErrNotFound
+	}
+	if err != nil {
+		return db.GetProfessionalRow{}, fmt.Errorf("read locked professional: %w", err)
+	}
+	return row, nil
 }
