@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
+import { useState } from "react";
 import { Button, Feedback, Modal, ModalActions } from "@/components/ui";
 import {
   deactivateProfessional,
@@ -33,13 +34,10 @@ export function ProfessionalDeactivationPanel({
   onUnauthorized,
   onBusyChange,
 }: Props) {
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const [finished, setFinished] = useState(false);
   const [missing, setMissing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const pending = useRef(false);
-  const controller = useRef<AbortController | null>(null);
-  useEffect(() => () => controller.current?.abort(), []);
   function showError() {
     setNotice({
       variant: "error",
@@ -48,12 +46,9 @@ export function ProfessionalDeactivationPanel({
     });
   }
   async function run() {
-    if (pending.current || !canWrite || finished || missing) return;
-    pending.current = true;
-    setSubmitting(true);
-    onBusyChange(true);
-    const request = new AbortController();
-    controller.current = request;
+    if (isPending() || !canWrite || finished || missing) return;
+    const request = begin();
+    if (!request) return;
     try {
       const result = await deactivateProfessional(record.id, request.signal);
       if (request.signal.aborted) return;
@@ -99,11 +94,7 @@ export function ProfessionalDeactivationPanel({
     } catch {
       if (!request.signal.aborted) showError();
     } finally {
-      onBusyChange(false);
-      if (!request.signal.aborted) {
-        pending.current = false;
-        setSubmitting(false);
-      }
+      request.finish();
     }
   }
   return (

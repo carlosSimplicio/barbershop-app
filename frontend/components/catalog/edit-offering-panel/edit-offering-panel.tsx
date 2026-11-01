@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import {
   useEffect,
   useRef,
@@ -66,13 +67,11 @@ export function EditOfferingPanel({
   const [version, setVersion] = useState(0);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const pending = useRef(false);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const pendingErrorFocus = useRef(false);
   const focusOnLoad = useRef(true);
   const form = useRef<HTMLFormElement>(null);
   const panel = useRef<HTMLElement>(null);
-  const mutation = useRef<AbortController | null>(null);
   function applyRecord(confirmed: Offering, preserveDraft = true) {
     setValues((current) =>
       preserveDraft && record
@@ -82,7 +81,6 @@ export function EditOfferingPanel({
     setRecord(confirmed);
     onRecordConfirmed(confirmed);
   }
-  useEffect(() => () => mutation.current?.abort(), []);
   useEffect(() => {
     if (load === "ready" && focusOnLoad.current) {
       focusOnLoad.current = false;
@@ -124,7 +122,7 @@ export function EditOfferingPanel({
   }, [offeringId, version, onUnauthorized, onRecordConfirmed]);
 
   function reload() {
-    if (pending.current) return;
+    if (isPending()) return;
     setLoad("loading");
     setVersion((value) => value + 1);
   }
@@ -137,7 +135,7 @@ export function EditOfferingPanel({
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!record || !canWrite || pending.current || load !== "ready") return;
+    if (!record || !canWrite || isPending() || load !== "ready") return;
     const checked = buildOfferingPatch(values, record);
     setErrors(checked.errors);
     if (!checked.request) {
@@ -152,12 +150,9 @@ export function EditOfferingPanel({
       });
       return;
     }
-    pending.current = true;
-    onBusyChange?.(true);
-    setSubmitting(true);
+    const controller = begin();
+    if (!controller) return;
     setNotice(null);
-    const controller = new AbortController();
-    mutation.current = controller;
     try {
       const result = await updateOffering(
         offeringId,
@@ -201,11 +196,7 @@ export function EditOfferingPanel({
     } catch {
       if (!controller.signal.aborted) showError();
     } finally {
-      onBusyChange?.(false);
-      if (!controller.signal.aborted) {
-        pending.current = false;
-        setSubmitting(false);
-      }
+      controller.finish();
     }
   }
   if (load === "unauthorized") return null;

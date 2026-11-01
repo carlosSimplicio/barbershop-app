@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Button,
@@ -43,15 +44,12 @@ export function ProfessionalReactivationPanel({
 }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const [finished, setFinished] = useState(false);
   const [missing, setMissing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const pending = useRef(false);
-  const controller = useRef<AbortController | null>(null);
   const field = useRef<HTMLInputElement>(null);
   const focusError = useRef(false);
-  useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
     if (!submitting && focusError.current) {
       focusError.current = false;
@@ -66,7 +64,7 @@ export function ProfessionalReactivationPanel({
     });
   }
   async function run() {
-    if (pending.current || !canWrite || finished || missing || record.active)
+    if (isPending() || !canWrite || finished || missing || record.active)
       return;
     const validation = validatePassword(
       password,
@@ -77,11 +75,8 @@ export function ProfessionalReactivationPanel({
       field.current?.focus();
       return;
     }
-    pending.current = true;
-    setSubmitting(true);
-    onBusyChange(true);
-    const request = new AbortController();
-    controller.current = request;
+    const request = begin();
+    if (!request) return;
     try {
       const result = await reactivateProfessional(
         record.id,
@@ -149,11 +144,7 @@ export function ProfessionalReactivationPanel({
     } catch {
       if (!request.signal.aborted) showError();
     } finally {
-      onBusyChange(false);
-      if (!request.signal.aborted) {
-        pending.current = false;
-        setSubmitting(false);
-      }
+      request.finish();
     }
   }
   function submit(event: FormEvent<HTMLFormElement>) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import { useEffect, useRef, useState } from "react";
 import { Button, Feedback, Modal, ModalActions } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
@@ -28,15 +29,12 @@ export function OfferingStatusAction({
   onBusyChange,
 }: OfferingStatusProps) {
   const [desiredActive, setDesiredActive] = useState<boolean | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const [missing, setMissing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const controller = useRef<AbortController | null>(null);
-  const pending = useRef(false);
   const focusAfter = useRef(false);
   const action = useRef<HTMLButtonElement>(null);
   const container = useRef<HTMLDivElement>(null);
-  useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
     if (!submitting && focusAfter.current) {
       focusAfter.current = false;
@@ -46,13 +44,9 @@ export function OfferingStatusAction({
   }, [submitting, canWrite, notice, desiredActive]);
 
   async function run() {
-    if (pending.current || !canWrite || desiredActive === null || missing)
-      return;
-    pending.current = true;
-    setSubmitting(true);
-    onBusyChange(true);
-    const request = new AbortController();
-    controller.current = request;
+    if (isPending() || !canWrite || desiredActive === null || missing) return;
+    const request = begin();
+    if (!request) return;
     try {
       const result = await setOfferingStatus(
         record.id,
@@ -104,13 +98,11 @@ export function OfferingStatusAction({
     } catch {
       if (!request.signal.aborted) showError();
     } finally {
-      pending.current = false;
-      if (!request.signal.aborted) setSubmitting(false);
-      onBusyChange(false);
+      request.finish();
     }
   }
   function closeConfirmation() {
-    if (pending.current) return;
+    if (isPending()) return;
     focusAfter.current = true;
     setDesiredActive(null);
   }

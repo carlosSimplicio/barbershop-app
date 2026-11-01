@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -60,11 +61,8 @@ export function CreateProfessionalForm({
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const submittingRef = useRef(false);
-  const controller = useRef<AbortController | null>(null);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const focusAfterResponse = useRef(false);
-  useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
     if (!submitting && focusAfterResponse.current) {
       focusAfterResponse.current = false;
@@ -93,7 +91,7 @@ export function CreateProfessionalForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submittingRef.current || !canWrite) return;
+    if (isPending() || !canWrite) return;
 
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -102,11 +100,8 @@ export function CreateProfessionalForm({
       return;
     }
 
-    submittingRef.current = true;
-    onBusyChange?.(true);
-    const requestController = new AbortController();
-    controller.current = requestController;
-    setSubmitting(true);
+    const requestController = begin();
+    if (!requestController) return;
     setFeedback(null);
     try {
       const result = await createProfessional(
@@ -164,11 +159,7 @@ export function CreateProfessionalForm({
         });
       }
     } finally {
-      onBusyChange?.(false);
-      if (!requestController.signal.aborted) {
-        submittingRef.current = false;
-        setSubmitting(false);
-      }
+      requestController.finish();
     }
   }
 

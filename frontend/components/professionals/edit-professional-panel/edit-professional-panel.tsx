@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import {
   useEffect,
   useRef,
@@ -62,11 +63,9 @@ export function EditProfessionalPanel({
   const [name, setName] = useState("");
   const [load, setLoad] = useState<Load>("loading");
   const [version, setVersion] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<Notice | null>(null);
-  const pending = useRef(false);
-  const mutation = useRef<AbortController | null>(null);
   const field = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLElement>(null);
   const focusError = useRef(false);
@@ -80,7 +79,6 @@ export function EditProfessionalPanel({
     setRecord(confirmed);
     onRecordConfirmed(confirmed);
   }
-  useEffect(() => () => mutation.current?.abort(), []);
   useEffect(() => {
     if (load === "ready" && focusInitial.current) {
       focusInitial.current = false;
@@ -142,7 +140,7 @@ export function EditProfessionalPanel({
     onUnauthorized,
   ]);
   function reload() {
-    if (pending.current || blocked) return;
+    if (isPending() || blocked) return;
     setLoad("loading");
     setVersion((value) => value + 1);
   }
@@ -155,7 +153,7 @@ export function EditProfessionalPanel({
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!record || !canWrite || pending.current || load !== "ready") return;
+    if (!record || !canWrite || isPending() || load !== "ready") return;
     const validation = validateProfessionalName(name);
     setError(validation);
     if (validation) {
@@ -170,12 +168,9 @@ export function EditProfessionalPanel({
       });
       return;
     }
-    pending.current = true;
-    setSubmitting(true);
-    onBusyChange(true);
+    const controller = begin();
+    if (!controller) return;
     setNotice(null);
-    const controller = new AbortController();
-    mutation.current = controller;
     try {
       const result = await updateProfessional(
         professionalId,
@@ -222,11 +217,7 @@ export function EditProfessionalPanel({
     } catch {
       if (!controller.signal.aborted) showError();
     } finally {
-      onBusyChange(false);
-      if (!controller.signal.aborted) {
-        pending.current = false;
-        setSubmitting(false);
-      }
+      controller.finish();
     }
   }
   const disabled = !canWrite || submitting || load !== "ready";

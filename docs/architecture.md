@@ -316,6 +316,8 @@
 
 ### Ciclo das mutações
 
+- Cadastros, edições e ações de estado de Serviços e Profissionais compartilham `useMutationRequest`: trava síncrona contra envio duplicado, estado de envio, cancelamento ao desmontar e liberação idempotente da atividade. Cada fluxo valida entradas e interpreta respostas localmente; o hook não repete requisições nem mantém cache.
+
 - Trate falhas de rede, respostas `5xx` e respostas fora do contrato como erros comuns: exiba uma mensagem local segura e encerre a operação pendente. Não existe estado de resultado incerto, consulta de confirmação automática ou etapa obrigatória de conferência para liberar os controles.
 - Preserve as entradas permitidas pelo fluxo e permita fechar, cancelar ou tentar novamente explicitamente após o erro, respeitando sessão, permissões e validações. Não repita mutações automaticamente. Uma falha não deve anunciar sucesso nem afirmar que a escrita foi revertida.
 - Mantenha rascunho e registro confirmado separados. Respostas de mutação que retornam o registro atualizam diretamente lista e editor; ao mudar estado, preserve campos editados e atualize os demais com os valores retornados.
