@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   ActionLink,
@@ -11,8 +11,13 @@ import {
   FileField,
   Feedback,
   IconButton,
+  Modal,
+  ModalActions,
   PasswordField,
   RecordList,
+  RecordListPanel,
+  RecordSummary,
+  type RecordListView,
   SelectField,
   TextareaField,
   TextField,
@@ -21,11 +26,18 @@ import {
 import styles from "./showcase.module.css";
 
 type Theme = "light" | "dark";
+type ListExampleState = "success" | "loading" | "error" | "empty" | "long";
 
 const sampleRecords = [
   { id: "ana-lima", name: "Ana Lima", detail: "ana@example.test" },
   { id: "bia-souza", name: "Beatriz Souza", detail: "bia@example.test" },
 ];
+
+const longSampleRecords = Array.from({ length: 20 }, (_, index) => ({
+  id: `record-${index + 1}`,
+  name: `Registro de exemplo ${index + 1}`,
+  detail: "Detalhes para conferir a rolagem interna da lista.",
+}));
 
 const swatches = [
   ["Azul principal", "--color-primary", "primary"],
@@ -43,6 +55,11 @@ export function DesignSystemShowcase() {
   );
   const [iconPressed, setIconPressed] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("(11) 99999-0000");
+  const modalTrigger = useRef<HTMLButtonElement>(null);
+  const confirmationTrigger = useRef<HTMLButtonElement>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalBusy, setModalBusy] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   return (
     <main className={styles.page} data-theme={theme}>
@@ -77,6 +94,7 @@ export function DesignSystemShowcase() {
         <a href="#actions">Ações</a>
         <a href="#fields">Campos</a>
         <a href="#states">Estados</a>
+        <a href="#modals">Modais</a>
         <a href="#accessibility">Acessibilidade</a>
       </nav>
 
@@ -128,6 +146,15 @@ export function DesignSystemShowcase() {
               Criar meu espaço <ChevronIcon />
             </Button>
             <Button disabled>Indisponível</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setActionMessage("Ação cancelada.")}
+            >
+              Cancelar
+            </Button>
+            <Button variant="secondary" disabled>
+              Cancelar
+            </Button>
             <IconButton
               aria-label={
                 iconPressed ? "Desmarcar favorito" : "Marcar favorito"
@@ -152,6 +179,9 @@ export function DesignSystemShowcase() {
           </p>
           <p className={styles.instruction}>
             Use ponteiro e Tab para conferir hover, foco, clique e estado ativo.
+            Button usa a variante primary por padrão. Ações de cancelamento usam
+            a variante secondary, com fundo branco, texto escuro e borda,
+            inclusive no tema escuro, sem a sombra da ação principal.
           </p>
         </Showcase>
         <Showcase title="Links de ação">
@@ -363,12 +393,132 @@ export function DesignSystemShowcase() {
             />
           </div>
         </Showcase>
+        <Showcase title="Painel de lista e itens compartilhados">
+          <p>
+            RecordListPanel reúne atualização, carregamento, erro, vazio e
+            paginação. RecordSummary organiza nome, detalhes, situação textual e
+            ações; cada fluxo define seus próprios campos, permissões e
+            callbacks. Ambos acompanham o tema e empilham conteúdo e ações em
+            telas estreitas.
+          </p>
+          <p>
+            Os rótulos identificam região, lista e paginação. O carregamento é
+            anunciado e bloqueia a atualização; operações pendentes bloqueiam os
+            controles. A referência da região permite devolver o foco após
+            fechar editores ou modais.
+          </p>
+          <RecordListPanelExample />
+          <p>
+            A área de itens tem altura limitada e rolagem interna. Título,
+            atualização e paginação ficam fora dela. Use Tab para focar a região
+            da lista e as teclas de navegação para rolar; o foco das ações deve
+            continuar visível. Selecione “Lista longa” para conferir o
+            comportamento.
+          </p>
+        </Showcase>
+      </section>
+
+      <section className={styles.section} id="modals">
+        <SectionHeading
+          description="Modal controlada e reutilizável para cadastro e edição, com título obrigatório, descrição opcional e conteúdo livre."
+          number="05"
+          title="Modais"
+        />
+        <Showcase title="Cadastro em modal">
+          <div className={styles.actionGrid}>
+            <strong>Exemplo de seção</strong>
+            <IconButton
+              ref={modalTrigger}
+              aria-label="Adicionar registro"
+              aria-haspopup="dialog"
+              onClick={() => setModalOpen(true)}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </IconButton>
+          </div>
+          <p>
+            Use o botão + à direita do título da seção para abrir um cadastro. A
+            modal acompanha o tema claro ou escuro e permite rolagem em telas
+            estreitas.
+          </p>
+          <p>
+            O foco começa no título, Tab permanece na modal e o fundo fica
+            indisponível. Feche pelo × ou Escape; o foco volta ao acionador. Use
+            returnFocusRef para indicar o acionador quando ele fica desabilitado
+            durante a confirmação; fallbackFocusRef recebe o foco se o acionador
+            estiver indisponível. A restauração acontece após atualizar os
+            controles. Cliques no fundo não fecham a modal. Durante um envio,
+            bloqueie o fechamento com closeDisabled. O conteúdo permanece
+            montado ao fechar; o fluxo consumidor controla o descarte de
+            rascunhos. Na edição, a ação de estado abre uma segunda modal de
+            confirmação, preservando o editor abaixo. Escape e Tab atuam somente
+            na confirmação; ao fechar, o foco retorna à ação de estado. Use
+            rótulos curtos: “Confirmar”, “Cancelar” e “Fechar” após a conclusão.
+            O estado e a ação correspondente ficam alinhados no topo, antes dos
+            campos; use “Salvar” e “Cancelar” lado a lado, alinhados à direita
+            na mesma linha do rodapé, para a edição. Envios pendentes bloqueiam
+            o fechamento. Após erro, os controles ficam disponíveis novamente.
+          </p>
+          <p>
+            Todas as modais usam ModalActions para agrupar suas ações em uma
+            única linha à direita, com botões compactos de largura natural e
+            textos curtos. O tamanho preserva a área mínima de toque de 44
+            pixels. Mantenha os botões de envio dentro do formulário. No
+            exemplo, Enviar simula uma operação pendente e Concluir a encerra.
+          </p>
+          <Modal
+            returnFocusRef={modalTrigger}
+            open={modalOpen}
+            title="Novo registro"
+            description="Exemplo com formulário e bloqueio durante envio."
+            closeDisabled={modalBusy}
+            onClose={() => setModalOpen(false)}
+          >
+            <TextField label="Nome do registro" />
+
+            {confirmationOpen ? (
+              <Modal
+                open
+                returnFocusRef={confirmationTrigger}
+                title="Confirmar alteração"
+                description="O rascunho da edição permanece na modal abaixo."
+                onClose={() => setConfirmationOpen(false)}
+              >
+                <ModalActions>
+                  <Button onClick={() => setConfirmationOpen(false)}>
+                    Confirmar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmationOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                </ModalActions>
+              </Modal>
+            ) : null}
+            <ModalActions>
+              <Button
+                ref={confirmationTrigger}
+                disabled={modalBusy || confirmationOpen}
+                onClick={() => setConfirmationOpen(true)}
+              >
+                Confirmar
+              </Button>
+              <Button onClick={() => setModalBusy(!modalBusy)}>
+                {modalBusy ? "Concluir" : "Enviar"}
+              </Button>
+            </ModalActions>
+          </Modal>
+        </Showcase>
       </section>
 
       <section className={styles.section} id="accessibility">
         <SectionHeading
           description="Regras mínimas incorporadas aos componentes compartilhados."
-          number="05"
+          number="06"
           title="Acessibilidade"
         />
         <div className={styles.ruleGrid}>
@@ -390,6 +540,88 @@ export function DesignSystemShowcase() {
         React disponível somente em desenvolvimento
       </footer>
     </main>
+  );
+}
+
+function RecordListPanelExample() {
+  const [mode, setMode] = useState<ListExampleState>("success");
+  const [offset, setOffset] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const records = mode === "long" ? longSampleRecords : sampleRecords;
+  const limit = mode === "long" ? longSampleRecords.length : 1;
+  const view: RecordListView<(typeof sampleRecords)[number]> =
+    mode === "success" || mode === "empty" || mode === "long"
+      ? {
+          status: "success",
+          page: {
+            items:
+              mode === "empty" ? [] : records.slice(offset, offset + limit),
+            offset: mode === "empty" ? 0 : offset,
+            limit,
+            has_more: mode !== "empty" && offset + limit < records.length,
+          },
+        }
+      : { status: mode };
+  return (
+    <>
+      <div className={styles.actionGrid}>
+        <SelectField
+          label="Estado da lista"
+          value={mode}
+          onChange={(event) => {
+            setMode(event.target.value as ListExampleState);
+            setOffset(0);
+          }}
+        >
+          <option value="success">Com registros</option>
+          <option value="loading">Carregando</option>
+          <option value="error">Erro</option>
+          <option value="empty">Vazio</option>
+          <option value="long">Lista longa (20 itens)</option>
+        </SelectField>
+        <Button aria-pressed={busy} onClick={() => setBusy(!busy)}>
+          {busy ? "Liberar controles da lista" : "Simular operação pendente"}
+        </Button>
+      </div>
+      <RecordListPanel
+        title="Registros de exemplo"
+        label="Lista de exemplo"
+        paginationLabel="Paginação de exemplo"
+        view={view}
+        busy={busy}
+        messages={{
+          loading: "Carregando registros…",
+          empty: "Nenhum registro cadastrado.",
+          errorTitle: "Não foi possível consultar os registros",
+          errorDescription: "Tente atualizar a lista novamente.",
+        }}
+        getKey={(record) => record.id}
+        onRefresh={() => setMode("success")}
+        onPageChange={setOffset}
+        renderItem={(record) => (
+          <RecordSummary
+            title={record.name}
+            status={{
+              label: record.id === "ana-lima" ? "Ativo" : "Inativo",
+              tone: record.id === "ana-lima" ? "success" : "neutral",
+            }}
+            actions={
+              <IconButton
+                aria-label="Editar registro"
+                title="Editar registro"
+                disabled={busy}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m16 3 5 5-13 13-5 1 1-5L16 3ZM14 5l5 5" />
+                </svg>
+              </IconButton>
+            }
+          >
+            <span>{record.detail}</span>
+          </RecordSummary>
+        )}
+      />
+    </>
   );
 }
 

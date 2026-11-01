@@ -21,7 +21,13 @@ import (
 	openapiTypes "github.com/oapi-codegen/runtime/types"
 )
 
+const maxProfessionalRequestBytes int64 = 8 * 1024
+
 type Registry interface {
+	Reactivate(context.Context, auth.Principal, string, string) (Professional, error)
+	Deactivate(context.Context, auth.Principal, string) (Professional, error)
+	UpdateName(context.Context, auth.Principal, string, string) (Professional, error)
+	Get(context.Context, auth.Principal, string) (Professional, error)
 	Create(context.Context, auth.Principal, CreateInput) (Professional, error)
 	List(context.Context, auth.Principal, int32, int32) (ListResult, error)
 }
@@ -78,18 +84,16 @@ func (handler *Handler) GetProfessionals(httpContext *gin.Context, parameters ap
 	}
 	items := make([]api.ProfessionalResponse, 0, len(result.Items))
 	for _, professional := range result.Items {
-		professionalUUID, err := uuid.Parse(professional.ID)
+		response, err := professionalResponse(professional)
 		if err != nil {
 			slog.Error("professional_list_response_invalid", "request_id", httpserver.RequestID(httpContext))
 			writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar os profissionais.")
 			return
 		}
-		items = append(items, api.ProfessionalResponse{
-			Id: professionalUUID, Name: professional.Name, Email: openapiTypes.Email(professional.Email), Active: professional.Active,
-		})
+		items = append(items, response)
 	}
 	httpContext.JSON(http.StatusOK, api.ProfessionalListResponse{
-		Items: items, Limit: int(result.Limit), Offset: int(result.Offset), HasMore: result.HasMore,
+		Items: items, Limit: int(result.Limit), Offset: int(result.Offset), HasMore: result.HasMore, CanWrite: result.CanWrite,
 	})
 }
 
@@ -99,10 +103,7 @@ func (handler *Handler) PostProfessionals(httpContext *gin.Context) {
 		return
 	}
 	var request createRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 8192))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&request); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+	if !decodeProfessionalRequest(httpContext, &request) {
 		return
 	}
 	professional, err := handler.registry.Create(httpContext.Request.Context(), principal, CreateInput{
@@ -112,15 +113,13 @@ func (handler *Handler) PostProfessionals(httpContext *gin.Context) {
 		writeCreationError(httpContext, err)
 		return
 	}
-	professionalUUID, err := uuid.Parse(professional.ID)
+	response, err := professionalResponse(professional)
 	if err != nil {
 		slog.Error("professional_response_invalid", "request_id", httpserver.RequestID(httpContext))
 		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível concluir o cadastro.")
 		return
 	}
-	httpContext.JSON(http.StatusCreated, api.ProfessionalResponse{
-		Id: professionalUUID, Name: professional.Name, Email: openapiTypes.Email(professional.Email), Active: professional.Active,
-	})
+	httpContext.JSON(http.StatusCreated, response)
 }
 
 func writeCreationError(httpContext *gin.Context, err error) {
@@ -156,4 +155,143 @@ func writeFieldError(httpContext *gin.Context, status int, field, code, message 
 	httpContext.JSON(status, api.ErrorResponse{
 		Code: topCode, Message: "Verifique os campos informados.", RequestId: httpserver.RequestID(httpContext), Fields: &fields,
 	})
+}
+
+func (handler *Handler) GetProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	professional, err := handler.registry.Get(httpContext.Request.Context(), principal, professionalID.String())
+	if err != nil {
+		writeProfessionalError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func writeProfessionalError(httpContext *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrForbidden):
+		writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode consultar este profissional.")
+	case errors.Is(err, ErrNotFound):
+		writeError(httpContext, http.StatusNotFound, "professional_not_found", "Profissional não encontrado.")
+	default:
+		slog.Error("professional_query_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o profissional.")
+	}
+}
+
+func writeProfessionalResponse(httpContext *gin.Context, status int, professional Professional) {
+	response, err := professionalResponse(professional)
+	if err != nil {
+		slog.Error("professional_response_invalid", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível consultar o profissional.")
+		return
+	}
+	httpContext.JSON(status, response)
+}
+
+func (handler *Handler) PatchProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	var request struct {
+		Name *string `json:"name"`
+	}
+	if !decodeProfessionalRequest(httpContext, &request) {
+		return
+	}
+	if request.Name == nil {
+		writeMutationError(httpContext, ErrInvalidName)
+		return
+	}
+	professional, err := handler.registry.UpdateName(httpContext.Request.Context(), principal, professionalID.String(), *request.Name)
+	if err != nil {
+		writeMutationError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func writeMutationError(httpContext *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrAlreadyActive):
+		writeError(httpContext, http.StatusConflict, "professional_already_active", "O profissional já está ativo. A senha não foi alterada.")
+	case errors.Is(err, security.ErrInvalidPassword):
+		writeFieldError(httpContext, http.StatusBadRequest, "temporary_password", "invalid_password", auth.PasswordRequirementsMessage())
+	case errors.Is(err, ErrForbidden):
+		writeError(httpContext, http.StatusForbidden, "forbidden", "Você não pode alterar este profissional.")
+	case errors.Is(err, ErrNotFound):
+		writeError(httpContext, http.StatusNotFound, "professional_not_found", "Profissional não encontrado.")
+	case errors.Is(err, entitlements.ErrReadOnly):
+		writeError(httpContext, http.StatusForbidden, "read_only", "O estabelecimento está em modo somente leitura.")
+	case errors.Is(err, ErrInvalidName):
+		writeFieldError(httpContext, http.StatusBadRequest, "name", "invalid_name", fmt.Sprintf("Informe um nome com até %d caracteres.", MaxNameCodePoints))
+	default:
+		slog.Error("professional_mutation_failed", "request_id", httpserver.RequestID(httpContext))
+		writeError(httpContext, http.StatusInternalServerError, "internal_error", "Não foi possível alterar o profissional.")
+	}
+}
+
+func (handler *Handler) PostProfessionalDeactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	// This transition has no input body; reject even an empty JSON object.
+	if _, err := io.ReadAll(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, 0)); err != nil {
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Esta operação não recebe corpo.")
+		return
+	}
+	professional, err := handler.registry.Deactivate(httpContext.Request.Context(), principal, professionalID.String())
+	if err != nil {
+		writeMutationError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	var request struct {
+		TemporaryPassword *string `json:"temporary_password"`
+	}
+	if !decodeProfessionalRequest(httpContext, &request) {
+		return
+	}
+	if request.TemporaryPassword == nil {
+		writeMutationError(httpContext, security.ErrInvalidPassword)
+		return
+	}
+	professional, err := handler.registry.Reactivate(httpContext.Request.Context(), principal, professionalID.String(), *request.TemporaryPassword)
+	if err != nil {
+		writeMutationError(httpContext, err)
+		return
+	}
+	writeProfessionalResponse(httpContext, http.StatusOK, professional)
+}
+
+func decodeProfessionalRequest(httpContext *gin.Context, input any) bool {
+	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, maxProfessionalRequestBytes))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(input); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
+		return false
+	}
+	return true
+}
+
+func professionalResponse(professional Professional) (api.ProfessionalResponse, error) {
+	professionalID, err := uuid.Parse(professional.ID)
+	if err != nil {
+		return api.ProfessionalResponse{}, err
+	}
+	return api.ProfessionalResponse{
+		Id: professionalID, Name: professional.Name, Email: openapiTypes.Email(professional.Email), Active: professional.Active,
+	}, nil
 }

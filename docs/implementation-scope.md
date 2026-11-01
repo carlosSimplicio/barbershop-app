@@ -204,12 +204,14 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Usar apenas estado, efeitos e Context nativos do React; Context não funciona como cache genérico de API.
 - [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
 - [x] Centralizar cores, tipografia, espaçamento, raios, sombras e temas claro e escuro em tokens visuais compartilhados.
-- [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado.
+- [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado; oferecer variante primária e secundária com fundo branco, texto escuro e borda para cancelamento, aplicada aos fluxos e à referência do design system.
 - [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis, incluindo `Textarea` e `TextareaField` para conteúdo multilinha e `FileField` para seleção de imagens.
 - [ ] Criar padrões compartilhados para tabelas.
-- [ ] Criar padrões compartilhados para modais.
+- [x] Criar `Modal` reutilizável no design system com `dialog` nativo, foco inicial e retorno ao acionador, teclado, fundo inerte, rolagem responsiva e fechamento bloqueável durante envios.
+- [x] Compartilhar `ModalActions` no design system e em todas as modais: botões compactos com alvo de toque preservado, textos curtos, largura natural e ações na mesma linha à direita; remover os estilos de rodapé duplicados dos domínios.
 - [x] Criar padrões compartilhados de feedback.
 - [x] Criar padrões compartilhados para estados vazios com lista semântica e anúncio acessível.
+- [x] Compartilhar `RecordListPanel` e `RecordSummary` entre serviços e profissionais, com estados de consulta, atualização, paginação sempre visível após consulta bem-sucedida, rolagem interna dos itens acessível por teclado, referência de foco, detalhes e ações responsivas, com botões de ícone compactos para atualizar e editar; preservar permissões e operações específicas em cada domínio.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
@@ -249,7 +251,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Invalidar credenciais e sessões anteriores após recuperação ou redefinição de senha.
 - [x] Permitir que o proprietário cadastre profissional pela API com senha temporária e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
-- [ ] Ao reativar profissional, exigir nova senha temporária sem restaurar credenciais antigas.
+- [x] Reativar profissional pela API com senha temporária válida inclusive igual ao valor anterior, novo hash, troca obrigatória e invalidação de sessões/tokens anteriores.
+- [x] Oferecer reativação com senha temporária pelo painel, inclusive reutilizando o valor anterior, sem expor a entrada nem afirmar sucesso após erro.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
 - [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
 - [x] Estender a limitação progressiva à solicitação de recuperação por IP e e-mail normalizado.
@@ -264,9 +267,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Garantir ao proprietário administração completa apenas do próprio estabelecimento.
 - [ ] Restringir o profissional à própria agenda, clientes relacionados e visão financeira própria.
 - [ ] Impedir profissional de acessar despesas, resultado geral ou dados financeiros de colegas.
-- [ ] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado.
+- [x] Revogar imediatamente todas as sessões e impedir login quando um profissional for desativado, com serialização contra login e troca obrigatória, inclusive requisição autenticada antes de um ciclo de desativação/reativação.
 - [x] Criar componente reutilizável que decide o direito de escrita a partir do trial persistido, incluindo o início e excluindo o fim.
 - [x] Exigir esse direito de escrita na API de cadastro de profissionais.
+- [x] Informar `can_write` na listagem de profissionais pelo componente central, preservando leitura sem trial ativo e distinguindo falhas de infraestrutura.
 - [ ] Estender a decisão de escrita aos períodos de assinatura e aplicá-la aos endpoints de mutação autenticados e públicos.
 - [ ] Com acesso expirado, permitir autenticação, leitura e assinatura/renovação, bloqueando demais mutações.
 - [ ] Cobrir a matriz de autorização e isolamento com testes unitários.
@@ -289,8 +293,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
 - [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
 - [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
-- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda, preservando links legados incompatíveis com o editor e exigindo reconciliação quando a consulta falha após salvamento confirmado.
-- [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após falha confirmada, reconciliar respostas ambíguas e conservar a seleção até a reconciliação quando necessário, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
+- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda, preservando links legados incompatíveis com o editor e mantendo a edição disponível quando a consulta falha após salvamento confirmado.
+- [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após recusa `4xx`, preservar a seleção e permitir nova tentativa explícita após erro de rede ou `5xx`, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 
 ## 8. Logos e arquivos públicos
@@ -303,20 +307,29 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
 - [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.
 - [x] Servir o logo atual por `GET /api/v1/public/establishments/{slug}/logo` somente quando publicável, com resolução central do slug, storage por interface, MIME/tamanho validados, `nosniff`, ETag SHA-256 e cache revalidável; trial expirado não oculta a imagem e nenhuma chave/caminho interno é exposto.
-- [x] Entregar em `/painel/configuracoes` o envio e a substituição do logo com pré-visualização substitutiva, limpeza da seleção temporária, mensagens de recusa, restauração do logo e limpeza do seletor após falha confirmada, reconciliação de respostas ambíguas, nova seleção para nova tentativa e atualização do endereço público após sucesso; conservar a consulta em `read_only` e não permitir remoção do logo publicado.
+- [x] Entregar em `/painel/configuracoes` o envio e a substituição do logo com pré-visualização substitutiva, limpeza da seleção temporária, mensagens de recusa, restauração do logo e limpeza do seletor após recusa `4xx`, seleção preservada para nova tentativa explícita após erro de rede ou `5xx` e atualização do endereço público após sucesso; conservar a consulta em `read_only` e não permitir remoção do logo publicado.
 
 ## 9. Administração de profissionais
 
 - [x] Criar profissional do próprio estabelecimento pela API com e-mail globalmente único e senha temporária.
-- [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação e leitura após expiração do trial.
+- [x] Listar pela API apenas profissionais do próprio estabelecimento, com paginação, `can_write` centralizado e leitura após expiração do trial.
 - [x] Exibir no painel nome, e-mail e estado ativo com carregamento, vazio, erro, paginação e descarte de consultas obsoletas.
-- [ ] Consultar individualmente, editar, ativar e desativar profissionais do estabelecimento.
-- [x] Oferecer cadastro pela página do painel com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
+- [x] Consultar individualmente pela API profissionais ativos e inativos do próprio estabelecimento, inclusive sem trial ativo.
+- [x] Editar somente o nome de profissional ativo ou inativo pela API, com validação compartilhada, CSRF parametrizado e direito de escrita, preservando identidade e credenciais.
+- [x] Desativar profissionais pela API atomicamente com revogação de acesso e repetição segura.
+- [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
+- [x] Padronizar os rótulos das confirmações como “Confirmar”/“Cancelar”/“Fechar” e as modais de edição de serviços e profissionais com botões “Salvar”/“Cancelar” lado a lado e alinhados à direita na mesma linha do rodapé e ação de estado no topo, à direita do estado atual, antes dos campos.
+- [x] Simplificar erros de mutações no frontend: `5xx`, rede e respostas fora do contrato exibem feedback e liberam os controles, sem estado incerto, consulta de confirmação ou conferência obrigatória; sincronizar testes e documentação.
+- [x] Consultar individualmente e editar o nome de profissionais ativos e inativos em modal pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e nova tentativa explícita após erro.
+- [x] Desativar profissionais a partir da edição pelo painel em modal própria de confirmação de perda de acesso, envio único, sincronização direta de lista/editor e tratamento local de erros.
+- [x] Reativar profissionais a partir da edição pelo painel em modal própria de confirmação, com senha temporária, conflito seguro, limpeza de entrada, coordenação e tratamento local de erros.
+- [x] Oferecer cadastro em modal reutilizável aberta pelo botão `+` à direita do título de Profissionais, com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
 - [ ] Permitir comissão específica por associação profissional-serviço sem alterar preço ou duração do serviço.
 - [ ] Exibir quantidade de agendamentos futuros afetados antes da desativação.
-- [ ] Preservar profissional, vínculos, agendamentos e histórico financeiro após desativação.
+- [x] Preservar perfil, identidade, e-mail e hash existentes após desativação, sem exclusão física.
+- [ ] Integrar a preservação dos futuros vínculos, agendamentos e histórico financeiro após desativação.
 - [ ] Alertar o proprietário sobre agendamentos futuros de profissional desativado, sem cancelamento automático.
 
 ## 10. Administração de serviços
@@ -327,9 +340,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Editar nome, preço e duração pela API com PATCH parcial, validação atômica, CSRF em rota parametrizada e preservação da identidade.
 - [x] Ativar e desativar serviço pela API com estado explícito idempotente, tenant, CSRF e direito de escrita.
 - [x] Listar serviços no painel com paginação, preço BRL exato, estados de consulta e somente leitura.
-- [x] Cadastrar serviço no painel com preço decimal convertido exatamente em centavos, limites visíveis de nome, preço e duração, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
-- [x] Consultar e editar serviço no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento e reconciliação que preserva o rascunho e sincroniza o registro persistido na lista.
-- [x] Ativar e desativar serviço no painel com confirmação, coordenação dos envios e consulta após resultado ambíguo, atualizando lista e editor aberto.
+- [x] Cadastrar serviço em modal reutilizável aberta pelo botão `+` à direita do título de Serviços, com preço decimal convertido exatamente em centavos, limites visíveis de nome, preço e duração, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
+- [x] Consultar e editar serviço em modal no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento, preservação do rascunho após erro e sincronização do registro persistido na lista após sucesso.
+- [x] Ativar e desativar serviço a partir da edição no painel em modal própria de confirmação, coordenação dos envios e tratamento local de erros, atualizando diretamente lista e editor aberto após sucesso.
 - [x] Validar nome obrigatório normalizado com até 120 pontos de código, sem caractere NUL, e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
 - [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.
@@ -369,7 +382,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas, com nova consulta ao servidor ao tentar novamente após falha temporária.
 - [x] Não renderizar seções vazias para informações públicas opcionais.
-- [x] Limpar seleção e pré-visualização do logo após recusas definitivas, inclusive no primeiro upload, preservando a reconciliação de falhas ambíguas.
+- [x] Limpar seleção e pré-visualização do logo após recusas definitivas, inclusive no primeiro upload, preservando seleção e permitindo nova tentativa explícita após erro de rede ou `5xx`.
 - [ ] Criar fluxo interativo para escolher serviço, profissional associado, dia e horário.
 - [ ] Coletar somente nome e telefone para criar o agendamento.
 - [ ] Criar agendamento com exatamente um serviço e um profissional.
@@ -522,6 +535,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Derivar e validar o tenant do `Principal` na consulta autenticada do estabelecimento.
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário no cadastro autenticado de profissionais.
 - [x] Derivar o tenant do `Principal` e validar papel de proprietário na listagem autenticada de profissionais.
+- [x] Validar tenant, papel do proprietário e perfil profissional na consulta individual, sem expor credenciais ou sessões.
+- [x] Validar tenant e papel na desativação e reativação e invalidar acessos anteriores sem destruir registros existentes.
 - [ ] Validar ownership, tenant e papel em cada recurso futuro acessado.
 - [ ] Preservar histórico e preferir desativação a exclusão destrutiva.
 - [ ] Não implementar exclusão ou anonimização automatizada de clientes no MVP.

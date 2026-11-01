@@ -19,9 +19,10 @@ type professionalPage struct {
 		Email  string `json:"email"`
 		Active bool   `json:"active"`
 	} `json:"items"`
-	Limit   int  `json:"limit"`
-	Offset  int  `json:"offset"`
-	HasMore bool `json:"has_more"`
+	Limit    int  `json:"limit"`
+	Offset   int  `json:"offset"`
+	HasMore  bool `json:"has_more"`
+	CanWrite bool `json:"can_write"`
 }
 
 func TestProfessionalListPaginatesAndIsolatesEstablishments(t *testing.T) {
@@ -43,7 +44,7 @@ func TestProfessionalListPaginatesAndIsolatesEstablishments(t *testing.T) {
 	}
 
 	first := getProfessionalPage(t, application, "/api/v1/professionals?limit=2&offset=0")
-	if first.Limit != 2 || first.Offset != 0 || !first.HasMore || len(first.Items) != 2 ||
+	if !first.CanWrite || first.Limit != 2 || first.Offset != 0 || !first.HasMore || len(first.Items) != 2 ||
 		first.Items[0].Name != "Caio" || first.Items[1].Name != "Bia" || first.Items[1].Active {
 		t.Fatalf("first page = %#v", first)
 	}
@@ -78,7 +79,7 @@ func TestProfessionalListRemainsReadableAfterTrialExpires(t *testing.T) {
 		t.Fatalf("expire trial: %v", err)
 	}
 	page := getProfessionalPage(t, application, "/api/v1/professionals")
-	if len(page.Items) != 1 || page.Items[0].Name != "Ana" {
+	if page.CanWrite || len(page.Items) != 1 || page.Items[0].Name != "Ana" {
 		t.Fatalf("expired trial list = %#v", page)
 	}
 }
@@ -140,4 +141,17 @@ func getProfessionalPage(t *testing.T, application *testApplication, path string
 		t.Fatal("professional list returned null items")
 	}
 	return result
+}
+
+func TestProfessionalListWithoutTrialRemainsReadable(t *testing.T) {
+	application := newTestApplication(t)
+	registerAndConfirmOwner(t, application, defaultOwnerRegistration())
+	createProfessionalForList(t, application, "Ana", "ana@example.test")
+	if _, err := integrationPool.Exec(context.Background(), `DELETE FROM establishment_trials`); err != nil {
+		t.Fatal(err)
+	}
+	page := getProfessionalPage(t, application, "/api/v1/professionals")
+	if page.CanWrite || len(page.Items) != 1 {
+		t.Fatalf("missing trial page = %#v", page)
+	}
 }

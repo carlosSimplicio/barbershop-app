@@ -19,9 +19,7 @@ beforeEach(() => vi.mocked(createProfessional).mockReset());
 
 test("valida os campos antes do envio e foca o primeiro erro", () => {
   render(<CreateProfessionalForm onCreated={vi.fn()} />);
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(screen.getByLabelText("Nome")).toHaveFocus();
   expect(
@@ -38,9 +36,7 @@ test("valida os campos antes do envio e foca o primeiro erro", () => {
   fireEvent.change(screen.getByLabelText("Senha temporária"), {
     target: { value: "curta" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(
     screen.getByText("Informe um nome com até 120 caracteres."),
@@ -73,9 +69,7 @@ test("mostra conflito de e-mail sem revelar o texto bruto da API", async () => {
   });
   render(<CreateProfessionalForm onCreated={vi.fn()} />);
   enterValidValues();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(
     await screen.findByText("Este e-mail já está cadastrado."),
@@ -89,9 +83,7 @@ test("explica a leitura permitida e o bloqueio de cadastro após o trial", async
   vi.mocked(createProfessional).mockResolvedValue(apiError(403, "read_only"));
   render(<CreateProfessionalForm onCreated={vi.fn()} />);
   enterValidValues();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(
     await screen.findByText(/período de avaliação não está ativo/i),
@@ -107,12 +99,10 @@ test("trata falha de rede com mensagem genérica", async () => {
   );
   render(<CreateProfessionalForm onCreated={vi.fn()} />);
   enterValidValues();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(
-    await screen.findByText("Verifique sua conexão e tente novamente."),
+    await screen.findByText(/Verifique sua conexão e tente novamente/),
   ).toBeInTheDocument();
   expect(screen.queryByText("network detail")).not.toBeInTheDocument();
 });
@@ -131,7 +121,7 @@ test("ignora nova submissão enquanto a primeira requisição está pendente", a
   const onCreated = vi.fn();
   render(<CreateProfessionalForm onCreated={onCreated} />);
   enterValidValues();
-  const submit = screen.getByRole("button", { name: "Cadastrar profissional" });
+  const submit = screen.getByRole("button", { name: "Cadastrar" });
   const form = submit.closest("form")!;
   act(() => {
     form.dispatchEvent(
@@ -160,9 +150,7 @@ test("limpa a senha e atualiza a lista depois de 201", async () => {
   const onCreated = vi.fn();
   render(<CreateProfessionalForm onCreated={onCreated} />);
   enterValidValues();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(
     await screen.findByText(/não poderá ser recuperada/i),
@@ -193,3 +181,33 @@ function apiError(status: number, code: string) {
     error: { code, message: "mensagem privada do servidor", request_id: "id" },
   };
 }
+
+test.each([500, 503])(
+  "HTTP %i no cadastro preserva entradas e permite novo envio explícito",
+  async (status) => {
+    vi.mocked(createProfessional).mockResolvedValue(
+      apiError(status, "read_only"),
+    );
+    const onCreated = vi.fn();
+    const onReadOnly = vi.fn();
+    render(
+      <CreateProfessionalForm onCreated={onCreated} onReadOnly={onReadOnly} />,
+    );
+    enterValidValues();
+    const submit = screen.getByRole("button", {
+      name: "Cadastrar",
+    });
+    const password = screen.getByLabelText("Senha temporária");
+    const previousPassword = (password as HTMLInputElement).value;
+    fireEvent.click(submit);
+    await screen.findByText("Não foi possível cadastrar o profissional");
+    expect(submit).toBeEnabled();
+    expect(password).toHaveValue(previousPassword);
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(onReadOnly).not.toHaveBeenCalled();
+    expect(createProfessional).toHaveBeenCalledOnce();
+    fireEvent.click(submit);
+    await waitFor(() => expect(createProfessional).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(submit).toBeEnabled());
+  },
+);

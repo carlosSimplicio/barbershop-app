@@ -127,7 +127,7 @@ export function buildOfferingPatch(
   return { errors: {}, request };
 }
 
-export function reconcileOfferingValues(
+export function mergeOfferingDraft(
   values: OfferingValues,
   previous: components["schemas"]["ServiceResponse"],
   current: components["schemas"]["ServiceResponse"],

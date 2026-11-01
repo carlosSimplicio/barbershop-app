@@ -68,7 +68,9 @@ func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, prin
 	if err != nil && !errors.Is(err, ErrUserNotFound) {
 		return LoginResult{}, err
 	}
-	if err != nil || !userCanAuthenticate(user) || !user.PasswordChangeRequired {
+	// Preserve the identity that authenticated the request. A slow body may
+	// resume after deactivation and reactivation with a newer temporary password.
+	if err != nil || !userCanAuthenticate(user) || !user.PasswordChangeRequired || !principal.PasswordChangeRequired || user.ID != principal.UserID || user.EstablishmentID != principal.EstablishmentID || user.Role != principal.Role || user.CredentialVersion != principal.CredentialVersion {
 		return LoginResult{}, ErrPasswordChangeDenied
 	}
 	unchanged, err := service.passwords.Verify(newPassword, user.PasswordHash)
@@ -84,7 +86,7 @@ func (service *SessionService) ChangeTemporaryPassword(ctx context.Context, prin
 	}
 	now := service.now().UTC()
 	sessionID := uuid.NewString()
-	previousVersion := user.CredentialVersion
+	previousVersion := principal.CredentialVersion
 	user.CredentialVersion++
 	user.PasswordChangeRequired = false
 	result, err := service.Issue(user, sessionID, now)
@@ -112,7 +114,7 @@ func (service *SessionService) Issue(user User, sessionID string, now time.Time)
 	return LoginResult{
 		Principal: Principal{
 			UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
-			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
+			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired, CredentialVersion: user.CredentialVersion,
 		},
 		AccessToken: accessToken, CSRFToken: csrfToken,
 	}, nil

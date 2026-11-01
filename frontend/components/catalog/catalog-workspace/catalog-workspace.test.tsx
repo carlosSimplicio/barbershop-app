@@ -74,19 +74,22 @@ test("libera cadastro quando a consulta volta a responder com catálogo vazio e 
 
   render(<CatalogWorkspace />);
   await screen.findByText("Não foi possível consultar os serviços");
-  expect(screen.getByLabelText("Nome do serviço")).toBeDisabled();
-  expect(screen.getByLabelText("Preço")).toBeDisabled();
-  expect(screen.getByLabelText("Duração (minutos)")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Adicionar serviço" }),
+  ).toBeDisabled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
   await screen.findByText("Nenhum serviço cadastrado.");
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+  expect(
+    screen.getByRole("dialog", { name: "Cadastrar serviço" }),
+  ).toBeVisible();
   expect(screen.getByLabelText("Nome do serviço")).toBeEnabled();
   expect(screen.getByLabelText("Preço")).toBeEnabled();
   expect(screen.getByLabelText("Duração (minutos)")).toBeEnabled();
-  expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
   expect(screen.queryByText("Modo somente leitura")).not.toBeInTheDocument();
 });
 function page(items = records, offset = 0, has_more = false, can_write = true) {
@@ -185,18 +188,82 @@ test("mantém criação confirmada quando a recarga da lista falha", async () =>
   });
   render(<CatalogWorkspace />);
   await screen.findByRole("list");
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
   fireEvent.change(screen.getByLabelText("Nome do serviço"), {
     target: { value: "Corte" },
   });
   fireEvent.change(screen.getByLabelText("Preço"), {
     target: { value: "1,00" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
   expect(
     await screen.findByText("Não foi possível consultar os serviços"),
   ).toBeVisible();
   expect(screen.getByText("Serviço cadastrado")).toBeVisible();
+});
+
+test("abre cadastro pelo cabeçalho, mantém rascunho e impede fechar durante envio", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  let finish!: (value: Awaited<ReturnType<typeof createOffering>>) => void;
+  vi.mocked(createOffering).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<CatalogWorkspace />);
+  await screen.findByRole("list");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  const action = screen.getByRole("button", { name: "Adicionar serviço" });
+  expect(action.closest("header")).toContainElement(
+    screen.getByRole("heading", { level: 1, name: "Serviços" }),
+  );
+  action.focus();
+  fireEvent.click(action);
+  fireEvent.change(screen.getByLabelText("Nome do serviço"), {
+    target: { value: "Corte" },
+  });
+  fireEvent.change(screen.getByLabelText("Preço"), {
+    target: { value: "1,00" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  expect(action).toHaveFocus();
+  fireEvent.click(action);
+  expect(screen.getByLabelText("Preço")).toHaveValue("1,00");
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeDisabled();
+  fireEvent(
+    screen.getByRole("dialog"),
+    new Event("cancel", { cancelable: true }),
+  );
+  expect(screen.getByRole("dialog")).toBeVisible();
+  await act(async () =>
+    finish({ state: "success", status: 201, data: records[0] }),
+  );
+  expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
+});
+
+test("erro no cadastro permite fechar e reabrir sem conferir a lista", async () => {
+  vi.mocked(createOffering).mockRejectedValue(new Error("network"));
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  render(<CatalogWorkspace />);
+  await screen.findByRole("list");
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+  fireEvent.change(screen.getByLabelText("Nome do serviço"), {
+    target: { value: "Corte" },
+  });
+  fireEvent.change(screen.getByLabelText("Preço"), {
+    target: { value: "1,00" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+  await screen.findByText("Não foi possível cadastrar o serviço");
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
+  expect(createOffering).toHaveBeenCalledOnce();
+  expect(listOfferings).toHaveBeenCalledOnce();
 });
 
 test("retorna foco à ação do registro ao cancelar edição", async () => {
@@ -211,19 +278,21 @@ test("retorna foco à ação do registro ao cancelar edição", async () => {
   fireEvent.click(action);
   const editor = await screen.findByRole("region", { name: "Editar serviço" });
   await within(editor).findByLabelText("Nome do serviço");
-  fireEvent.click(
-    within(editor).getByRole("button", { name: "Cancelar edição" }),
-  );
+  fireEvent.click(within(editor).getByRole("button", { name: "Cancelar" }));
   expect(action).toHaveFocus();
 });
 
-test("reconciliação após edição ambígua atualiza também o catálogo", async () => {
+test("edição com erro preserva rascunho e atualiza catálogo somente após nova tentativa bem-sucedida", async () => {
   const confirmed = { ...records[0], price_cents: 200 };
   vi.mocked(listOfferings).mockResolvedValue(page());
-  vi.mocked(getOffering)
-    .mockResolvedValueOnce({ state: "success", status: 200, data: records[0] })
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  vi.mocked(updateOffering)
+    .mockRejectedValueOnce(new Error("network"))
     .mockResolvedValueOnce({ state: "success", status: 200, data: confirmed });
-  vi.mocked(updateOffering).mockRejectedValue(new Error("response lost"));
   render(<CatalogWorkspace />);
   fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
   const editor = screen.getByRole("region", { name: "Editar serviço" });
@@ -231,24 +300,17 @@ test("reconciliação após edição ambígua atualiza também o catálogo", asy
   fireEvent.change(within(editor).getByLabelText("Preço"), {
     target: { value: "2,00" },
   });
-  fireEvent.click(
-    within(editor).getByRole("button", { name: "Salvar alterações" }),
-  );
-  await screen.findByText("Não foi possível confirmar a alteração");
-  fireEvent.click(
-    within(editor).getByRole("button", { name: "Recarregar serviço" }),
-  );
-  await waitFor(() =>
-    expect(
-      within(editor).getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled(),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+  await screen.findByText("Não foi possível salvar o serviço");
   expect(within(editor).getByLabelText("Preço")).toHaveValue("2,00");
+  expect(getOffering).toHaveBeenCalledOnce();
+  expect(updateOffering).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+  await screen.findByText("Serviço atualizado");
   expect(
     screen.getByRole("list", { name: "Serviços cadastrados" }),
   ).toHaveTextContent(/R\$\s2,00/);
-  expect(updateOffering).toHaveBeenCalledOnce();
-  expect(getOffering).toHaveBeenCalledTimes(2);
+  expect(getOffering).toHaveBeenCalledOnce();
 });
 
 test("estado confirmado atualiza lista e editor aberto, bloqueando ações enquanto aguarda", async () => {
@@ -272,14 +334,10 @@ test("estado confirmado atualiza lista e editor aberto, bloqueando ações enqua
   const editor = await screen.findByRole("region", { name: "Editar serviço" });
   await within(editor).findByLabelText("Preço");
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+  expect(within(editor).getByRole("button", { name: "Salvar" })).toBeDisabled();
   expect(
-    within(editor).getByRole("button", { name: "Salvar alterações" }),
-  ).toBeDisabled();
-  expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
+    screen.getByRole("button", { name: "Adicionar serviço" }),
   ).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Atualizar lista" }),
@@ -299,70 +357,118 @@ test("estado confirmado atualiza lista e editor aberto, bloqueando ações enqua
   );
 });
 
-test("mantém bloqueio global até concluir todas as consultas de estado pendentes", async () => {
+test("erro na mudança de estado libera fechamento e nova tentativa sem consultar o serviço", async () => {
   vi.mocked(listOfferings).mockResolvedValue(page());
-  vi.mocked(setOfferingStatus).mockRejectedValue(new Error("network"));
-  let first!: (value: Awaited<ReturnType<typeof getOffering>>) => void;
-  let second!: (value: Awaited<ReturnType<typeof getOffering>>) => void;
-  vi.mocked(getOffering)
-    .mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          first = resolve;
-        }),
-    )
-    .mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          second = resolve;
-        }),
-    );
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  vi.mocked(setOfferingStatus).mockResolvedValue({
+    state: "error",
+    status: 503,
+    error: { code: "internal_error", message: "raw", request_id: "test" },
+  });
   render(<CatalogWorkspace />);
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
   fireEvent.click(
     await screen.findByRole("button", { name: "Desativar Corte" }),
   );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+  await screen.findByText("Não foi possível alterar o serviço");
+  expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
+  expect(
+    within(screen.getByRole("dialog", { name: "Desativar serviço" })).getByRole(
+      "button",
+      { name: "Cancelar" },
+    ),
+  ).toBeEnabled();
+  expect(
+    within(screen.getByRole("dialog", { name: "Desativar serviço" })).getByRole(
+      "button",
+      { name: "Fechar modal" },
+    ),
+  ).toBeEnabled();
+  expect(getOffering).toHaveBeenCalledOnce();
+  expect(setOfferingStatus).toHaveBeenCalledOnce();
   fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
+    within(screen.getByRole("dialog", { name: "Desativar serviço" })).getByRole(
+      "button",
+      { name: "Fechar modal" },
+    ),
   );
-  await screen.findByText("Não foi possível confirmar a alteração de estado");
-  fireEvent.click(screen.getByRole("button", { name: "Ativar Barba" }));
-  fireEvent.click(screen.getByRole("button", { name: "Confirmar ativação" }));
-  await waitFor(() =>
-    expect(
-      screen.getAllByText("Não foi possível confirmar a alteração de estado"),
-    ).toHaveLength(2),
-  );
-  const consult = screen.getAllByRole("button", {
-    name: "Consultar estado do serviço",
+  expect(
+    screen.queryByRole("dialog", { name: "Desativar serviço" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Editar serviço" })).toBeVisible();
+});
+
+test("lista oferece somente o lápis e a modal usa o estado recém-consultado para ativação", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: { ...records[0], active: false },
   });
-  fireEvent.click(consult[0]);
-  fireEvent.click(consult[1]);
-  expect(getOffering).toHaveBeenCalledTimes(2);
-  await act(async () =>
-    first({
-      state: "success",
-      status: 200,
-      data: { ...records[0], active: false },
-    }),
-  );
+  render(<CatalogWorkspace />);
+  const list = await screen.findByRole("list", {
+    name: "Serviços cadastrados",
+  });
   expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
+    within(list).queryByRole("button", { name: /Ativar|Desativar/ }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(within(list).getByRole("button", { name: "Editar Corte" }));
+  const modal = screen.getByRole("dialog", { name: "Editar serviço" });
+  expect(
+    await within(modal).findByRole("button", { name: "Ativar Corte" }),
+  ).toBeEnabled();
+  expect(
+    within(modal).getByRole("heading", { name: "Editar serviço" }),
+  ).toHaveFocus();
+  expect(
+    within(modal).queryByRole("button", { name: "Desativar Corte" }),
+  ).not.toBeInTheDocument();
+});
+
+test("salvamento do serviço bloqueia fechar e mudar estado até a resposta", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  let finish!: (value: Awaited<ReturnType<typeof updateOffering>>) => void;
+  vi.mocked(updateOffering).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<CatalogWorkspace />);
+  const origin = await screen.findByRole("button", { name: "Editar Corte" });
+  origin.focus();
+  fireEvent.click(origin);
+  const modal = screen.getByRole("dialog", { name: "Editar serviço" });
+  fireEvent.change(await within(modal).findByLabelText("Preço"), {
+    target: { value: "2,00" },
+  });
+  fireEvent.click(within(modal).getByRole("button", { name: "Salvar" }));
+  expect(
+    within(modal).getByRole("button", { name: "Fechar modal" }),
   ).toBeDisabled();
   expect(
-    screen.getByRole("button", { name: "Atualizar lista" }),
+    within(modal).getByRole("button", { name: "Desativar Corte" }),
   ).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+  fireEvent(modal, new Event("cancel", { cancelable: true }));
+  expect(modal).toBeVisible();
   await act(async () =>
-    second({
+    finish({
       state: "success",
       status: 200,
-      data: { ...records[1], active: true },
+      data: { ...records[0], price_cents: 200 },
     }),
   );
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Cadastrar serviço" }),
-    ).toBeEnabled(),
-  );
-  expect(screen.getByRole("button", { name: "Atualizar lista" })).toBeEnabled();
+  fireEvent.click(within(modal).getByRole("button", { name: "Fechar modal" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(origin).toHaveFocus();
 });

@@ -88,5 +88,5 @@ function SettingsRequest() {
     );
   }
 
-  return <SettingsForm onRefresh={refreshSettings} settings={view.settings} />;
+  return <SettingsForm settings={view.settings} />;
 }

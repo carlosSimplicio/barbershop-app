@@ -36,6 +36,7 @@ type Principal struct {
 	Email                  string
 	Role                   string
 	PasswordChangeRequired bool
+	CredentialVersion      int64
 }
 
 type LoginInput struct {
@@ -52,7 +53,7 @@ type LoginResult struct {
 
 type LoginStore interface {
 	FindUserByNormalizedEmail(context.Context, string) (User, error)
-	CreateSession(context.Context, string, string, time.Time) error
+	CreateSession(context.Context, User, string, time.Time) error
 }
 
 type PasswordVerifier interface {
@@ -131,14 +132,17 @@ func (service *LoginService) Login(ctx context.Context, input LoginInput) (Login
 	if err != nil {
 		return LoginResult{}, err
 	}
-	if err := service.store.CreateSession(ctx, user.ID, sessionID, now.Add(SessionLifetime)); err != nil {
+	if err := service.store.CreateSession(ctx, user, sessionID, now.Add(SessionLifetime)); err != nil {
+		if errors.Is(err, ErrInvalidSession) {
+			return LoginResult{}, ErrInvalidCredentials
+		}
 		return LoginResult{}, err
 	}
 
 	return LoginResult{
 		Principal: Principal{
 			UserID: user.ID, EstablishmentID: user.EstablishmentID, Email: user.Email,
-			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired,
+			Role: user.Role, PasswordChangeRequired: user.PasswordChangeRequired, CredentialVersion: user.CredentialVersion,
 		},
 		AccessToken: accessToken, CSRFToken: csrfToken,
 	}, nil

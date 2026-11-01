@@ -116,3 +116,19 @@ func (handler *Handler) PatchService(httpContext *gin.Context, offeringID uuid.U
 func (handler *Handler) PutServiceStatus(httpContext *gin.Context, offeringID uuid.UUID) {
 	handler.catalog.PutServiceStatus(httpContext, offeringID)
 }
+
+func (handler *Handler) GetProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionals.GetProfessional(httpContext, professionalID)
+}
+
+func (handler *Handler) PatchProfessional(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionals.PatchProfessional(httpContext, professionalID)
+}
+
+func (handler *Handler) PostProfessionalDeactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionals.PostProfessionalDeactivation(httpContext, professionalID)
+}
+
+func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionals.PostProfessionalReactivation(httpContext, professionalID)
+}

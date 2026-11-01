@@ -1,7 +1,8 @@
 "use client";
 
+import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, ModalActions } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
 import { createOffering } from "@/lib/catalog/catalog-api";
 import {
@@ -35,12 +36,9 @@ export function CreateOfferingForm({
   const [values, setValues] = useState<OfferingValues>(emptyOfferingValues);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const form = useRef<HTMLFormElement>(null);
-  const pending = useRef(false);
   const pendingErrorFocus = useRef(false);
-  const controller = useRef<AbortController | null>(null);
-  useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
     if (!submitting && pendingErrorFocus.current) {
       pendingErrorFocus.current = false;
@@ -50,26 +48,16 @@ export function CreateOfferingForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending.current || !canWrite) return;
+    if (isPending() || !canWrite) return;
     const checked = validateOfferingValues(values);
     setErrors(checked.errors);
     if (!checked.request) {
       focusOfferingError(form.current, checked.errors);
       return;
     }
-    pending.current = true;
-    onBusyChange?.(true);
-    setSubmitting(true);
+    const request = begin();
+    if (!request) return;
     setFeedback(null);
-    const request = new AbortController();
-    controller.current = request;
-    const uncertain = () =>
-      setFeedback({
-        variant: "warning",
-        title: "Não foi possível confirmar o cadastro",
-        message:
-          "Atualize a lista para conferir se o serviço foi criado antes de tentar novamente.",
-      });
     try {
       const result = await createOffering(checked.request, request.signal);
       if (request.signal.aborted) return;
@@ -103,21 +91,20 @@ export function CreateOfferingForm({
         setErrors(outcome.fields);
         return;
       }
-      if (outcome.state === "uncertain") uncertain();
-      else
+      setFeedback({
+        variant: "error",
+        title: "Não foi possível cadastrar o serviço",
+        message: "Verifique os dados e tente novamente.",
+      });
+    } catch {
+      if (!request.signal.aborted)
         setFeedback({
           variant: "error",
           title: "Não foi possível cadastrar o serviço",
-          message: "Verifique os dados e tente novamente.",
+          message: "Verifique sua conexão e tente novamente.",
         });
-    } catch {
-      if (!request.signal.aborted) uncertain();
     } finally {
-      onBusyChange?.(false);
-      if (!request.signal.aborted) {
-        pending.current = false;
-        setSubmitting(false);
-      }
+      request.finish();
     }
   }
   function change(field: keyof OfferingValues, value: string) {
@@ -127,7 +114,6 @@ export function CreateOfferingForm({
   }
   return (
     <section aria-label="Cadastrar serviço" className={styles.panel}>
-      <h2>Cadastrar serviço</h2>
       {feedback ? (
         <Feedback variant={feedback.variant} title={feedback.title}>
           {feedback.message}
@@ -140,9 +126,11 @@ export function CreateOfferingForm({
           disabled={!canWrite || submitting}
           onChange={change}
         />
-        <Button type="submit" disabled={!canWrite || submitting}>
-          {submitting ? "Cadastrando…" : "Cadastrar serviço"}
-        </Button>
+        <ModalActions>
+          <Button type="submit" disabled={!canWrite || submitting}>
+            {submitting ? "Cadastrando…" : "Cadastrar"}
+          </Button>
+        </ModalActions>
       </form>
     </section>
   );

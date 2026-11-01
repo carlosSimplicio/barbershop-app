@@ -228,48 +228,29 @@ test.each([
   },
 );
 
-test("reconcilia o salvamento confirmado antes de permitir novas alterações", async () => {
-  const savedSettings = successfulSettings({ name: "Novo nome" });
+test("salvamento confirmado continua editável se a atualização posterior falhar", async () => {
   getSettingsMock
     .mockResolvedValueOnce(successfulResult())
-    .mockRejectedValueOnce(new Error("temporary refresh failure"))
-    .mockRejectedValueOnce(new Error("temporary retry failure"))
-    .mockResolvedValueOnce(successfulResult(savedSettings))
-    .mockResolvedValueOnce(successfulResult());
+    .mockRejectedValueOnce(new Error("refresh failure"))
+    .mockResolvedValue(successfulResult());
   patchSettingsMock.mockResolvedValue({ state: "empty", status: 204 });
-
   render(<EstablishmentSettingsWorkspace />);
-
   fireEvent.change(await screen.findByLabelText("Nome do estabelecimento"), {
-    target: { value: savedSettings.name },
+    target: { value: "Novo nome" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Salvar configurações" }));
-
-  const refresh = await screen.findByRole("button", {
-    name: "Atualizar configurações",
+  await screen.findByText(
+    "Os dados foram salvos, mas não foi possível atualizar os valores exibidos agora.",
+  );
+  expect(screen.getByLabelText("Nome do estabelecimento")).toBeEnabled();
+  expect(screen.getByLabelText("Nome do estabelecimento")).toHaveValue(
+    "Novo nome",
+  );
+  expect(screen.getByLabelText("Selecionar logo")).toBeEnabled();
+  fireEvent.change(screen.getByLabelText("Nome do estabelecimento"), {
+    target: { value: "Estúdio Aurora" },
   });
-  expect(screen.getByLabelText("Nome do estabelecimento")).toBeDisabled();
-  expect(screen.getByLabelText("Selecionar logo")).toBeDisabled();
-  expect(
-    screen.getByRole("button", { name: "Salvar configurações" }),
-  ).toBeDisabled();
-
-  fireEvent.click(refresh);
-  await screen.findByText("Não foi possível consultar as configurações");
-  expect(
-    screen.queryByLabelText("Nome do estabelecimento"),
-  ).not.toBeInTheDocument();
-  expect(patchSettingsMock).toHaveBeenCalledOnce();
-
-  fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
-  const nameField = await screen.findByLabelText("Nome do estabelecimento");
-  expect(nameField).toBeEnabled();
-  expect(nameField).toHaveValue(savedSettings.name);
-  fireEvent.change(nameField, { target: { value: "Estúdio Aurora" } });
-  const save = screen.getByRole("button", { name: "Salvar configurações" });
-  expect(save).toBeEnabled();
-  fireEvent.click(save);
-
+  fireEvent.click(screen.getByRole("button", { name: "Salvar configurações" }));
   await waitFor(() => expect(patchSettingsMock).toHaveBeenCalledTimes(2));
   expect(patchSettingsMock).toHaveBeenLastCalledWith(
     { name: "Estúdio Aurora" },
@@ -508,7 +489,9 @@ test("pré-visualiza e envia o logo, atualiza a publicação e limpa a seleção
     "/api/v1/public/establishments/estudio-aurora/logo?version=1",
   );
   expect(input).toHaveValue("");
-  expect(revokeObjectURL).toHaveBeenCalledWith("blob:logo-preview");
+  await waitFor(() =>
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:logo-preview"),
+  );
 });
 
 test("limpa o arquivo selecionado sem remover o logo publicado", async () => {
@@ -562,7 +545,9 @@ test("limpa o arquivo selecionado sem remover o logo publicado", async () => {
   ).toHaveAttribute("src", "/api/v1/public/establishments/estudio-aurora/logo");
   expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
   expect(uploadLogoMock).not.toHaveBeenCalled();
-  expect(revokeObjectURL).toHaveBeenCalledWith("blob:temporary-logo");
+  await waitFor(() =>
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:temporary-logo"),
+  );
 });
 
 test("mantém o logo publicado após falha e permite tentar novamente", async () => {
@@ -668,7 +653,8 @@ test.each([
       screen.queryByRole("img", { name: "Pré-visualização do logo" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
-    expect(revoke).toHaveBeenCalledWith("blob:first-logo");
+    // Removing the preview can precede the passive effect that releases its URL.
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith("blob:first-logo"));
     expect(
       screen.queryByText("backend internal message"),
     ).not.toBeInTheDocument();
@@ -703,132 +689,62 @@ test("mostra o endereço quando o upload confirma mas a atualização falha", as
   );
 });
 
-test("reconcilia um erro interno do upload antes de limpar a seleção", async () => {
-  const refreshedSettings = successfulSettings({
-    logo: {
-      url: "/api/v1/public/establishments/estudio-aurora/logo",
-      content_type: "image/webp",
-      byte_size: 8,
-      width: 2,
-      height: 2,
-    },
-    is_complete: true,
-    is_publishable: true,
-  });
-  getSettingsMock
-    .mockResolvedValueOnce(
-      successfulResult(
-        successfulSettings({
-          logo: {
-            url: "/api/v1/public/establishments/estudio-aurora/logo",
-            content_type: "image/png",
-            byte_size: 4,
-            width: 1,
-            height: 1,
-          },
-          is_complete: true,
-          is_publishable: true,
-        }),
-      ),
-    )
-    .mockResolvedValueOnce(successfulResult(refreshedSettings));
-  uploadLogoMock.mockResolvedValue({
-    error: {
-      code: "internal_error",
-      message: "Não foi possível enviar o logo.",
-      request_id: "request-id",
-    },
-    state: "error",
-    status: 500,
-  });
+test.each([500, 503])(
+  "HTTP %i no upload mantém seleção e permite repetir sem consultar configurações",
+  async (status) => {
+    getSettingsMock.mockResolvedValue(successfulResult());
+    uploadLogoMock
+      .mockResolvedValueOnce({
+        state: "error",
+        status,
+        error: { code: "internal_error", message: "raw", request_id: "test" },
+      })
+      .mockResolvedValueOnce({ state: "empty", status: 204 });
+    render(<EstablishmentSettingsWorkspace />);
+    const input = await screen.findByLabelText("Selecionar logo");
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File(["new logo"], "replacement.webp", { type: "image/webp" }),
+        ],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+    await screen.findByText("Não foi possível enviar o logo");
+    expect(
+      screen.getByRole("img", { name: "Pré-visualização do logo" }),
+    ).toBeVisible();
+    expect(screen.getByText("replacement.webp")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Enviar logo" })).toBeEnabled();
+    expect(uploadLogoMock).toHaveBeenCalledOnce();
+    expect(getSettingsMock).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
+    await waitFor(() => expect(uploadLogoMock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible(),
+    );
+    expect(getSettingsMock).toHaveBeenCalledTimes(2);
+  },
+);
 
+test("falha de rede no upload não consulta configurações e permite limpar seleção", async () => {
+  getSettingsMock.mockResolvedValue(successfulResult());
+  uploadLogoMock.mockRejectedValue(new Error("network"));
   render(<EstablishmentSettingsWorkspace />);
-  const input = await screen.findByLabelText("Escolher novo logo");
-  fireEvent.change(input, {
+  fireEvent.change(await screen.findByLabelText("Selecionar logo"), {
     target: {
-      files: [
-        new File(["new logo"], "replacement.webp", { type: "image/webp" }),
-      ],
+      files: [new File(["logo"], "replacement.webp", { type: "image/webp" })],
     },
   });
   fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
-
-  expect(
-    await screen.findByText(
-      "Confira o logo exibido antes de iniciar outro envio.",
-    ),
-  ).toBeVisible();
-  expect(
-    screen.getByRole("img", { name: "Logo de Estúdio Aurora" }),
-  ).toHaveAttribute(
-    "src",
-    "/api/v1/public/establishments/estudio-aurora/logo?version=1",
-  );
-  expect(
-    screen.queryByRole("img", { name: "Pré-visualização do logo" }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible();
-});
-
-test("mantém a seleção incerta e oferece reconciliação quando a consulta também falha", async () => {
-  const currentSettings = successfulSettings({
-    logo: {
-      url: "/api/v1/public/establishments/estudio-aurora/logo",
-      content_type: "image/png",
-      byte_size: 4,
-      width: 1,
-      height: 1,
-    },
-    is_complete: true,
-    is_publishable: true,
-  });
-  getSettingsMock
-    .mockResolvedValueOnce(successfulResult(currentSettings))
-    .mockRejectedValueOnce(new Error("settings temporarily unavailable"))
-    .mockResolvedValueOnce(successfulResult(currentSettings));
-  uploadLogoMock.mockResolvedValue({
-    error: {
-      code: "internal_error",
-      message: "Não foi possível enviar o logo.",
-      request_id: "request-id",
-    },
-    state: "error",
-    status: 500,
-  });
-
-  render(<EstablishmentSettingsWorkspace />);
-  fireEvent.change(await screen.findByLabelText("Escolher novo logo"), {
-    target: {
-      files: [
-        new File(["new logo"], "replacement.webp", { type: "image/webp" }),
-      ],
-    },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Enviar logo" }));
-
-  expect(
-    await screen.findByText(
-      "A consulta das configurações também falhou. Atualize o estado do logo antes de enviar novamente.",
-    ),
-  ).toBeVisible();
-  expect(
-    screen.getByRole("img", { name: "Pré-visualização do logo" }),
-  ).toBeVisible();
-  expect(screen.getByText("replacement.webp")).toBeVisible();
-  expect(screen.getByRole("button", { name: "Enviar logo" })).toBeDisabled();
-
+  await screen.findByText("Não foi possível enviar o logo");
+  expect(screen.getByRole("button", { name: "Enviar logo" })).toBeEnabled();
+  expect(getSettingsMock).toHaveBeenCalledOnce();
+  expect(uploadLogoMock).toHaveBeenCalledOnce();
   fireEvent.click(
-    screen.getByRole("button", { name: "Atualizar estado do logo" }),
+    screen.getByRole("button", { name: "Limpar arquivo selecionado" }),
   );
-  expect(
-    await screen.findByText(
-      "Confira o logo exibido antes de iniciar outro envio.",
-    ),
-  ).toBeVisible();
   expect(screen.getByText("Nenhum arquivo selecionado")).toBeVisible();
-  expect(
-    screen.queryByRole("img", { name: "Pré-visualização do logo" }),
-  ).not.toBeInTheDocument();
 });
 
 test("mantém o fuso bloqueado sem impedir a edição dos demais dados", async () => {
@@ -1015,3 +931,43 @@ function successfulSettings(
 function successfulResult(settings = successfulSettings()) {
   return { data: settings, state: "success", status: 200 } as const;
 }
+
+test.each([500, 503])(
+  "HTTP %i nas configurações libera campos e nova tentativa sem consulta posterior",
+  async (status) => {
+    getSettingsMock.mockResolvedValue(successfulResult());
+    patchSettingsMock
+      .mockResolvedValueOnce({
+        state: "error",
+        status,
+        error: {
+          code: "read_only",
+          message: "private",
+          request_id: "test",
+          fields: [{ field: "name", code: "invalid_name", message: "private" }],
+        },
+      })
+      .mockResolvedValueOnce({ state: "empty", status: 204 });
+    render(<EstablishmentSettingsWorkspace />);
+    const name = await screen.findByLabelText("Nome do estabelecimento");
+    fireEvent.change(name, { target: { value: "Novo nome" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Salvar configurações" }),
+    );
+    await screen.findByText("Não foi possível salvar as configurações");
+    expect(name).toBeEnabled();
+    expect(name).toHaveValue("Novo nome");
+    expect(
+      screen.getByRole("button", { name: "Salvar configurações" }),
+    ).toBeEnabled();
+    expect(screen.getByLabelText("Selecionar logo")).toBeEnabled();
+    expect(screen.queryByText("private")).not.toBeInTheDocument();
+    expect(getSettingsMock).toHaveBeenCalledOnce();
+    expect(patchSettingsMock).toHaveBeenCalledOnce();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Salvar configurações" }),
+    );
+    await screen.findByText("Configurações salvas");
+    expect(patchSettingsMock).toHaveBeenCalledTimes(2);
+  },
+);

@@ -69,13 +69,16 @@ permanecem nas redes internas do Compose.
 
 ## Catálogo de serviços
 
-O proprietário administra o catálogo em `/painel/servicos`: cadastro, listagem
-paginada, consulta, edição, ativação e desativação. Preços usam BRL com centavos
+O proprietário administra o catálogo em `/painel/servicos`: cadastro em modal
+aberta pelo botão `+` à direita do título, listagem paginada, consulta, edição,
+ativação e desativação. Preços usam BRL com centavos
 exatos; duração aceita minutos inteiros e usa 30 quando vazia. Serviços inativos
 permanecem no catálogo, e o painel continua consultável após expiração do trial.
 
-Alterações pedem confirmação quando necessário e respostas incertas exigem
-conferência antes de novo envio. Os passos de validação estão em
+Alterações pedem confirmação quando necessário. Falhas de rede, respostas `5xx`
+ou fora do contrato exibem erro, preservam as entradas e permitem fechar,
+cancelar ou tentar novamente explicitamente, sem consulta de confirmação nem
+repetição automática. Os passos de validação estão em
 [docs/operations.md](docs/operations.md#validação-local-do-catálogo-de-serviços).
 Associação a profissionais, agenda e contagem de agendamentos afetados permanecem
 nos próximos escopos documentados.
@@ -91,8 +94,9 @@ PNG, JPEG ou WebP para habilitar sua página pública em `/{slug}`. Com logo, a
 entrada abre `/painel/profissionais`. Também é possível abrir Profissionais pela
 navegação antes do envio do logo.
 
-Em Profissionais, cadastre um nome, e-mail fictício exclusivo e senha temporária;
-a lista é atualizada após o cadastro e o campo da senha é limpo. Compartilhe a
+Em Profissionais, clique no botão `+` à direita do título e cadastre na modal
+um nome, e-mail fictício exclusivo e senha temporária. A lista é atualizada
+após o cadastro e o campo da senha é limpo. Compartilhe a
 senha apenas por um canal seguro, pois ela não pode ser recuperada. Saia da
 sessão do proprietário e entre com a conta profissional: ela abre `/testes` e
 exige a troca da senha antes de acessar recursos de domínio. Use o link “Área
@@ -200,6 +204,10 @@ make compose-config # valida a composição de desenvolvimento
 O gate de pull request executa os testes unitários e a integração do backend.
 As verificações completas rodam na branch principal e podem ser executadas
 localmente antes de uma release.
+
+Para validar as funcionalidades entregues em sequência, siga o
+[checklist de validação local](docs/local-validation-checklist.md), organizado
+por fluxo, com preparação dos dados e resultados esperados.
 
 ## Estrutura
 

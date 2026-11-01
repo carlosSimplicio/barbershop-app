@@ -10,6 +10,8 @@
 [data-theme="light"] {
   --color-primary: #2677a4;
   --color-primary-hover: #236b95;
+  --color-secondary: #ffffff;
+  --color-on-secondary: #17384d;
   --color-accent: #d7eef9;
   --color-ink: #17384d;
   --color-muted: #557184;
@@ -22,6 +24,7 @@
   --color-warning: #946414;
   --color-focus: #2b78c5;
   --color-on-primary: #ffffff;
+  --color-overlay: rgb(6 16 25 / 50%);
   --shadow-card: 0 1.2rem 3rem rgb(48 112 148 / 10%);
   --shadow-control: inset 0 1px 2px rgb(23 56 77 / 4%);
   color-scheme: light;
@@ -42,6 +45,7 @@
   --color-warning: #f4c66b;
   --color-focus: #75cff4;
   --color-on-primary: #071722;
+  --color-overlay: rgb(0 0 0 / 65%);
   --shadow-card: 0 1.5rem 4rem rgb(0 0 0 / 24%);
   --shadow-control: inset 0 1px 2px rgb(0 0 0 / 16%);
   color-scheme: dark;

@@ -28,7 +28,7 @@ Plataforma multi-tenant de agendamento e gestão financeira para barbearias, sal
 - Links transacionais podem transportar um token somente no fragmento da URL, que não é enviado ao servidor. A interface deve removê-lo do endereço antes de enviar o token no corpo da requisição e nunca encaminhá-lo em path, query, `Referer` ou logs.
 - Preserve histórico de agendamentos e financeiro. Prefira desativação e registros imutáveis a exclusões que destruam referências históricas.
 - Use inglês para código, schema, endpoints e identificadores técnicos. Use português brasileiro nos textos apresentados ao usuário.
-- Todo o frontend e qualquer componente visual devem seguir o design system implementado em `frontend/components/ui` e documentado pela referência React em `frontend/app/design-system`. Quando uma necessidade real exigir um novo componente, variante ou estado visual, documente-o e incorpore-o ao design system no mesmo trabalho que o introduzir no produto.
+- Todo o frontend e qualquer componente visual devem seguir o design system implementado em `frontend/components/ui` e documentado pela referência React em `frontend/app/design-system`. Quando uma necessidade real exigir um novo componente, variante ou estado visual, documente-o e incorpore-o ao design system no mesmo trabalho que o introduzir no produto. Todas as modais devem compor suas ações com `ModalActions`: botões compactos, de largura natural, alinhados à direita, na mesma linha e com textos curtos quando possível, preservando a área mínima de toque. Ações de cancelamento usam `Button variant="secondary"`, com fundo branco, texto escuro e borda.
 - Siga os padrões existentes antes de introduzir novas dependências ou abstrações. Mantenha a solução simples e justifique qualquer divergência.
 
 ## Estrutura e stack
@@ -52,7 +52,7 @@ Aplique estas convenções às próximas features e ao código alterado no escop
 - Compartilhe validações puras entre operações que tenham o mesmo contrato de negócio. Preserve validadores próprios quando regras, normalização ou limites forem diferentes entre domínios.
 - Centralize mecanismos transversais já compartilhados, como extração da identidade autenticada e correspondência de rotas, mantendo regras e erros específicos no respectivo domínio.
 - Explique em comentários técnicos em inglês a intenção e o requisito protegido por decisões não evidentes, como uma decodificação em etapas; evite comentários que apenas repitam o código.
-- Ao definir campos opcionais, mutações e seus estados no frontend, siga os contratos de ausência, `null`, resultado incerto, sessão e coordenação de requisições descritos em `docs/architecture.md`.
+- Ao definir campos opcionais, mutações e seus estados no frontend, siga os contratos de ausência, `null`, tratamento de erros, sessão e coordenação de requisições descritos em `docs/architecture.md`.
 
 ## Código gerado e banco de dados
 

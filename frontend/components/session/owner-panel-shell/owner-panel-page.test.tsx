@@ -3,6 +3,23 @@ import { expect, test } from "vitest";
 
 import { OwnerPanelPage } from "./owner-panel-page";
 
+test("mantém a ação de cadastro no mesmo cabeçalho do título", () => {
+  render(
+    <OwnerPanelPage
+      title="Serviços"
+      description="Catálogo"
+      actions={<button aria-label="Adicionar serviço">+</button>}
+    >
+      Lista
+    </OwnerPanelPage>,
+  );
+  expect(
+    screen
+      .getByRole("heading", { level: 1, name: "Serviços" })
+      .closest("header"),
+  ).toContainElement(screen.getByRole("button", { name: "Adicionar serviço" }));
+});
+
 test("renders owner panel pages with the shared heading and content layout", () => {
   render(
     <OwnerPanelPage

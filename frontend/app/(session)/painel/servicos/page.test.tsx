@@ -8,7 +8,7 @@ import ServicesPage from "./page";
 const replace = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("@/components/catalog/catalog-workspace/catalog-workspace", () => ({
-  CatalogWorkspace: () => <div>Lista de serviços</div>,
+  CatalogWorkspace: () => <h1>Serviços</h1>,
 }));
 
 test("mostra a casca do painel somente para proprietário", async () => {

@@ -35,3 +35,19 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+
+.button[data-variant="secondary"] {
+  border: 1px solid var(--color-line);
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+  box-shadow: none;
+}
+
+.button[data-variant="secondary"]:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-secondary) 96%,
+    var(--color-on-secondary)
+  );
+  border-color: var(--color-on-secondary);
+}

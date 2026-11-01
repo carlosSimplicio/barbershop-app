@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Button, Feedback, RecordList } from "@/components/ui";
 import {
-  DEFAULT_PAGE_SIZE,
-  FIRST_PAGE_OFFSET,
-  MAX_PAGE_OFFSET,
-} from "@/lib/api/pagination";
+  Feedback,
+  IconButton,
+  Modal,
+  RecordListPanel,
+  RecordSummary,
+} from "@/components/ui";
+import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
+import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
   listOfferings,
   type Offering,
@@ -35,12 +38,12 @@ export function CatalogWorkspace() {
 }
 
 function CatalogRequest() {
+  const [creating, setCreating] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
   const writing = pendingOperations > 0;
   const trackOperation = useCallback((busy: boolean) => {
     setPendingOperations((count) => count + (busy ? 1 : -1));
   }, []);
-  const [editorVersion, setEditorVersion] = useState(0);
   const editOrigin = useRef<HTMLButtonElement | null>(null);
   const catalog = useRef<HTMLElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -52,6 +55,11 @@ function CatalogRequest() {
     () => setView({ status: "unauthorized" }),
     [],
   );
+
+  function closeEditor() {
+    if (writing) return;
+    setSelected(null);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,152 +106,127 @@ function CatalogRequest() {
     );
   }, []);
   if (view.status === "unauthorized") return null;
+  const canWrite =
+    !writing && !readOnly && view.status === "success" && view.page.can_write;
   return (
-    <div className={styles.workspace}>
-      <CreateOfferingForm
-        canWrite={
-          !writing &&
-          !readOnly &&
-          view.status === "success" &&
-          view.page.can_write
-        }
-        onBusyChange={trackOperation}
-        onCreated={() => {
-          setOffset(FIRST_PAGE_OFFSET);
-          refresh();
-        }}
-        onReadOnly={() => setReadOnly(true)}
-        onUnauthorized={onUnauthorized}
-      />
-      {readOnly || (view.status === "success" && !view.page.can_write) ? (
-        <Feedback variant="warning" title="Modo somente leitura">
-          Você pode consultar os serviços. Alterações ficam disponíveis com
-          acesso ativo.
-        </Feedback>
-      ) : null}
-      {selected ? (
-        <EditOfferingPanel
-          key={selected}
-          offeringId={selected}
-          canWrite={
-            !writing &&
-            !readOnly &&
-            view.status === "success" &&
-            view.page.can_write
-          }
-          reloadVersion={editorVersion}
-          onBusyChange={trackOperation}
-          onRecordConfirmed={acceptRecord}
-          onClose={() => {
-            setSelected(null);
-            if (editOrigin.current?.isConnected) editOrigin.current.focus();
-            else catalog.current?.focus();
-          }}
-          onReadOnly={() => setReadOnly(true)}
-          onUnauthorized={onUnauthorized}
-        />
-      ) : null}
-      <section
-        ref={catalog}
-        tabIndex={-1}
-        aria-label="Catálogo de serviços"
-        aria-busy={view.status === "loading"}
-        className={styles.panel}
-      >
-        <h2>Serviços cadastrados</h2>
-        <Button
-          onClick={refresh}
-          disabled={writing || view.status === "loading"}
+    <OwnerPanelPage
+      title="Serviços"
+      description="Organize os serviços, preços e durações do estabelecimento."
+      actions={
+        <IconButton
+          aria-label="Adicionar serviço"
+          aria-haspopup="dialog"
+          disabled={!canWrite}
+          onClick={() => setCreating(true)}
         >
-          Atualizar lista
-        </Button>
-        {view.status === "loading" ? (
-          <p role="status" aria-live="polite">
-            Carregando serviços…
-          </p>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </IconButton>
+      }
+    >
+      <div className={styles.workspace}>
+        <Modal
+          open={creating}
+          title="Cadastrar serviço"
+          onClose={() => setCreating(false)}
+          closeDisabled={writing}
+          fallbackFocusRef={catalog}
+        >
+          <CreateOfferingForm
+            canWrite={canWrite}
+            onBusyChange={trackOperation}
+            onCreated={() => {
+              setOffset(FIRST_PAGE_OFFSET);
+              refresh();
+            }}
+            onReadOnly={() => setReadOnly(true)}
+            onUnauthorized={onUnauthorized}
+          />
+        </Modal>
+        {readOnly || (view.status === "success" && !view.page.can_write) ? (
+          <Feedback variant="warning" title="Modo somente leitura">
+            Você pode consultar os serviços. Alterações ficam disponíveis com
+            acesso ativo.
+          </Feedback>
         ) : null}
-        {view.status === "error" ? (
-          <>
-            <Feedback
-              variant="error"
-              title="Não foi possível consultar os serviços"
-            >
-              Verifique sua conexão e tente novamente.
-            </Feedback>
-            <Button onClick={refresh}>Tentar novamente</Button>
-          </>
-        ) : null}
-        {view.status === "success" ? (
-          <>
-            <RecordList
-              items={view.page.items}
-              getKey={(item) => item.id}
-              label="Serviços cadastrados"
-              emptyMessage="Nenhum serviço cadastrado."
-              renderItem={(item) => (
-                <div className={styles.record}>
-                  <div className={styles.details}>
-                    <strong>{item.name}</strong>
-                    <span>{formatOfferingPrice(item.price_cents)}</span>
-                    <span>{item.duration_minutes} minutos</span>
-                  </div>
-                  <div className={styles.recordActions}>
-                    <span>{item.active ? "Ativo" : "Inativo"}</span>
-                    <Button
-                      disabled={writing || readOnly || !view.page.can_write}
-                      onClick={(event) => {
-                        editOrigin.current = event.currentTarget;
-                        setSelected(item.id);
-                      }}
-                      aria-label={`Editar ${item.name}`}
-                    >
-                      Editar
-                    </Button>
-                    <OfferingStatusAction
-                      record={item}
-                      canWrite={!writing && !readOnly && view.page.can_write}
-                      onBusyChange={trackOperation}
-                      onChanged={(record) => {
-                        acceptRecord(record);
-                        if (selected === record.id)
-                          setEditorVersion((value) => value + 1);
-                      }}
-                      onReadOnly={() => setReadOnly(true)}
-                      onUnauthorized={onUnauthorized}
-                    />
-                  </div>
-                </div>
+        {selected ? (
+          <Modal
+            key={selected}
+            open
+            returnFocusRef={editOrigin}
+            title="Editar serviço"
+            onClose={closeEditor}
+            closeDisabled={writing}
+            fallbackFocusRef={catalog}
+          >
+            <EditOfferingPanel
+              offeringId={selected}
+              canWrite={canWrite}
+              blocked={writing}
+              onBusyChange={trackOperation}
+              onRecordConfirmed={acceptRecord}
+              onClose={closeEditor}
+              onReadOnly={() => setReadOnly(true)}
+              onUnauthorized={onUnauthorized}
+              renderActions={(record, disabled, onChanged) => (
+                <OfferingStatusAction
+                  record={record}
+                  canWrite={canWrite && !disabled}
+                  onBusyChange={trackOperation}
+                  onChanged={onChanged}
+                  onReadOnly={() => setReadOnly(true)}
+                  onUnauthorized={onUnauthorized}
+                />
               )}
             />
-            <nav
-              aria-label="Paginação de serviços"
-              className={styles.pagination}
-            >
-              <Button
-                disabled={writing || offset === FIRST_PAGE_OFFSET}
-                onClick={() =>
-                  changePage(
-                    Math.max(FIRST_PAGE_OFFSET, offset - DEFAULT_PAGE_SIZE),
-                  )
-                }
-              >
-                Anterior
-              </Button>
-              <span>Página {Math.floor(offset / DEFAULT_PAGE_SIZE) + 1}</span>
-              <Button
-                disabled={
-                  writing ||
-                  !view.page.has_more ||
-                  offset > MAX_PAGE_OFFSET - DEFAULT_PAGE_SIZE
-                }
-                onClick={() => changePage(offset + DEFAULT_PAGE_SIZE)}
-              >
-                Próxima
-              </Button>
-            </nav>
-          </>
+          </Modal>
         ) : null}
-      </section>
-    </div>
+        <RecordListPanel<Offering>
+          ref={catalog}
+          title="Serviços cadastrados"
+          label="Catálogo de serviços"
+          paginationLabel="Paginação de serviços"
+          view={view}
+          busy={writing}
+          messages={{
+            loading: "Carregando serviços…",
+            empty: "Nenhum serviço cadastrado.",
+            errorTitle: "Não foi possível consultar os serviços",
+            errorDescription: "Verifique sua conexão e tente novamente.",
+          }}
+          onRefresh={refresh}
+          onPageChange={changePage}
+          getKey={(item) => item.id}
+          renderItem={(item) => (
+            <RecordSummary
+              title={item.name}
+              status={{
+                label: item.active ? "Ativo" : "Inativo",
+                tone: item.active ? "success" : "neutral",
+              }}
+              actions={
+                <IconButton
+                  disabled={!canWrite}
+                  onClick={(event) => {
+                    editOrigin.current = event.currentTarget;
+                    setSelected(item.id);
+                  }}
+                  aria-label={`Editar ${item.name}`}
+                  title={`Editar ${item.name}`}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="m16 3 5 5-13 13-5 1 1-5L16 3ZM14 5l5 5" />
+                  </svg>
+                </IconButton>
+              }
+            >
+              <span>{formatOfferingPrice(item.price_cents)}</span>
+              <span>{item.duration_minutes} minutos</span>
+            </RecordSummary>
+          )}
+        />
+      </div>
+    </OwnerPanelPage>
   );
 }

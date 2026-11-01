@@ -63,8 +63,8 @@ func (store *Store) FindActiveSessionUser(ctx context.Context, sessionID string,
 	return userFromActiveSessionRow(row), nil
 }
 
-func (store *Store) CreateSession(ctx context.Context, userID, sessionID string, expiresAt time.Time) error {
-	parsedUserID, err := parseUUID(userID)
+func (store *Store) CreateSession(ctx context.Context, expected User, sessionID string, expiresAt time.Time) error {
+	parsedUserID, err := parseUUID(expected.ID)
 	if err != nil {
 		return err
 	}
@@ -72,9 +72,36 @@ func (store *Store) CreateSession(ctx context.Context, userID, sessionID string,
 	if err != nil {
 		return err
 	}
-	_, err = store.queries.CreateAuthSession(ctx, db.CreateAuthSessionParams{ID: parsedSessionID, UserID: parsedUserID, ExpiresAt: timestamptz(expiresAt)})
+	transaction, err := store.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin login session transaction: %w", err)
+	}
+	defer func() { _ = transaction.Rollback(ctx) }()
+	queries := store.queries.WithTx(transaction)
+	// Lock the user first, then read a fresh credential snapshot. All credential
+	// mutations serialize on this row before touching credentials or sessions.
+	if _, err = queries.LockAuthSessionUser(ctx, parsedUserID); errors.Is(err, pgx.ErrNoRows) {
+		return ErrInvalidSession
+	} else if err != nil {
+		return fmt.Errorf("lock login user: %w", err)
+	}
+	row, err := queries.GetAuthUserByID(ctx, parsedUserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrInvalidSession
+	}
+	if err != nil {
+		return fmt.Errorf("revalidate login user: %w", err)
+	}
+	current := userFromIDRow(row)
+	if !userCanAuthenticate(current) || current.ID != expected.ID || current.EstablishmentID != expected.EstablishmentID || current.Role != expected.Role || current.CredentialVersion != expected.CredentialVersion || current.Email != expected.Email || current.NormalizedEmail != expected.NormalizedEmail || current.PasswordChangeRequired != expected.PasswordChangeRequired {
+		return ErrInvalidSession
+	}
+	_, err = queries.CreateAuthSession(ctx, db.CreateAuthSessionParams{ID: parsedSessionID, UserID: parsedUserID, ExpiresAt: timestamptz(expiresAt)})
 	if err != nil {
 		return fmt.Errorf("create authentication session: %w", err)
+	}
+	if err := transaction.Commit(ctx); err != nil {
+		return fmt.Errorf("commit login session: %w", err)
 	}
 	return nil
 }
@@ -111,6 +138,11 @@ func (store *Store) ChangeTemporaryPassword(ctx context.Context, userID string, 
 	}
 	defer func() { _ = transaction.Rollback(ctx) }()
 	queries := store.queries.WithTx(transaction)
+	if _, err = queries.LockAuthSessionUser(ctx, parsedUserID); errors.Is(err, pgx.ErrNoRows) {
+		return ErrPasswordChangeDenied
+	} else if err != nil {
+		return fmt.Errorf("lock password change user: %w", err)
+	}
 	user, err := queries.GetAuthUserByIDForUpdate(ctx, parsedUserID)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (!user.Active || !user.PasswordChangeRequired || user.CredentialVersion != expectedCredentialVersion)) {
 		return ErrPasswordChangeDenied

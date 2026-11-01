@@ -487,6 +487,164 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: patchProfessional
+      summary: Altera somente o nome do profissional ativo ou inativo
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfessionalRequest"
+      responses:
+        "200":
+          description: Registro persistido; identidade, e-mail, estado e credenciais preservados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Profissional inexistente ou de outro estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    get:
+      operationId: getProfessional
+      summary: Consulta profissional ativo ou inativo do estabelecimento do proprietário
+      tags: [professionals]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Cadastro do profissional, disponível inclusive sem trial ativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Profissional inexistente ou de outro estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}/deactivation:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: postProfessionalDeactivation
+      summary: Desativa profissional e revoga seu acesso atomicamente
+      description: Sem corpo. Repetir para inativo retorna o registro sem novo incremento de versão ou alteração de credencial. Preserva o perfil e suas referências.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Profissional inativo, com acesso revogado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Profissional inexistente ou de outro estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}/reactivation:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: postProfessionalReactivation
+      summary: Reativa profissional com senha temporária e troca obrigatória
+      description: Aceita senha temporária válida inclusive igual à anterior, gera novo hash e invalida sessões e tokens antigos. Não autentica o profissional. Alvo já ativo retorna conflito sem efeitos.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReactivateProfessionalRequest"
+      responses:
+        "200":
+          description: Profissional reativado com troca obrigatória no próximo login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Profissional inexistente ou de outro estabelecimento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: professional_already_active; credencial, versão e sessões permanecem inalteradas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /services:
     get:
       operationId: getServices
@@ -785,6 +943,26 @@ components:
           minLength: 8
           maxLength: 32
           description: Between 8 and 32 Unicode code points; excludes White_Space, control (Cc), format (Cf), and Default_Ignorable_Code_Point characters. Rejected without trimming, character removal, or normalization.
+    ReactivateProfessionalRequest:
+      type: object
+      additionalProperties: false
+      required: [temporary_password]
+      properties:
+        temporary_password:
+          type: string
+          minLength: 8
+          maxLength: 32
+          description: Sem espaços ou caracteres proibidos, sem normalização. Pode repetir o valor anterior; não é retornada nem recuperável.
+    UpdateProfessionalRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Nome obrigatório, sem NUL; remove espaços nas extremidades. Omitido, nulo ou vazio é recusado.
     ProfessionalResponse:
       type: object
       required: [id, name, email, active]
@@ -801,7 +979,7 @@ components:
           type: boolean
     ProfessionalListResponse:
       type: object
-      required: [items, limit, offset, has_more]
+      required: [items, limit, offset, has_more, can_write]
       properties:
         items:
           type: array
@@ -816,6 +994,9 @@ components:
           minimum: 0
         has_more:
           type: boolean
+        can_write:
+          type: boolean
+          description: Direito de escrita resolvido centralmente; leitura permanece disponível sem trial ativo.
     PasswordRecoveryRequest:
       type: object
       additionalProperties: false
