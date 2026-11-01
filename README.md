@@ -75,8 +75,10 @@ ativação e desativação. Preços usam BRL com centavos
 exatos; duração aceita minutos inteiros e usa 30 quando vazia. Serviços inativos
 permanecem no catálogo, e o painel continua consultável após expiração do trial.
 
-Alterações pedem confirmação quando necessário e respostas incertas exigem
-conferência antes de novo envio. Os passos de validação estão em
+Alterações pedem confirmação quando necessário. Falhas de rede, respostas `5xx`
+ou fora do contrato exibem erro, preservam as entradas e permitem fechar,
+cancelar ou tentar novamente explicitamente, sem consulta de confirmação nem
+repetição automática. Os passos de validação estão em
 [docs/operations.md](docs/operations.md#validação-local-do-catálogo-de-serviços).
 Associação a profissionais, agenda e contagem de agendamentos afetados permanecem
 nos próximos escopos documentados.
