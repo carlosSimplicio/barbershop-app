@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import {
-  Button,
-  Feedback,
-  IconButton,
-  Modal,
-  ModalActions,
-} from "@/components/ui";
+import { Feedback, IconButton, Modal } from "@/components/ui";
 import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
 import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
@@ -16,8 +10,7 @@ import {
   type Professional,
 } from "@/lib/professionals/professionals-api";
 import { isProfessionalList } from "@/lib/professionals/professional-operation-result";
-import { ProfessionalReactivationPanel } from "../professional-reactivation-panel/professional-reactivation-panel";
-import { ProfessionalDeactivationPanel } from "../professional-deactivation-panel/professional-deactivation-panel";
+import { ProfessionalStatusAction } from "../professional-status-action/professional-status-action";
 import { CreateProfessionalForm } from "../create-professional-form/create-professional-form";
 import { EditProfessionalPanel } from "../edit-professional-panel/edit-professional-panel";
 import {
@@ -25,11 +18,6 @@ import {
   type ProfessionalsView,
 } from "../professionals-list-panel/professionals-list-panel";
 import styles from "./professionals-workspace.module.css";
-
-type ProfessionalStateAction = {
-  kind: "deactivation" | "reactivation";
-  record: Professional;
-};
 
 export function ProfessionalsWorkspace() {
   const { state } = useAuthSession();
@@ -49,11 +37,7 @@ function ProfessionalsRequest() {
   const [version, setVersion] = useState(0);
   const [pendingOperations, setPendingOperations] = useState(0);
   const [readOnly, setReadOnly] = useState(false);
-  const [stateAction, setStateAction] =
-    useState<ProfessionalStateAction | null>(null);
-  const statusOrigin = useRef<HTMLButtonElement | null>(null);
-  const editorContent = useRef<HTMLDivElement>(null);
-  const restoreStatusFocus = useRef(false);
+  const [confirming, setConfirming] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const restoreEditorFocus = useRef(false);
@@ -84,14 +68,6 @@ function ProfessionalsRequest() {
         : current,
     );
   }, []);
-  useEffect(() => {
-    if (!stateAction && restoreStatusFocus.current && pendingOperations === 0) {
-      restoreStatusFocus.current = false;
-      if (statusOrigin.current?.isConnected && !statusOrigin.current.disabled)
-        statusOrigin.current.focus();
-      else editorContent.current?.focus();
-    }
-  }, [stateAction, pendingOperations]);
   useEffect(() => {
     if (!selected && restoreEditorFocus.current) {
       restoreEditorFocus.current = false;
@@ -137,12 +113,7 @@ function ProfessionalsRequest() {
     if (pendingOperations > 0) return;
     restoreEditorFocus.current = true;
     setSelected(null);
-    setStateAction(null);
-    restoreStatusFocus.current = false;
-  }
-  function closeStateAction() {
-    restoreStatusFocus.current = true;
-    setStateAction(null);
+    setConfirming(false);
   }
   if (view.status === "unauthorized") return null;
   const canWrite =
@@ -155,7 +126,7 @@ function ProfessionalsRequest() {
         <IconButton
           aria-label="Adicionar profissional"
           aria-haspopup="dialog"
-          disabled={!canWrite || !!stateAction}
+          disabled={!canWrite || confirming}
           onClick={() => setCreating(true)}
         >
           <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -175,7 +146,7 @@ function ProfessionalsRequest() {
         >
           <CreateProfessionalForm
             embedded
-            canWrite={canWrite && !stateAction}
+            canWrite={canWrite && !confirming}
             onCreated={() => {
               setOffset(FIRST_PAGE_OFFSET);
               refresh();
@@ -200,86 +171,34 @@ function ProfessionalsRequest() {
             closeDisabled={pendingOperations > 0}
             fallbackFocusRef={list}
           >
-            <div ref={editorContent} tabIndex={-1}>
-              <EditProfessionalPanel
-                embedded
-                professionalId={selected}
-                canWrite={canWrite && !stateAction}
-                blocked={busy || !!stateAction}
-                onRecordConfirmed={acceptRecord}
-                onClose={closeEditor}
-                onReadOnly={onReadOnly}
-                onUnauthorized={onUnauthorized}
-                onBusyChange={trackOperation}
-                renderActions={(record, disabled, onChanged) => (
-                  <>
-                    <div className={styles.statusHeader}>
-                      <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
-                      <ModalActions>
-                        <Button
-                          ref={statusOrigin}
-                          disabled={disabled || !!stateAction}
-                          aria-label={`${record.active ? "Desativar" : "Reativar"} ${record.name}`}
-                          onClick={() =>
-                            setStateAction({
-                              kind: record.active
-                                ? "deactivation"
-                                : "reactivation",
-                              record,
-                            })
-                          }
-                        >
-                          {record.active ? "Desativar" : "Reativar"}
-                        </Button>
-                      </ModalActions>
-                    </div>
-                    {stateAction?.kind === "deactivation" ? (
-                      <ProfessionalDeactivationPanel
-                        key={`deactivation:${stateAction.record.id}`}
-                        record={stateAction.record}
-                        canWrite={canWrite}
-                        onBusyChange={trackOperation}
-                        onReadOnly={onReadOnly}
-                        onUnauthorized={onUnauthorized}
-                        onRecordConfirmed={(confirmed) => {
-                          onChanged(confirmed);
-                          setStateAction((current) =>
-                            current
-                              ? { ...current, record: confirmed }
-                              : current,
-                          );
-                        }}
-                        onClose={closeStateAction}
-                      />
-                    ) : null}
-                    {stateAction?.kind === "reactivation" ? (
-                      <ProfessionalReactivationPanel
-                        key={`reactivation:${stateAction.record.id}`}
-                        record={stateAction.record}
-                        canWrite={canWrite}
-                        onBusyChange={trackOperation}
-                        onReadOnly={onReadOnly}
-                        onUnauthorized={onUnauthorized}
-                        onRecordConfirmed={(confirmed) => {
-                          onChanged(confirmed);
-                          setStateAction((current) =>
-                            current
-                              ? { ...current, record: confirmed }
-                              : current,
-                          );
-                        }}
-                        onClose={closeStateAction}
-                      />
-                    ) : null}
-                  </>
-                )}
-              />
-            </div>
+            <EditProfessionalPanel
+              embedded
+              professionalId={selected}
+              canWrite={canWrite && !confirming}
+              blocked={busy || confirming}
+              onRecordConfirmed={acceptRecord}
+              onClose={closeEditor}
+              onReadOnly={onReadOnly}
+              onUnauthorized={onUnauthorized}
+              onBusyChange={trackOperation}
+              renderActions={(record, disabled, onChanged) => (
+                <ProfessionalStatusAction
+                  record={record}
+                  canWrite={canWrite}
+                  disabled={disabled}
+                  onOpenChange={setConfirming}
+                  onBusyChange={trackOperation}
+                  onReadOnly={onReadOnly}
+                  onUnauthorized={onUnauthorized}
+                  onChanged={onChanged}
+                />
+              )}
+            />
           </Modal>
         ) : null}
         <ProfessionalsListPanel
           view={view}
-          busy={busy || !!stateAction}
+          busy={busy || confirming}
           listRef={list}
           onRefresh={refresh}
           onPageChange={(next) => {
