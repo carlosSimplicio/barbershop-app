@@ -26,7 +26,7 @@ function form(canWrite = true) {
 }
 test("exige campos e foca o primeiro erro", () => {
   form();
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   expect(screen.getByLabelText("Nome do serviço")).toHaveFocus();
   expect(createOffering).not.toHaveBeenCalled();
 });
@@ -44,7 +44,7 @@ test("envia uma vez, aplica 30 minutos pelo valor nulo e confirma criação", as
   });
   const props = form();
   fill();
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
   expect(props.onCreated).toHaveBeenCalledOnce();
   expect(createOffering).toHaveBeenCalledWith(
@@ -65,7 +65,7 @@ test("preserva dados e mostra erros locais por campo", async () => {
   });
   form();
   fill();
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   await waitFor(() =>
     expect(screen.getByLabelText("Nome do serviço")).toHaveAttribute(
       "aria-invalid",
@@ -77,9 +77,7 @@ test("preserva dados e mostra erros locais por campo", async () => {
 });
 test("não envia com somente leitura e informa expiração recebida", async () => {
   const props = form(false);
-  expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeDisabled();
   expect(createOffering).not.toHaveBeenCalled();
   expect(props.onReadOnly).not.toHaveBeenCalled();
 });
@@ -108,14 +106,12 @@ test.each([
     else vi.mocked(createOffering).mockRejectedValue(new Error("raw"));
     const callbacks = form();
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
     expect(
       await screen.findByText("Não foi possível cadastrar o serviço"),
     ).toBeVisible();
     expect(createOffering).toHaveBeenCalledOnce();
-    expect(
-      screen.getByRole("button", { name: "Cadastrar serviço" }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
     expect(callbacks.onReadOnly).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Corte");
     expect(screen.queryByText("Serviço cadastrado")).not.toBeInTheDocument();
@@ -133,7 +129,7 @@ test("impede submissões simultâneas e informa read_only", async () => {
   const props = form();
   fill();
   const element = screen
-    .getByRole("button", { name: "Cadastrar serviço" })
+    .getByRole("button", { name: "Cadastrar" })
     .closest("form")!;
   fireEvent.submit(element);
   fireEvent.submit(element);
@@ -161,7 +157,7 @@ test("foca preço inválido da API após habilitar os controles", async () => {
   form();
   fill();
   screen.getByLabelText("Nome do serviço").focus();
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   await waitFor(() => expect(screen.getByLabelText("Preço")).toHaveFocus());
   expect(screen.getByLabelText("Preço")).toHaveAttribute(
     "aria-invalid",

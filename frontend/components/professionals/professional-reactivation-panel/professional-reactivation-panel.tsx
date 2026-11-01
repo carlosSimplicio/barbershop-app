@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, Feedback, PasswordField } from "@/components/ui";
+import {
+  Button,
+  Feedback,
+  Modal,
+  ModalActions,
+  PasswordField,
+} from "@/components/ui";
 import { validatePassword } from "@/lib/auth/password-validation/password-validation";
 import { TEMPORARY_PASSWORD_HINT } from "@/lib/professionals/professional-form-model";
 import {
@@ -10,7 +16,6 @@ import {
 } from "@/lib/professionals/professionals-api";
 import { classifyProfessionalOperation } from "@/lib/professionals/professional-operation-result";
 import formStyles from "../create-professional-form/create-professional-form.module.css";
-import styles from "./professional-reactivation-panel.module.css";
 
 type Props = {
   record: Professional;
@@ -44,13 +49,9 @@ export function ProfessionalReactivationPanel({
   const [notice, setNotice] = useState<Notice | null>(null);
   const pending = useRef(false);
   const controller = useRef<AbortController | null>(null);
-  const panel = useRef<HTMLElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const focusError = useRef(false);
-  useEffect(() => {
-    panel.current?.focus();
-    return () => controller.current?.abort();
-  }, []);
+  useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
     if (!submitting && focusError.current) {
       focusError.current = false;
@@ -159,60 +160,72 @@ export function ProfessionalReactivationPanel({
     event.preventDefault();
     void run();
   }
-  return (
-    <section
-      ref={panel}
-      tabIndex={-1}
-      aria-label="Reativar profissional"
-      aria-busy={submitting}
-      className={formStyles.panel}
-    >
-      <h2>Reativar {record.name}?</h2>
-      <p>
-        Defina uma senha temporária válida, inclusive igual à anterior. O
-        profissional precisará trocá-la após entrar.
-      </p>
-      {notice ? (
-        <Feedback variant={notice.variant} title={notice.title}>
-          {notice.message}
-        </Feedback>
-      ) : null}
+  const confirmationActions = (
+    <ModalActions>
       {!finished && !missing ? (
-        <form noValidate onSubmit={submit} className={formStyles.form}>
-          <PasswordField
-            ref={field}
-            label="Senha temporária para reativação"
-            autoComplete="new-password"
-            hint={TEMPORARY_PASSWORD_HINT}
-            value={password}
-            error={error}
-            disabled={!canWrite || submitting}
-            required
-            onChange={(event) => {
-              setPassword(event.target.value);
-              setError(undefined);
-              setNotice(null);
-            }}
-          />
-          <Button
-            type="submit"
-            disabled={!canWrite || submitting || record.active}
-          >
-            {submitting ? "Aguarde…" : "Confirmar reativação"}
-          </Button>
-        </form>
-      ) : null}
-      <div className={styles.actions}>
         <Button
-          disabled={submitting}
-          onClick={() => {
-            setPassword("");
-            onClose();
-          }}
+          type="submit"
+          disabled={!canWrite || submitting || record.active}
         >
-          {finished || missing ? "Fechar reativação" : "Cancelar reativação"}
+          {submitting ? "Aguarde…" : "Confirmar"}
         </Button>
-      </div>
-    </section>
+      ) : null}
+      <Button
+        disabled={submitting}
+        onClick={() => {
+          setPassword("");
+          onClose();
+        }}
+      >
+        {finished || missing ? "Fechar" : "Cancelar"}
+      </Button>
+    </ModalActions>
+  );
+  return (
+    <Modal
+      open
+      title="Reativar profissional"
+      onClose={onClose}
+      closeDisabled={submitting}
+    >
+      <section
+        aria-label="Reativar profissional"
+        aria-busy={submitting}
+        className={formStyles.embedded}
+      >
+        <p>Reativar “{record.name}”?</p>
+        <p>
+          Defina uma senha temporária válida, inclusive igual à anterior. O
+          profissional precisará trocá-la após entrar.
+        </p>
+        {notice ? (
+          <Feedback variant={notice.variant} title={notice.title}>
+            {notice.message}
+          </Feedback>
+        ) : null}
+        {!finished && !missing ? (
+          <form noValidate onSubmit={submit} className={formStyles.form}>
+            <PasswordField
+              ref={field}
+              label="Senha temporária para reativação"
+              autoComplete="new-password"
+              hint={TEMPORARY_PASSWORD_HINT}
+              value={password}
+              error={error}
+              disabled={!canWrite || submitting}
+              required
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setError(undefined);
+                setNotice(null);
+              }}
+            />
+            {confirmationActions}
+          </form>
+        ) : (
+          confirmationActions
+        )}
+      </section>
+    </Modal>
   );
 }

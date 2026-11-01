@@ -9,8 +9,14 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
-.buttons {
+
+.header {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
+  min-width: 0;
+}
+.header p {
+  margin: 0;
 }

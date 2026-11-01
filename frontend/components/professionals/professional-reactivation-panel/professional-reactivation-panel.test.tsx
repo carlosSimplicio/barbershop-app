@@ -27,7 +27,7 @@ function renderPanel() {
   fireEvent.change(screen.getByLabelText("Senha temporária para reativação"), {
     target: { value: "senha-temporaria" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Confirmar reativação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
 }
 test("apresenta erro local de senha e foca o campo após a resposta", async () => {
   vi.mocked(reactivateProfessional).mockResolvedValue({
@@ -72,7 +72,5 @@ test("recurso ausente limpa senha e permite fechar sem repetir envio", async () 
   expect(
     screen.queryByLabelText("Senha temporária para reativação"),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole("button", { name: "Fechar reativação" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Fechar" })).toBeEnabled();
 });

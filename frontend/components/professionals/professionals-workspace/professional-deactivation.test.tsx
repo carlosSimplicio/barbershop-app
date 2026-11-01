@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
@@ -68,7 +69,11 @@ test("exige confirmação identificada e permite cancelar sem escrita", async ()
   );
   fireEvent.click(screen.getByRole("button", { name: "Desativar Ana" }));
   expect(screen.getByText(/sessões serão encerradas/i)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar desativação" }));
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "Desativar profissional" }),
+    ).getByRole("button", { name: "Cancelar" }),
+  );
   expect(screen.getByRole("button", { name: "Desativar Ana" })).toHaveFocus();
   expect(deactivateProfessional).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
@@ -89,6 +94,12 @@ async function confirmPanel() {
     expect(screen.getByRole("button", { name: "Desativar Ana" })).toBeEnabled(),
   );
   fireEvent.click(screen.getByRole("button", { name: "Desativar Ana" }));
+  expect(
+    await screen.findByRole("dialog", { name: "Desativar profissional" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Desativar profissional" }),
+  ).toHaveFocus();
 }
 
 test("envia uma única desativação e atualiza a lista sem excluir o cadastro", async () => {
@@ -100,7 +111,7 @@ test("envia uma única desativação e atualiza a lista sem excluir o cadastro",
       }),
   );
   await confirmPanel();
-  const button = screen.getByRole("button", { name: "Confirmar desativação" });
+  const button = screen.getByRole("button", { name: "Confirmar" });
   fireEvent.click(button);
   fireEvent.click(button);
   expect(deactivateProfessional).toHaveBeenCalledExactlyOnceWith(
@@ -118,7 +129,7 @@ test("envia uma única desativação e atualiza a lista sem excluir o cadastro",
   expect(screen.getByRole("list")).toHaveTextContent("Ana");
   expect(screen.getByRole("list")).toHaveTextContent("Inativo");
   expect(screen.getByText("Profissional desativado")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Fechar confirmação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Reativar Ana" })).toHaveFocus(),
   );
@@ -131,21 +142,32 @@ test("erro na desativação permite cancelar ou fechar sem consulta adicional", 
     error: { code: "internal_error", message: "raw", request_id: "test" },
   });
   await confirmPanel();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   await screen.findByText("Não foi possível desativar o profissional");
+  expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
   expect(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
+    within(
+      screen.getByRole("dialog", { name: "Desativar profissional" }),
+    ).getByRole("button", { name: "Cancelar" }),
   ).toBeEnabled();
   expect(
-    screen.getByRole("button", { name: "Cancelar desativação" }),
+    within(
+      screen.getByRole("dialog", { name: "Desativar profissional" }),
+    ).getByRole("button", { name: "Fechar modal" }),
   ).toBeEnabled();
-  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
   expect(deactivateProfessional).toHaveBeenCalledOnce();
   expect(getProfessional).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "Desativar profissional" }),
+    ).getByRole("button", { name: "Fechar modal" }),
+  );
+  expect(
+    screen.queryByRole("dialog", { name: "Desativar profissional" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("dialog", { name: "Editar profissional" }),
+  ).toBeVisible();
 });
 
 test("sincroniza estado no editor preservando seu rascunho", async () => {
@@ -164,9 +186,7 @@ test("sincroniza estado no editor preservando seu rascunho", async () => {
     target: { value: "Rascunho" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Desativar Ana" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
 
   await screen.findByText("Estado: Inativo");
   expect(screen.getByLabelText("Nome do profissional")).toHaveValue("Rascunho");
@@ -180,16 +200,12 @@ test("read_only bloqueia todas as escritas sem mostrar mensagem bruta", async ()
     error: { code: "read_only", message: "privado", request_id: "id" },
   });
   await confirmPanel();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   await screen.findByText("Modo somente leitura");
   expect(
     screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
-  expect(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Confirmar" })).toBeDisabled();
   expect(screen.queryByText("privado")).not.toBeInTheDocument();
 });
 
@@ -201,12 +217,10 @@ test("usa resposta da desativação sem recarregar editor e permite fechar a mod
     error: { code: "not_found", message: "raw", request_id: "test" },
   });
   vi.mocked(deactivateProfessional).mockResolvedValue(result(false));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   await screen.findByText("Profissional desativado");
   expect(getProfessional).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("button", { name: "Fechar confirmação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled(),
   );

@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
-import { Button, Feedback, PasswordField, TextField } from "@/components/ui";
+import {
+  Button,
+  Feedback,
+  ModalActions,
+  PasswordField,
+  TextField,
+} from "@/components/ui";
 import {
   EMAIL_MAX_LENGTH,
   validateEmail,
@@ -224,9 +230,11 @@ export function CreateProfessionalForm({
           required
           value={values.temporary_password}
         />
-        <Button disabled={submitting || !canWrite} type="submit">
-          {submitting ? "Cadastrando…" : "Cadastrar profissional"}
-        </Button>
+        <ModalActions>
+          <Button disabled={submitting || !canWrite} type="submit">
+            {submitting ? "Cadastrando…" : "Cadastrar"}
+          </Button>
+        </ModalActions>
       </form>
     </section>
   );

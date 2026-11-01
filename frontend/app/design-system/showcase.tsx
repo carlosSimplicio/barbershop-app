@@ -12,6 +12,7 @@ import {
   Feedback,
   IconButton,
   Modal,
+  ModalActions,
   PasswordField,
   RecordList,
   RecordListPanel,
@@ -56,6 +57,7 @@ export function DesignSystemShowcase() {
   const [phoneNumber, setPhoneNumber] = useState("(11) 99999-0000");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBusy, setModalBusy] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   return (
     <main className={styles.page} data-theme={theme}>
@@ -432,9 +434,21 @@ export function DesignSystemShowcase() {
             Cliques no fundo não fecham a modal. Durante um envio, bloqueie o
             fechamento com closeDisabled. O conteúdo permanece montado ao
             fechar; o fluxo consumidor controla o descarte de rascunhos. Na
-            edição, ações e confirmações de estado ficam na mesma modal, fora do
-            formulário de edição. Envios pendentes bloqueiam o fechamento. Após
-            erro, os controles ficam disponíveis novamente.
+            edição, a ação de estado abre uma segunda modal de confirmação,
+            preservando o editor abaixo. Escape e Tab atuam somente na
+            confirmação; ao fechar, o foco retorna à ação de estado. Use rótulos
+            curtos: “Confirmar”, “Cancelar” e “Fechar” após a conclusão. O
+            estado e a ação correspondente ficam alinhados no topo, antes dos
+            campos; use “Salvar” e “Cancelar” lado a lado, alinhados à direita
+            na mesma linha do rodapé, para a edição. Envios pendentes bloqueiam
+            o fechamento. Após erro, os controles ficam disponíveis novamente.
+          </p>
+          <p>
+            Todas as modais usam ModalActions para agrupar suas ações em uma
+            única linha à direita, com botões compactos de largura natural e
+            textos curtos. O tamanho preserva a área mínima de toque de 44
+            pixels. Mantenha os botões de envio dentro do formulário. No
+            exemplo, Enviar simula uma operação pendente e Concluir a encerra.
           </p>
           <Modal
             open={modalOpen}
@@ -444,9 +458,35 @@ export function DesignSystemShowcase() {
             onClose={() => setModalOpen(false)}
           >
             <TextField label="Nome do registro" />
-            <Button onClick={() => setModalBusy(!modalBusy)}>
-              {modalBusy ? "Concluir envio simulado" : "Simular envio"}
-            </Button>
+
+            {confirmationOpen ? (
+              <Modal
+                open
+                title="Confirmar alteração"
+                description="O rascunho da edição permanece na modal abaixo."
+                onClose={() => setConfirmationOpen(false)}
+              >
+                <ModalActions>
+                  <Button onClick={() => setConfirmationOpen(false)}>
+                    Confirmar
+                  </Button>
+                  <Button onClick={() => setConfirmationOpen(false)}>
+                    Cancelar
+                  </Button>
+                </ModalActions>
+              </Modal>
+            ) : null}
+            <ModalActions>
+              <Button
+                disabled={modalBusy}
+                onClick={() => setConfirmationOpen(true)}
+              >
+                Confirmar
+              </Button>
+              <Button onClick={() => setModalBusy(!modalBusy)}>
+                {modalBusy ? "Concluir" : "Enviar"}
+              </Button>
+            </ModalActions>
           </Modal>
         </Showcase>
       </section>

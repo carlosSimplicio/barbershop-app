@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, ModalActions } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
 import { createOffering } from "@/lib/catalog/catalog-api";
 import {
@@ -141,9 +141,11 @@ export function CreateOfferingForm({
           disabled={!canWrite || submitting}
           onChange={change}
         />
-        <Button type="submit" disabled={!canWrite || submitting}>
-          {submitting ? "Cadastrando…" : "Cadastrar serviço"}
-        </Button>
+        <ModalActions>
+          <Button type="submit" disabled={!canWrite || submitting}>
+            {submitting ? "Cadastrando…" : "Cadastrar"}
+          </Button>
+        </ModalActions>
       </form>
     </section>
   );

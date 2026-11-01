@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createRef, StrictMode, useRef, useState } from "react";
 import { expect, test, vi } from "vitest";
 
@@ -147,4 +147,106 @@ test("devolve foco ao destino alternativo se a origem estiver desabilitada ao fe
   origin.setAttribute("disabled", "");
   view.rerender(content(false));
   expect(screen.getByRole("heading", { name: "Lista" })).toHaveFocus();
+});
+
+function NestedExample({ blocked = false }: { blocked?: boolean }) {
+  const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(true);
+  return (
+    <Modal
+      open={editing}
+      title="Editar registro"
+      onClose={() => setEditing(false)}
+      closeDisabled={blocked}
+    >
+      <input aria-label="Rascunho" defaultValue="Nome editado" />
+      <button onClick={() => setConfirming(true)}>Alterar estado</button>
+      {confirming ? (
+        <Modal
+          open
+          title="Confirmar estado"
+          onClose={() => setConfirming(false)}
+          closeDisabled={blocked}
+        >
+          <button disabled={blocked}>Confirmar estado</button>
+          <button disabled={blocked} onClick={() => setConfirming(false)}>
+            Cancelar confirmação
+          </button>
+        </Modal>
+      ) : null}
+    </Modal>
+  );
+}
+
+test("Escape fecha somente a confirmação e preserva editor, rascunho e retorno do foco", () => {
+  render(<NestedExample />);
+  const trigger = screen.getByRole("button", { name: "Alterar estado" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  const confirmation = screen.getByRole("dialog", { name: "Confirmar estado" });
+  expect(
+    within(confirmation).getByRole("heading", { name: "Confirmar estado" }),
+  ).toHaveFocus();
+  fireEvent(
+    confirmation,
+    new Event("cancel", { cancelable: true, bubbles: true }),
+  );
+  expect(
+    screen.queryByRole("dialog", { name: "Confirmar estado" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Editar registro" })).toBeVisible();
+  expect(screen.getByLabelText("Rascunho")).toHaveValue("Nome editado");
+  expect(trigger).toHaveFocus();
+});
+
+test("Tab circula somente na confirmação sem ser capturado pelo editor abaixo", () => {
+  const layout = vi
+    .spyOn(HTMLElement.prototype, "getClientRects")
+    .mockReturnValue([new DOMRect()] as unknown as DOMRectList);
+  try {
+    render(<NestedExample />);
+    fireEvent.click(screen.getByRole("button", { name: "Alterar estado" }));
+    const confirmation = screen.getByRole("dialog", {
+      name: "Confirmar estado",
+    });
+    const first = within(confirmation).getByRole("button", {
+      name: "Fechar modal",
+    });
+    const last = within(confirmation).getByRole("button", {
+      name: "Cancelar confirmação",
+    });
+    last.focus();
+    fireEvent.keyDown(last, { key: "Tab" });
+    expect(first).toHaveFocus();
+    fireEvent.keyDown(first, { key: "Tab", shiftKey: true });
+    expect(last).toHaveFocus();
+  } finally {
+    layout.mockRestore();
+  }
+});
+
+test("confirmação pendente protege Escape e recupera foco nela ao pressionar Tab fora do dialog", () => {
+  render(<NestedExample blocked />);
+  fireEvent.click(screen.getByRole("button", { name: "Alterar estado" }));
+  const confirmation = screen.getByRole("dialog", { name: "Confirmar estado" });
+  expect(
+    within(confirmation).getByRole("button", { name: "Fechar modal" }),
+  ).toBeDisabled();
+  document.body.setAttribute("tabindex", "-1");
+  document.body.focus();
+  expect(document.body).toHaveFocus();
+  fireEvent.keyDown(document.body, { key: "Tab", cancelable: true });
+  document.body.removeAttribute("tabindex");
+  expect(
+    within(confirmation).getByRole("heading", { name: "Confirmar estado" }),
+  ).toHaveFocus();
+  expect(
+    fireEvent.keyDown(document.body, { key: "Escape", cancelable: true }),
+  ).toBe(false);
+  fireEvent(
+    confirmation,
+    new Event("cancel", { cancelable: true, bubbles: true }),
+  );
+  expect(screen.getByRole("dialog", { name: "Editar registro" })).toBeVisible();
+  expect(confirmation).toBeVisible();
 });

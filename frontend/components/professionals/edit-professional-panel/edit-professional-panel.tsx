@@ -7,7 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Button, Feedback, TextField } from "@/components/ui";
+import { Button, Feedback, ModalActions, TextField } from "@/components/ui";
 import {
   getProfessional,
   updateProfessional,
@@ -22,7 +22,6 @@ import {
   PROFESSIONAL_NAME_HINT,
 } from "@/lib/professionals/professional-form-model";
 import formStyles from "../create-professional-form/create-professional-form.module.css";
-import styles from "./edit-professional-panel.module.css";
 
 type Props = {
   professionalId: string;
@@ -231,6 +230,18 @@ export function EditProfessionalPanel({
     }
   }
   const disabled = !canWrite || submitting || load !== "ready";
+  const editActions = (
+    <ModalActions>
+      {record && load !== "missing" ? (
+        <Button type="submit" disabled={disabled}>
+          {submitting ? "Salvando…" : "Salvar"}
+        </Button>
+      ) : null}
+      <Button onClick={onClose} disabled={submitting || blocked}>
+        Cancelar
+      </Button>
+    </ModalActions>
+  );
   return (
     <section
       ref={panel}
@@ -239,6 +250,13 @@ export function EditProfessionalPanel({
       className={embedded ? formStyles.embedded : formStyles.panel}
     >
       {!embedded ? <h2>Editar profissional</h2> : null}
+      {record ? (
+        renderActions ? (
+          renderActions(record, disabled, applyRecord)
+        ) : (
+          <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
+        )
+      ) : null}
       {load === "loading" ? (
         <p role="status">Carregando profissional…</p>
       ) : null}
@@ -247,9 +265,11 @@ export function EditProfessionalPanel({
           variant="error"
           title="Não foi possível consultar o profissional"
           action={
-            <Button onClick={reload} disabled={submitting || blocked}>
-              Tentar novamente
-            </Button>
+            <ModalActions>
+              <Button onClick={reload} disabled={submitting || blocked}>
+                Tentar novamente
+              </Button>
+            </ModalActions>
           }
         >
           Verifique sua conexão e tente novamente.
@@ -267,7 +287,6 @@ export function EditProfessionalPanel({
       ) : null}
       {record && load !== "missing" ? (
         <form noValidate onSubmit={submit} className={formStyles.form}>
-          <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
           <TextField
             label="Nome do profissional"
             hint={PROFESSIONAL_NAME_HINT}
@@ -288,18 +307,11 @@ export function EditProfessionalPanel({
             readOnly
             hint="O e-mail de acesso não pode ser alterado."
           />
-          <Button type="submit" disabled={disabled}>
-            {submitting ? "Salvando…" : "Salvar alterações"}
-          </Button>
+          {editActions}
         </form>
-      ) : null}
-      {/* Keep state confirmations dismissible when the edited resource is missing. */}
-      {record ? renderActions?.(record, disabled, applyRecord) : null}
-      <div className={styles.actions}>
-        <Button onClick={onClose} disabled={submitting || blocked}>
-          Cancelar edição
-        </Button>
-      </div>
+      ) : (
+        editActions
+      )}
     </section>
   );
 }

@@ -94,9 +94,7 @@ test("atualiza a lista após criar o profissional", async () => {
   fireEvent.change(screen.getByLabelText("Senha temporária"), {
     target: { value: "senha-segura" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
   expect(await screen.findByText("Ana Lima")).toBeInTheDocument();
   await waitFor(() => expect(listProfessionals).toHaveBeenCalledTimes(2));
@@ -109,20 +107,14 @@ test("erro no cadastro permite fechar e reabrir sem conferir a lista", async () 
   render(<ProfessionalsWorkspace />);
   await screen.findByText("Nenhum profissional cadastrado.");
   fillCreation();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   await screen.findByText("Não foi possível cadastrar o profissional");
-  expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
   fireEvent.click(
     screen.getByRole("button", { name: "Adicionar profissional" }),
   );
-  expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
   expect(createProfessional).toHaveBeenCalledOnce();
   expect(listProfessionals).toHaveBeenCalledOnce();
 });
@@ -202,14 +194,14 @@ test("consulta inativo, mantém e-mail somente leitura e cancela com foco na ori
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Rascunho" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar edição" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
   expect(updateProfessional).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Editar Ana Lima" })).toHaveFocus();
 });
 
 test("envia apenas nome alterado uma vez e sincroniza lista com o registro persistido", async () => {
   await openEditor();
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   expect(updateProfessional).not.toHaveBeenCalled();
   let finish!: (value: ReturnType<typeof recordResult>) => void;
   vi.mocked(updateProfessional).mockImplementation(
@@ -221,9 +213,7 @@ test("envia apenas nome alterado uma vez e sincroniza lista com o registro persi
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: " Beatriz " },
   });
-  const form = screen
-    .getByRole("button", { name: "Salvar alterações" })
-    .closest("form")!;
+  const form = screen.getByRole("button", { name: "Salvar" }).closest("form")!;
   act(() => {
     fireEvent.submit(form);
     fireEvent.submit(form);
@@ -260,11 +250,9 @@ test("erro de edição preserva rascunho sem atualizar a lista nem consultar o c
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Rascunho" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await screen.findByText("Não foi possível salvar o profissional");
-  expect(
-    screen.getByRole("button", { name: "Salvar alterações" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
   expect(screen.getByLabelText("Nome do profissional")).toHaveValue("Rascunho");
   expect(screen.getByRole("list")).not.toHaveTextContent("Rascunho");
@@ -278,7 +266,7 @@ test("propaga read_only da edição a todas as escritas mantendo leitura", async
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Beatriz" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await screen.findByText("Modo somente leitura");
   expect(
     screen.getByRole("button", { name: "Adicionar profissional" }),
@@ -295,7 +283,7 @@ test("remove conteúdo protegido após 401 da edição sem consultar sessão nov
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Beatriz" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await waitFor(() =>
     expect(screen.queryByRole("list")).not.toBeInTheDocument(),
   );
@@ -318,7 +306,7 @@ test("foca erro de campo local sem mostrar mensagens brutas do servidor", async 
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Beatriz" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await waitFor(() =>
     expect(screen.getByLabelText("Nome do profissional")).toHaveFocus(),
   );
@@ -341,9 +329,7 @@ test("mantém sucesso do cadastro se a atualização da lista falhar", async () 
   render(<ProfessionalsWorkspace />);
   await screen.findByText("Nenhum profissional cadastrado.");
   fillCreation();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   await screen.findByText("Não foi possível consultar os profissionais");
   expect(screen.getByText("Profissional cadastrado")).toBeInTheDocument();
   expect(screen.getByLabelText("Senha temporária")).toHaveValue("");
@@ -368,13 +354,9 @@ test("read_only recebido no cadastro bloqueia também editor", async () => {
   await openEditor();
   vi.mocked(createProfessional).mockResolvedValue(failure(403, "read_only"));
   fillCreation();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   await screen.findByText("Modo somente leitura");
-  expect(
-    screen.getByRole("button", { name: "Salvar alterações" }),
-  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
@@ -394,7 +376,7 @@ test("descarta PATCH obsoleto após troca de identidade e cancela a requisição
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Antigo" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   const session = vi.mocked(useAuthSession).mock.results.at(-1)!
     .value as ReturnType<typeof useAuthSession>;
   if (session.state.status !== "authenticated")
@@ -437,15 +419,13 @@ test.each([500, 503])(
     fireEvent.change(screen.getByLabelText("Nome do profissional"), {
       target: { value: "Registro novo" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
     await screen.findByText("Não foi possível salvar o profissional");
-    expect(
-      screen.getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
     expect(updateProfessional).toHaveBeenCalledOnce();
     expect(getProfessional).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
     await screen.findByText("Profissional atualizado");
     expect(screen.getByRole("list")).toHaveTextContent("Registro novo");
     expect(updateProfessional).toHaveBeenCalledTimes(2);
@@ -459,9 +439,9 @@ test("devolve foco após cancelar edição com erro", async () => {
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Rascunho" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await screen.findByText("Não foi possível salvar o profissional");
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar edição" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
   expect(screen.getByRole("button", { name: "Editar Ana Lima" })).toHaveFocus();
 });
 

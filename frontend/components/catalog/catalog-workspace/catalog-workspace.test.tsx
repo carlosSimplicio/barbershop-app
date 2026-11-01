@@ -89,9 +89,7 @@ test("libera cadastro quando a consulta volta a responder com catálogo vazio e 
   expect(screen.getByLabelText("Nome do serviço")).toBeEnabled();
   expect(screen.getByLabelText("Preço")).toBeEnabled();
   expect(screen.getByLabelText("Duração (minutos)")).toBeEnabled();
-  expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
   expect(screen.queryByText("Modo somente leitura")).not.toBeInTheDocument();
 });
 function page(items = records, offset = 0, has_more = false, can_write = true) {
@@ -197,7 +195,7 @@ test("mantém criação confirmada quando a recarga da lista falha", async () =>
   fireEvent.change(screen.getByLabelText("Preço"), {
     target: { value: "1,00" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
   expect(
     await screen.findByText("Não foi possível consultar os serviços"),
@@ -233,7 +231,7 @@ test("abre cadastro pelo cabeçalho, mantém rascunho e impede fechar durante en
   expect(action).toHaveFocus();
   fireEvent.click(action);
   expect(screen.getByLabelText("Preço")).toHaveValue("1,00");
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   expect(screen.getByRole("button", { name: "Fechar modal" })).toBeDisabled();
   fireEvent(
     screen.getByRole("dialog"),
@@ -258,16 +256,12 @@ test("erro no cadastro permite fechar e reabrir sem conferir a lista", async () 
   fireEvent.change(screen.getByLabelText("Preço"), {
     target: { value: "1,00" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
   await screen.findByText("Não foi possível cadastrar o serviço");
-  expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
   fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
-  expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cadastrar" })).toBeEnabled();
   expect(createOffering).toHaveBeenCalledOnce();
   expect(listOfferings).toHaveBeenCalledOnce();
 });
@@ -284,9 +278,7 @@ test("retorna foco à ação do registro ao cancelar edição", async () => {
   fireEvent.click(action);
   const editor = await screen.findByRole("region", { name: "Editar serviço" });
   await within(editor).findByLabelText("Nome do serviço");
-  fireEvent.click(
-    within(editor).getByRole("button", { name: "Cancelar edição" }),
-  );
+  fireEvent.click(within(editor).getByRole("button", { name: "Cancelar" }));
   expect(action).toHaveFocus();
 });
 
@@ -308,12 +300,12 @@ test("edição com erro preserva rascunho e atualiza catálogo somente após nov
   fireEvent.change(within(editor).getByLabelText("Preço"), {
     target: { value: "2,00" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await screen.findByText("Não foi possível salvar o serviço");
   expect(within(editor).getByLabelText("Preço")).toHaveValue("2,00");
   expect(getOffering).toHaveBeenCalledOnce();
   expect(updateOffering).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
   await screen.findByText("Serviço atualizado");
   expect(
     screen.getByRole("list", { name: "Serviços cadastrados" }),
@@ -342,12 +334,8 @@ test("estado confirmado atualiza lista e editor aberto, bloqueando ações enqua
   const editor = await screen.findByRole("region", { name: "Editar serviço" });
   await within(editor).findByLabelText("Preço");
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
-  expect(
-    within(editor).getByRole("button", { name: "Salvar alterações" }),
-  ).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+  expect(within(editor).getByRole("button", { name: "Salvar" })).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Adicionar serviço" }),
   ).toBeDisabled();
@@ -386,19 +374,33 @@ test("erro na mudança de estado libera fechamento e nova tentativa sem consulta
   fireEvent.click(
     await screen.findByRole("button", { name: "Desativar Corte" }),
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   await screen.findByText("Não foi possível alterar o serviço");
+  expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
   expect(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
+    within(screen.getByRole("dialog", { name: "Desativar serviço" })).getByRole(
+      "button",
+      { name: "Cancelar" },
+    ),
   ).toBeEnabled();
-  expect(screen.getByRole("button", { name: "Cancelar edição" })).toBeEnabled();
-  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
+  expect(
+    within(screen.getByRole("dialog", { name: "Desativar serviço" })).getByRole(
+      "button",
+      { name: "Fechar modal" },
+    ),
+  ).toBeEnabled();
   expect(getOffering).toHaveBeenCalledOnce();
   expect(setOfferingStatus).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(
+    within(screen.getByRole("dialog", { name: "Desativar serviço" })).getByRole(
+      "button",
+      { name: "Fechar modal" },
+    ),
+  );
+  expect(
+    screen.queryByRole("dialog", { name: "Desativar serviço" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Editar serviço" })).toBeVisible();
 });
 
 test("lista oferece somente o lápis e a modal usa o estado recém-consultado para ativação", async () => {
@@ -450,9 +452,7 @@ test("salvamento do serviço bloqueia fechar e mudar estado até a resposta", as
   fireEvent.change(await within(modal).findByLabelText("Preço"), {
     target: { value: "2,00" },
   });
-  fireEvent.click(
-    within(modal).getByRole("button", { name: "Salvar alterações" }),
-  );
+  fireEvent.click(within(modal).getByRole("button", { name: "Salvar" }));
   expect(
     within(modal).getByRole("button", { name: "Fechar modal" }),
   ).toBeDisabled();

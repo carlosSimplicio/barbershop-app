@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
@@ -70,7 +71,11 @@ test("oferece reativação somente para inativo e permite cancelar limpando a se
   fireEvent.change(screen.getByLabelText("Senha temporária para reativação"), {
     target: { value: "senha-temporaria" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar reativação" }));
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "Reativar profissional" }),
+    ).getByRole("button", { name: "Cancelar" }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
   expect(screen.getByLabelText("Senha temporária para reativação")).toHaveValue(
     "",
@@ -99,6 +104,12 @@ async function openPanel() {
     expect(screen.getByRole("button", { name: "Reativar Ana" })).toBeEnabled(),
   );
   fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
+  expect(
+    await screen.findByRole("dialog", { name: "Reativar profissional" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Reativar profissional" }),
+  ).toHaveFocus();
   return rendered;
 }
 function enterPassword(value = "senha-temporaria") {
@@ -107,7 +118,7 @@ function enterPassword(value = "senha-temporaria") {
   });
 }
 function confirm() {
-  fireEvent.click(screen.getByRole("button", { name: "Confirmar reativação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
 }
 
 test("valida senha sem comparação com a anterior e confirma somente após resposta", async () => {
@@ -129,7 +140,7 @@ test("valida senha sem comparação com a anterior e confirma somente após resp
   expect(reactivateProfessional).not.toHaveBeenCalled();
   enterPassword();
   const form = screen
-    .getByRole("button", { name: "Confirmar reativação" })
+    .getByRole("button", { name: "Confirmar" })
     .closest("form")!;
   act(() => {
     fireEvent.submit(form);
@@ -172,13 +183,17 @@ test.each([500, 503])(
     expect(
       screen.getByLabelText("Senha temporária para reativação"),
     ).toHaveValue("senha-temporaria");
+    expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "Confirmar reativação" }),
+      within(
+        screen.getByRole("dialog", { name: "Reativar profissional" }),
+      ).getByRole("button", { name: "Cancelar" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "Cancelar reativação" }),
+      within(
+        screen.getByRole("dialog", { name: "Reativar profissional" }),
+      ).getByRole("button", { name: "Fechar modal" }),
     ).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
     expect(reactivateProfessional).toHaveBeenCalledOnce();
     expect(getProfessional).toHaveBeenCalledOnce();
     confirm();
@@ -204,7 +219,11 @@ test("conflito informa que o profissional já está ativo e permite cancelar", a
   );
   expect(getProfessional).toHaveBeenCalledOnce();
   expect(reactivateProfessional).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar reativação" }));
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "Reativar profissional" }),
+    ).getByRole("button", { name: "Cancelar" }),
+  );
   expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
   expect(screen.queryByText("privado")).not.toBeInTheDocument();
 });
@@ -243,7 +262,11 @@ test("falha de rede preserva senha para tentar novamente e cancelar a descarta",
   );
   expect(reactivateProfessional).toHaveBeenCalledOnce();
   expect(getProfessional).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar reativação" }));
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "Reativar profissional" }),
+    ).getByRole("button", { name: "Cancelar" }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
   expect(screen.getByLabelText("Senha temporária para reativação")).toHaveValue(
     "",
@@ -261,9 +284,7 @@ test("read_only bloqueia demais escritas sem anunciar sucesso", async () => {
   expect(
     screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
-  expect(
-    screen.getByRole("button", { name: "Confirmar reativação" }),
-  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Confirmar" })).toBeDisabled();
   expect(screen.queryByText("Profissional reativado")).not.toBeInTheDocument();
 });
 

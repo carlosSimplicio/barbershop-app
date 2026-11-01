@@ -15,6 +15,7 @@ export { Feedback, type FeedbackProps } from "./feedback/feedback";
 export { IconButton, type IconButtonProps } from "./icon-button/icon-button";
 export { Input, type InputProps } from "./input/input";
 export { Modal, type ModalProps } from "./modal/modal";
+export { ModalActions, type ModalActionsProps } from "./modal/modal-actions";
 export {
   PasswordField,
   type PasswordFieldProps,

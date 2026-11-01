@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Button, Feedback, IconButton, Modal } from "@/components/ui";
+import {
+  Button,
+  Feedback,
+  IconButton,
+  Modal,
+  ModalActions,
+} from "@/components/ui";
 import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
 import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
@@ -207,19 +213,26 @@ function ProfessionalsRequest() {
                 onBusyChange={trackOperation}
                 renderActions={(record, disabled, onChanged) => (
                   <>
-                    <Button
-                      ref={statusOrigin}
-                      disabled={disabled || !!stateAction}
-                      aria-label={`${record.active ? "Desativar" : "Reativar"} ${record.name}`}
-                      onClick={() =>
-                        setStateAction({
-                          kind: record.active ? "deactivation" : "reactivation",
-                          record,
-                        })
-                      }
-                    >
-                      {record.active ? "Desativar" : "Reativar"}
-                    </Button>
+                    <div className={styles.statusHeader}>
+                      <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
+                      <ModalActions>
+                        <Button
+                          ref={statusOrigin}
+                          disabled={disabled || !!stateAction}
+                          aria-label={`${record.active ? "Desativar" : "Reativar"} ${record.name}`}
+                          onClick={() =>
+                            setStateAction({
+                              kind: record.active
+                                ? "deactivation"
+                                : "reactivation",
+                              record,
+                            })
+                          }
+                        >
+                          {record.active ? "Desativar" : "Reativar"}
+                        </Button>
+                      </ModalActions>
+                    </div>
                     {stateAction?.kind === "deactivation" ? (
                       <ProfessionalDeactivationPanel
                         key={`deactivation:${stateAction.record.id}`}

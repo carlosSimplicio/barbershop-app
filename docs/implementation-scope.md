@@ -208,6 +208,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis, incluindo `Textarea` e `TextareaField` para conteúdo multilinha e `FileField` para seleção de imagens.
 - [ ] Criar padrões compartilhados para tabelas.
 - [x] Criar `Modal` reutilizável no design system com `dialog` nativo, foco inicial e retorno ao acionador, teclado, fundo inerte, rolagem responsiva e fechamento bloqueável durante envios.
+- [x] Compartilhar `ModalActions` no design system e em todas as modais: botões compactos com alvo de toque preservado, textos curtos, largura natural e ações na mesma linha à direita; remover os estilos de rodapé duplicados dos domínios.
 - [x] Criar padrões compartilhados de feedback.
 - [x] Criar padrões compartilhados para estados vazios com lista semântica e anúncio acessível.
 - [x] Compartilhar `RecordListPanel` e `RecordSummary` entre serviços e profissionais, com estados de consulta, atualização, paginação sempre visível após consulta bem-sucedida, rolagem interna dos itens acessível por teclado, referência de foco, detalhes e ações responsivas, com botões de ícone compactos para atualizar e editar; preservar permissões e operações específicas em cada domínio.
@@ -317,10 +318,11 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Editar somente o nome de profissional ativo ou inativo pela API, com validação compartilhada, CSRF parametrizado e direito de escrita, preservando identidade e credenciais.
 - [x] Desativar profissionais pela API atomicamente com revogação de acesso e repetição segura.
 - [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
+- [x] Padronizar os rótulos das confirmações como “Confirmar”/“Cancelar”/“Fechar” e as modais de edição de serviços e profissionais com botões “Salvar”/“Cancelar” lado a lado e alinhados à direita na mesma linha do rodapé e ação de estado no topo, à direita do estado atual, antes dos campos.
 - [x] Simplificar erros de mutações no frontend: `5xx`, rede e respostas fora do contrato exibem feedback e liberam os controles, sem estado incerto, consulta de confirmação ou conferência obrigatória; sincronizar testes e documentação.
 - [x] Consultar individualmente e editar o nome de profissionais ativos e inativos em modal pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e nova tentativa explícita após erro.
-- [x] Desativar profissionais dentro da modal de edição pelo painel com confirmação de perda de acesso, envio único, sincronização direta de lista/editor e tratamento local de erros.
-- [x] Reativar profissionais dentro da modal de edição pelo painel com confirmação, senha temporária, conflito seguro, limpeza de entrada, coordenação e tratamento local de erros.
+- [x] Desativar profissionais a partir da edição pelo painel em modal própria de confirmação de perda de acesso, envio único, sincronização direta de lista/editor e tratamento local de erros.
+- [x] Reativar profissionais a partir da edição pelo painel em modal própria de confirmação, com senha temporária, conflito seguro, limpeza de entrada, coordenação e tratamento local de erros.
 - [x] Oferecer cadastro em modal reutilizável aberta pelo botão `+` à direita do título de Profissionais, com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
@@ -340,7 +342,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Listar serviços no painel com paginação, preço BRL exato, estados de consulta e somente leitura.
 - [x] Cadastrar serviço em modal reutilizável aberta pelo botão `+` à direita do título de Serviços, com preço decimal convertido exatamente em centavos, limites visíveis de nome, preço e duração, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
 - [x] Consultar e editar serviço em modal no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento, preservação do rascunho após erro e sincronização do registro persistido na lista após sucesso.
-- [x] Ativar e desativar serviço dentro da modal de edição no painel com confirmação, coordenação dos envios e tratamento local de erros, atualizando diretamente lista e editor aberto após sucesso.
+- [x] Ativar e desativar serviço a partir da edição no painel em modal própria de confirmação, coordenação dos envios e tratamento local de erros, atualizando diretamente lista e editor aberto após sucesso.
 - [x] Validar nome obrigatório normalizado com até 120 pontos de código, sem caractere NUL, e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
 - [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.

@@ -32,9 +32,7 @@ test.each([
       onBusyChange={vi.fn()}
     />,
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   if (status === 401)
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce());
   else

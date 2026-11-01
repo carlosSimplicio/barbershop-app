@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, Modal, ModalActions } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
 import { setOfferingStatus, type Offering } from "@/lib/catalog/catalog-api";
 import styles from "./offering-status-action.module.css";
@@ -43,7 +43,7 @@ export function OfferingStatusAction({
       if (canWrite) action.current?.focus();
       else container.current?.focus();
     }
-  }, [submitting, canWrite, notice]);
+  }, [submitting, canWrite, notice, desiredActive]);
 
   async function run() {
     if (pending.current || !canWrite || desiredActive === null || missing)
@@ -109,6 +109,11 @@ export function OfferingStatusAction({
       onBusyChange(false);
     }
   }
+  function closeConfirmation() {
+    if (pending.current) return;
+    focusAfter.current = true;
+    setDesiredActive(null);
+  }
   function showError() {
     setNotice({
       variant: "error",
@@ -118,48 +123,58 @@ export function OfferingStatusAction({
   }
   return (
     <div ref={container} tabIndex={-1} className={styles.action}>
-      <Button
-        ref={action}
-        disabled={!canWrite || submitting || missing}
-        aria-label={`${record.active ? "Desativar" : "Ativar"} ${record.name}`}
-        onClick={() => {
-          setDesiredActive(!record.active);
-          setNotice(null);
-        }}
-      >
-        {record.active ? "Desativar" : "Ativar"}
-      </Button>
+      <div className={styles.header}>
+        <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
+        <ModalActions>
+          <Button
+            ref={action}
+            disabled={!canWrite || submitting || missing}
+            aria-label={`${record.active ? "Desativar" : "Ativar"} ${record.name}`}
+            onClick={() => {
+              setDesiredActive(!record.active);
+              setNotice(null);
+            }}
+          >
+            {record.active ? "Desativar" : "Ativar"}
+          </Button>
+        </ModalActions>
+      </div>
       {desiredActive !== null ? (
-        <div
-          role="group"
-          aria-label={`Confirmar alteração de ${record.name}`}
-          className={styles.confirmation}
+        <Modal
+          open
+          title={desiredActive ? "Ativar serviço" : "Desativar serviço"}
+          closeDisabled={submitting}
+          fallbackFocusRef={container}
+          onClose={closeConfirmation}
         >
-          <p>
-            {desiredActive ? "Ativar" : "Desativar"} “{record.name}”? O serviço
-            permanecerá no catálogo.
-          </p>
-          <div className={styles.buttons}>
-            <Button
-              disabled={!canWrite || submitting}
-              onClick={() => void run()}
-            >
-              {desiredActive ? "Confirmar ativação" : "Confirmar desativação"}
-            </Button>
-            <Button
-              disabled={submitting}
-              onClick={() => {
-                setDesiredActive(null);
-                if (canWrite) action.current?.focus();
-                else container.current?.focus();
-              }}
-            >
-              Cancelar alteração
-            </Button>
+          <div
+            role="group"
+            aria-label={`Confirmar alteração de ${record.name}`}
+            className={styles.confirmation}
+          >
+            <p>
+              {desiredActive ? "Ativar" : "Desativar"} “{record.name}”? O
+              serviço permanecerá no catálogo.
+            </p>
+            {notice ? (
+              <Feedback variant={notice.variant} title={notice.title}>
+                {notice.message}
+              </Feedback>
+            ) : null}
+            <ModalActions>
+              <Button
+                disabled={!canWrite || submitting}
+                onClick={() => void run()}
+              >
+                Confirmar
+              </Button>
+              <Button disabled={submitting} onClick={closeConfirmation}>
+                Cancelar
+              </Button>
+            </ModalActions>
           </div>
-        </div>
-      ) : null}
-      {notice ? (
+        </Modal>
+      ) : notice ? (
         <Feedback variant={notice.variant} title={notice.title}>
           {notice.message}
         </Feedback>

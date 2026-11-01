@@ -7,7 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, ModalActions } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
 import {
   getOffering,
@@ -24,7 +24,6 @@ import {
 } from "@/lib/catalog/offering-form-model";
 import { OfferingFields } from "../offering-fields/offering-fields";
 import formStyles from "../offering-form.module.css";
-import styles from "./edit-offering-panel.module.css";
 
 export type EditOfferingProps = {
   offeringId: string;
@@ -211,6 +210,18 @@ export function EditOfferingPanel({
   }
   if (load === "unauthorized") return null;
   const disabled = !canWrite || submitting || load !== "ready";
+  const editActions = (
+    <ModalActions>
+      {record && load !== "missing" ? (
+        <Button type="submit" disabled={disabled}>
+          {submitting ? "Salvando…" : "Salvar"}
+        </Button>
+      ) : null}
+      <Button onClick={onClose} disabled={submitting || blocked}>
+        Cancelar
+      </Button>
+    </ModalActions>
+  );
   return (
     <section
       ref={panel}
@@ -219,15 +230,24 @@ export function EditOfferingPanel({
       className={embedded ? formStyles.embedded : formStyles.panel}
     >
       {!embedded ? <h2>Editar serviço</h2> : null}
+      {record ? (
+        renderActions ? (
+          renderActions(record, disabled, applyRecord)
+        ) : (
+          <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
+        )
+      ) : null}
       {load === "loading" ? <p role="status">Carregando serviço…</p> : null}
       {load === "error" ? (
         <Feedback
           variant="error"
           title="Não foi possível consultar o serviço"
           action={
-            <Button onClick={reload} disabled={submitting || blocked}>
-              Tentar novamente
-            </Button>
+            <ModalActions>
+              <Button onClick={reload} disabled={submitting || blocked}>
+                Tentar novamente
+              </Button>
+            </ModalActions>
           }
         >
           Verifique sua conexão e tente novamente.
@@ -248,9 +268,8 @@ export function EditOfferingPanel({
           ref={form}
           onSubmit={submit}
           noValidate
-          className={`${formStyles.form} ${styles.form}`}
+          className={formStyles.form}
         >
-          <p>Estado: {record.active ? "Ativo" : "Inativo"}</p>
           <OfferingFields
             values={values}
             errors={errors}
@@ -261,18 +280,11 @@ export function EditOfferingPanel({
               setNotice(null);
             }}
           />
-          <Button type="submit" disabled={disabled}>
-            {submitting ? "Salvando…" : "Salvar alterações"}
-          </Button>
+          {editActions}
         </form>
-      ) : null}
-      {/* Keep state confirmations dismissible when the edited resource is missing. */}
-      {record ? renderActions?.(record, disabled, applyRecord) : null}
-      <div className={styles.actions}>
-        <Button onClick={onClose} disabled={submitting || blocked}>
-          Cancelar edição
-        </Button>
-      </div>
+      ) : (
+        editActions
+      )}
     </section>
   );
 }

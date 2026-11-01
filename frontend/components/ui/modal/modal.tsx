@@ -57,10 +57,13 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return;
+    // An open descendant dialog owns focus and keyboard handling until it closes.
+    if (dialogRef.current?.querySelector("dialog[open]")) return;
     if (!dialogRef.current?.contains(document.activeElement))
       titleRef.current?.focus();
     if (!closeDisabled) return;
     function protectPendingDialog(event: KeyboardEvent) {
+      if (dialogRef.current?.querySelector("dialog[open]")) return;
       // Disabling the focused submit button can move focus to the body.
       // Capture keys there as well, before native dialog dismissal or tabbing.
       if (event.key === "Escape") {
@@ -86,12 +89,19 @@ export function Modal({
       aria-labelledby={`${id}-title`}
       aria-describedby={description ? `${id}-description` : undefined}
       onCancel={(event) => {
+        if (event.target !== event.currentTarget) return;
+        event.stopPropagation();
         // Keep Escape controlled so an in-flight mutation cannot be dismissed.
         event.preventDefault();
         if (!closeDisabled) onClose();
       }}
       onKeyDown={(event) => {
-        if (event.key !== "Tab") return;
+        if (
+          event.key !== "Tab" ||
+          (event.target as HTMLElement).closest("dialog") !==
+            event.currentTarget
+        )
+          return;
         const controls = Array.from(
           event.currentTarget.querySelectorAll<HTMLElement>(
             'a[href], button, input, select, textarea, [contenteditable="true"], [tabindex]',

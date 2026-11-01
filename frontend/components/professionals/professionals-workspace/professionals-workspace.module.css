@@ -3,3 +3,14 @@
   min-width: 0;
   gap: var(--space-6);
 }
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.statusHeader p {
+  margin: 0;
+}

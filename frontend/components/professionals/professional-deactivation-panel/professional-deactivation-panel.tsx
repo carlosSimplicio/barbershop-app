@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, Modal, ModalActions } from "@/components/ui";
 import {
   deactivateProfessional,
   type Professional,
 } from "@/lib/professionals/professionals-api";
 import { classifyProfessionalOperation } from "@/lib/professionals/professional-operation-result";
 import formStyles from "../create-professional-form/create-professional-form.module.css";
-import styles from "./professional-deactivation-panel.module.css";
 
 type Props = {
   record: Professional;
@@ -40,11 +39,7 @@ export function ProfessionalDeactivationPanel({
   const [notice, setNotice] = useState<Notice | null>(null);
   const pending = useRef(false);
   const controller = useRef<AbortController | null>(null);
-  const panel = useRef<HTMLElement>(null);
-  useEffect(() => {
-    panel.current?.focus();
-    return () => controller.current?.abort();
-  }, []);
+  useEffect(() => () => controller.current?.abort(), []);
   function showError() {
     setNotice({
       variant: "error",
@@ -112,32 +107,40 @@ export function ProfessionalDeactivationPanel({
     }
   }
   return (
-    <section
-      ref={panel}
-      tabIndex={-1}
-      aria-label="Desativar profissional"
-      className={formStyles.panel}
+    <Modal
+      open
+      title="Desativar profissional"
+      onClose={onClose}
+      closeDisabled={submitting}
     >
-      <h2>Desativar {record.name}?</h2>
-      <p>
-        As sessões serão encerradas e o profissional não poderá entrar. O
-        cadastro será preservado.
-      </p>
-      {notice ? (
-        <Feedback variant={notice.variant} title={notice.title}>
-          {notice.message}
-        </Feedback>
-      ) : null}
-      <div className={styles.actions}>
-        {!finished && !missing ? (
-          <Button disabled={!canWrite || submitting} onClick={() => void run()}>
-            {submitting ? "Aguarde…" : "Confirmar desativação"}
-          </Button>
+      <section
+        aria-label="Desativar profissional"
+        className={formStyles.embedded}
+      >
+        <p>Desativar “{record.name}”?</p>
+        <p>
+          As sessões serão encerradas e o profissional não poderá entrar. O
+          cadastro será preservado.
+        </p>
+        {notice ? (
+          <Feedback variant={notice.variant} title={notice.title}>
+            {notice.message}
+          </Feedback>
         ) : null}
-        <Button disabled={submitting} onClick={onClose}>
-          {finished || missing ? "Fechar confirmação" : "Cancelar desativação"}
-        </Button>
-      </div>
-    </section>
+        <ModalActions>
+          {!finished && !missing ? (
+            <Button
+              disabled={!canWrite || submitting}
+              onClick={() => void run()}
+            >
+              {submitting ? "Aguarde…" : "Confirmar"}
+            </Button>
+          ) : null}
+          <Button disabled={submitting} onClick={onClose}>
+            {finished || missing ? "Fechar" : "Cancelar"}
+          </Button>
+        </ModalActions>
+      </section>
+    </Modal>
   );
 }

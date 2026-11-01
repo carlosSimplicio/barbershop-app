@@ -42,14 +42,10 @@ test("falha de rede libera cancelamento sem consultar nem repetir a escrita", as
   vi.mocked(setOfferingStatus).mockRejectedValue(new Error("network"));
   render(<OfferingStatusAction {...props()} />);
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   await screen.findByText("Não foi possível alterar o serviço");
-  expect(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  ).toBeEnabled();
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar alteração" }));
+  expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
   expect(screen.getByRole("button", { name: "Desativar Corte" })).toBeEnabled();
   expect(getOffering).not.toHaveBeenCalled();
   expect(setOfferingStatus).toHaveBeenCalledOnce();
@@ -58,9 +54,15 @@ test("confirma o serviço e cancelar não grava", () => {
   render(<OfferingStatusAction {...props()} />);
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
   expect(
+    screen.getByRole("dialog", { name: "Desativar serviço" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Desativar serviço" }),
+  ).toHaveFocus();
+  expect(
     screen.getByRole("group", { name: "Confirmar alteração de Corte" }),
   ).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar alteração" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
   expect(setOfferingStatus).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Desativar Corte" })).toHaveFocus();
 });
@@ -75,7 +77,7 @@ test("envia estado false explícito uma vez e atualiza o registro", async () => 
   const callbacks = props();
   render(<OfferingStatusAction {...callbacks} />);
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  const confirm = screen.getByRole("button", { name: "Confirmar desativação" });
+  const confirm = screen.getByRole("button", { name: "Confirmar" });
   fireEvent.click(confirm);
   fireEvent.click(confirm);
   expect(setOfferingStatus).toHaveBeenCalledOnce();
@@ -110,16 +112,12 @@ test.each([500, 503])(
     const callbacks = props();
     render(<OfferingStatusAction {...callbacks} />);
     fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Confirmar desativação" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     await screen.findByText("Não foi possível alterar o serviço");
     expect(callbacks.onChanged).not.toHaveBeenCalled();
     expect(setOfferingStatus).toHaveBeenCalledOnce();
     expect(getOffering).not.toHaveBeenCalled();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Confirmar desativação" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     await screen.findByText("Serviço desativado");
     expect(setOfferingStatus).toHaveBeenCalledTimes(2);
   },
@@ -137,9 +135,7 @@ test("bloqueia modo leitura e trata read_only recebido", async () => {
     error: { code: "read_only", message: "raw", request_id: "test" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   await waitFor(() => expect(callbacks.onReadOnly).toHaveBeenCalledOnce());
   expect(await screen.findByText("Alteração indisponível")).toBeVisible();
   expect(screen.queryByText("raw")).not.toBeInTheDocument();
@@ -155,9 +151,7 @@ test("descarta sucesso de uma ação desmontada", async () => {
   const callbacks = props();
   const view = render(<OfferingStatusAction {...callbacks} />);
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   view.unmount();
   await act(async () =>
     finish({
@@ -184,7 +178,7 @@ test("ativa serviço inativo com estado true explícito", async () => {
     />,
   );
   fireEvent.click(screen.getByRole("button", { name: "Ativar Corte" }));
-  fireEvent.click(screen.getByRole("button", { name: "Confirmar ativação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
   expect(await screen.findByText("Serviço ativado")).toBeVisible();
   expect(setOfferingStatus).toHaveBeenCalledWith(
     "corte",
@@ -213,9 +207,7 @@ test.each([401, 403, 404])(
     });
     render(<OfferingStatusAction {...callbacks} />);
     fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Confirmar desativação" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     if (status === 401)
       await waitFor(() =>
         expect(callbacks.onUnauthorized).toHaveBeenCalledOnce(),
