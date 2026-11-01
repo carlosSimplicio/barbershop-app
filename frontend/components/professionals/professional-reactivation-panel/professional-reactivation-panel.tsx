@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type RefObject,
+} from "react";
 import {
   Button,
   Feedback,
@@ -19,6 +25,8 @@ import { classifyProfessionalOperation } from "@/lib/professionals/professional-
 import formStyles from "../create-professional-form/create-professional-form.module.css";
 
 type Props = {
+  returnFocusRef?: RefObject<HTMLElement | null>;
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
   record: Professional;
   canWrite: boolean;
   onClose: () => void;
@@ -35,6 +43,8 @@ type Notice = {
 
 export function ProfessionalReactivationPanel({
   record,
+  returnFocusRef,
+  fallbackFocusRef,
   canWrite,
   onClose,
   onRecordConfirmed,
@@ -178,6 +188,8 @@ export function ProfessionalReactivationPanel({
       open
       title="Reativar profissional"
       onClose={onClose}
+      returnFocusRef={returnFocusRef}
+      fallbackFocusRef={fallbackFocusRef}
       closeDisabled={submitting}
     >
       <section

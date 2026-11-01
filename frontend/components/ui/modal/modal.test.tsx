@@ -152,6 +152,7 @@ test("devolve foco ao destino alternativo se a origem estiver desabilitada ao fe
 function NestedExample({ blocked = false }: { blocked?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState(true);
+  const trigger = useRef<HTMLButtonElement>(null);
   return (
     <Modal
       open={editing}
@@ -160,10 +161,17 @@ function NestedExample({ blocked = false }: { blocked?: boolean }) {
       closeDisabled={blocked}
     >
       <input aria-label="Rascunho" defaultValue="Nome editado" />
-      <button onClick={() => setConfirming(true)}>Alterar estado</button>
+      <button
+        ref={trigger}
+        disabled={confirming}
+        onClick={() => setConfirming(true)}
+      >
+        Alterar estado
+      </button>
       {confirming ? (
         <Modal
           open
+          returnFocusRef={trigger}
           title="Confirmar estado"
           onClose={() => setConfirming(false)}
           closeDisabled={blocked}
@@ -181,7 +189,6 @@ function NestedExample({ blocked = false }: { blocked?: boolean }) {
 test("Escape fecha somente a confirmação e preserva editor, rascunho e retorno do foco", () => {
   render(<NestedExample />);
   const trigger = screen.getByRole("button", { name: "Alterar estado" });
-  trigger.focus();
   fireEvent.click(trigger);
   const confirmation = screen.getByRole("dialog", { name: "Confirmar estado" });
   expect(
@@ -249,4 +256,46 @@ test("confirmação pendente protege Escape e recupera foco nela ao pressionar T
   );
   expect(screen.getByRole("dialog", { name: "Editar registro" })).toBeVisible();
   expect(confirmation).toBeVisible();
+});
+
+test("destino explícito removido retorna ao fallback ao desmontar a modal", () => {
+  function Example() {
+    const [open, setOpen] = useState(false);
+    const [removed, setRemoved] = useState(false);
+    const target = useRef<HTMLButtonElement>(null);
+    const fallback = useRef<HTMLHeadingElement>(null);
+    return (
+      <>
+        <h1 ref={fallback} tabIndex={-1}>
+          Lista
+        </h1>
+        {!removed ? (
+          <button
+            ref={target}
+            onClick={() => {
+              setRemoved(true);
+              setOpen(true);
+            }}
+          >
+            Editar
+          </button>
+        ) : null}
+        {open ? (
+          <Modal
+            open
+            title="Edição"
+            returnFocusRef={target}
+            fallbackFocusRef={fallback}
+            onClose={() => setOpen(false)}
+          >
+            <button onClick={() => setOpen(false)}>Concluir</button>
+          </Modal>
+        ) : null}
+      </>
+    );
+  }
+  render(<Example />);
+  fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+  fireEvent.click(screen.getByRole("button", { name: "Concluir" }));
+  expect(screen.getByRole("heading", { name: "Lista" })).toHaveFocus();
 });

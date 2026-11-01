@@ -45,7 +45,6 @@ function CatalogRequest() {
     setPendingOperations((count) => count + (busy ? 1 : -1));
   }, []);
   const editOrigin = useRef<HTMLButtonElement | null>(null);
-  const restoreEditorFocus = useRef(false);
   const catalog = useRef<HTMLElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
@@ -57,18 +56,8 @@ function CatalogRequest() {
     [],
   );
 
-  useEffect(() => {
-    if (!selected && restoreEditorFocus.current) {
-      restoreEditorFocus.current = false;
-      if (editOrigin.current?.isConnected && !editOrigin.current.disabled)
-        editOrigin.current.focus();
-      else catalog.current?.focus();
-    }
-  }, [selected]);
-
   function closeEditor() {
     if (writing) return;
-    restoreEditorFocus.current = true;
     setSelected(null);
   }
 
@@ -166,6 +155,7 @@ function CatalogRequest() {
           <Modal
             key={selected}
             open
+            returnFocusRef={editOrigin}
             title="Editar serviço"
             onClose={closeEditor}
             closeDisabled={writing}

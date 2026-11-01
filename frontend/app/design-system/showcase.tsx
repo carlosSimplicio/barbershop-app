@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   ActionLink,
@@ -55,6 +55,8 @@ export function DesignSystemShowcase() {
   );
   const [iconPressed, setIconPressed] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("(11) 99999-0000");
+  const modalTrigger = useRef<HTMLButtonElement>(null);
+  const confirmationTrigger = useRef<HTMLButtonElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBusy, setModalBusy] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -426,6 +428,7 @@ export function DesignSystemShowcase() {
           <div className={styles.actionGrid}>
             <strong>Exemplo de seção</strong>
             <IconButton
+              ref={modalTrigger}
               aria-label="Adicionar registro"
               aria-haspopup="dialog"
               onClick={() => setModalOpen(true)}
@@ -442,15 +445,18 @@ export function DesignSystemShowcase() {
           </p>
           <p>
             O foco começa no título, Tab permanece na modal e o fundo fica
-            indisponível. Feche pelo × ou Escape; o foco volta ao acionador.
-            Cliques no fundo não fecham a modal. Durante um envio, bloqueie o
-            fechamento com closeDisabled. O conteúdo permanece montado ao
-            fechar; o fluxo consumidor controla o descarte de rascunhos. Na
-            edição, a ação de estado abre uma segunda modal de confirmação,
-            preservando o editor abaixo. Escape e Tab atuam somente na
-            confirmação; ao fechar, o foco retorna à ação de estado. Use rótulos
-            curtos: “Confirmar”, “Cancelar” e “Fechar” após a conclusão. O
-            estado e a ação correspondente ficam alinhados no topo, antes dos
+            indisponível. Feche pelo × ou Escape; o foco volta ao acionador. Use
+            returnFocusRef para indicar o acionador quando ele fica desabilitado
+            durante a confirmação; fallbackFocusRef recebe o foco se o acionador
+            estiver indisponível. A restauração acontece após atualizar os
+            controles. Cliques no fundo não fecham a modal. Durante um envio,
+            bloqueie o fechamento com closeDisabled. O conteúdo permanece
+            montado ao fechar; o fluxo consumidor controla o descarte de
+            rascunhos. Na edição, a ação de estado abre uma segunda modal de
+            confirmação, preservando o editor abaixo. Escape e Tab atuam somente
+            na confirmação; ao fechar, o foco retorna à ação de estado. Use
+            rótulos curtos: “Confirmar”, “Cancelar” e “Fechar” após a conclusão.
+            O estado e a ação correspondente ficam alinhados no topo, antes dos
             campos; use “Salvar” e “Cancelar” lado a lado, alinhados à direita
             na mesma linha do rodapé, para a edição. Envios pendentes bloqueiam
             o fechamento. Após erro, os controles ficam disponíveis novamente.
@@ -463,6 +469,7 @@ export function DesignSystemShowcase() {
             exemplo, Enviar simula uma operação pendente e Concluir a encerra.
           </p>
           <Modal
+            returnFocusRef={modalTrigger}
             open={modalOpen}
             title="Novo registro"
             description="Exemplo com formulário e bloqueio durante envio."
@@ -474,6 +481,7 @@ export function DesignSystemShowcase() {
             {confirmationOpen ? (
               <Modal
                 open
+                returnFocusRef={confirmationTrigger}
                 title="Confirmar alteração"
                 description="O rascunho da edição permanece na modal abaixo."
                 onClose={() => setConfirmationOpen(false)}
@@ -493,7 +501,8 @@ export function DesignSystemShowcase() {
             ) : null}
             <ModalActions>
               <Button
-                disabled={modalBusy}
+                ref={confirmationTrigger}
+                disabled={modalBusy || confirmationOpen}
                 onClick={() => setConfirmationOpen(true)}
               >
                 Confirmar

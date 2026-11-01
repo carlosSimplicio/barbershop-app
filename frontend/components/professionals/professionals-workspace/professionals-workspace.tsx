@@ -40,7 +40,6 @@ function ProfessionalsRequest() {
   const [confirming, setConfirming] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
-  const restoreEditorFocus = useRef(false);
   const list = useRef<HTMLElement>(null);
   const busy = pendingOperations > 0;
   const trackOperation = useCallback(
@@ -68,14 +67,6 @@ function ProfessionalsRequest() {
         : current,
     );
   }, []);
-  useEffect(() => {
-    if (!selected && restoreEditorFocus.current) {
-      restoreEditorFocus.current = false;
-      if (origin.current?.isConnected && !origin.current.disabled)
-        origin.current.focus();
-      else list.current?.focus();
-    }
-  }, [selected]);
   useEffect(() => {
     const controller = new AbortController();
     void listProfessionals({
@@ -111,7 +102,6 @@ function ProfessionalsRequest() {
   }
   function closeEditor() {
     if (pendingOperations > 0) return;
-    restoreEditorFocus.current = true;
     setSelected(null);
     setConfirming(false);
   }
@@ -166,6 +156,7 @@ function ProfessionalsRequest() {
           <Modal
             key={selected}
             open
+            returnFocusRef={origin}
             title="Editar profissional"
             onClose={closeEditor}
             closeDisabled={pendingOperations > 0}

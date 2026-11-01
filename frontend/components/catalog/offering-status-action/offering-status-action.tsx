@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Feedback, Modal, ModalActions } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
 import { setOfferingStatus, type Offering } from "@/lib/catalog/catalog-api";
@@ -32,16 +32,8 @@ export function OfferingStatusAction({
   const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const [missing, setMissing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const focusAfter = useRef(false);
   const action = useRef<HTMLButtonElement>(null);
   const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!submitting && focusAfter.current) {
-      focusAfter.current = false;
-      if (canWrite) action.current?.focus();
-      else container.current?.focus();
-    }
-  }, [submitting, canWrite, notice, desiredActive]);
 
   async function run() {
     if (isPending() || !canWrite || desiredActive === null || missing) return;
@@ -72,7 +64,6 @@ export function OfferingStatusAction({
       if (outcome.state === "confirmed") {
         setMissing(false);
         setDesiredActive(null);
-        focusAfter.current = true;
         setNotice({
           variant: "success",
           title: outcome.record.active
@@ -103,7 +94,6 @@ export function OfferingStatusAction({
   }
   function closeConfirmation() {
     if (isPending()) return;
-    focusAfter.current = true;
     setDesiredActive(null);
   }
   function showError() {
@@ -136,6 +126,7 @@ export function OfferingStatusAction({
           open
           title={desiredActive ? "Ativar serviço" : "Desativar serviço"}
           closeDisabled={submitting}
+          returnFocusRef={action}
           fallbackFocusRef={container}
           onClose={closeConfirmation}
         >

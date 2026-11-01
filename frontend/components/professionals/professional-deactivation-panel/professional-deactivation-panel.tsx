@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import { Button, Feedback, Modal, ModalActions } from "@/components/ui";
 import {
   deactivateProfessional,
@@ -11,6 +11,8 @@ import { classifyProfessionalOperation } from "@/lib/professionals/professional-
 import formStyles from "../create-professional-form/create-professional-form.module.css";
 
 type Props = {
+  returnFocusRef?: RefObject<HTMLElement | null>;
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
   record: Professional;
   canWrite: boolean;
   onClose: () => void;
@@ -27,6 +29,8 @@ type Notice = {
 
 export function ProfessionalDeactivationPanel({
   record,
+  returnFocusRef,
+  fallbackFocusRef,
   canWrite,
   onClose,
   onRecordConfirmed,
@@ -102,6 +106,8 @@ export function ProfessionalDeactivationPanel({
       open
       title="Desativar profissional"
       onClose={onClose}
+      returnFocusRef={returnFocusRef}
+      fallbackFocusRef={fallbackFocusRef}
       closeDisabled={submitting}
     >
       <section

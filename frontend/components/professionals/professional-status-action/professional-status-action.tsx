@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button, ModalActions } from "@/components/ui";
 import type { Professional } from "@/lib/professionals/professionals-api";
 import { ProfessionalDeactivationPanel } from "../professional-deactivation-panel/professional-deactivation-panel";
@@ -35,17 +35,7 @@ export function ProfessionalStatusAction({
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const action = useRef<HTMLButtonElement>(null);
   const container = useRef<HTMLDivElement>(null);
-  const restoreFocus = useRef(false);
-  useEffect(() => {
-    if (!confirmation && restoreFocus.current) {
-      restoreFocus.current = false;
-      if (action.current?.isConnected && !action.current.disabled)
-        action.current.focus();
-      else container.current?.focus();
-    }
-  }, [confirmation, disabled]);
   function close() {
-    restoreFocus.current = true;
     setConfirmation(null);
     onOpenChange(false);
   }
@@ -63,6 +53,8 @@ export function ProfessionalStatusAction({
     onUnauthorized,
     onRecordConfirmed: acceptRecord,
     onClose: close,
+    returnFocusRef: action,
+    fallbackFocusRef: container,
   };
   return (
     <div ref={container} tabIndex={-1}>

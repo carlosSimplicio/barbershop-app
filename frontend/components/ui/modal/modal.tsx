@@ -18,6 +18,7 @@ export type ModalProps = {
   description?: string;
   onClose: () => void;
   closeDisabled?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
   fallbackFocusRef?: RefObject<HTMLElement | null>;
 };
 
@@ -28,6 +29,7 @@ export function Modal({
   description,
   onClose,
   closeDisabled = false,
+  returnFocusRef,
   fallbackFocusRef,
 }: ModalProps) {
   const id = useId();
@@ -38,22 +40,13 @@ export function Modal({
     if (!open) return;
     const dialog = dialogRef.current!;
     const origin = document.activeElement;
-    const fallback = fallbackFocusRef?.current;
     dialog.showModal();
     titleRef.current?.focus();
     return () => {
       dialog.close();
-      if (
-        origin instanceof HTMLElement &&
-        origin.isConnected &&
-        !origin.matches(":disabled")
-      ) {
-        origin.focus();
-      } else {
-        if (fallback?.isConnected) fallback.focus();
-      }
+      restoreModalFocus(origin, returnFocusRef, fallbackFocusRef);
     };
-  }, [open, fallbackFocusRef]);
+  }, [open, returnFocusRef, fallbackFocusRef]);
 
   useEffect(() => {
     if (!open) return;
@@ -156,4 +149,24 @@ export function Modal({
       <div className={styles.content}>{children}</div>
     </dialog>
   );
+}
+
+function restoreModalFocus(
+  origin: Element | null,
+  returnFocusRef?: RefObject<HTMLElement | null>,
+  fallbackFocusRef?: RefObject<HTMLElement | null>,
+) {
+  // Passive cleanup runs after DOM updates, so a trigger disabled by the
+  // confirmation can be enabled again before we restore focus to it.
+  const target = returnFocusRef ? returnFocusRef.current : origin;
+  const fallback = fallbackFocusRef?.current;
+  if (
+    target instanceof HTMLElement &&
+    target.isConnected &&
+    !target.matches(":disabled")
+  ) {
+    target.focus();
+  } else {
+    if (fallback?.isConnected) fallback.focus();
+  }
 }
