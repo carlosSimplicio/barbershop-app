@@ -42,22 +42,17 @@ function ProfessionalsRequest() {
   const [offset, setOffset] = useState(FIRST_PAGE_OFFSET);
   const [version, setVersion] = useState(0);
   const [pendingOperations, setPendingOperations] = useState(0);
-  const [reconciling, setReconciling] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [stateAction, setStateAction] =
     useState<ProfessionalStateAction | null>(null);
-  const [editorVersion, setEditorVersion] = useState(0);
   const statusOrigin = useRef<HTMLButtonElement | null>(null);
   const editorContent = useRef<HTMLDivElement>(null);
   const restoreStatusFocus = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const restoreEditorFocus = useRef(false);
-  const confirmationsDuringList = useRef<Map<string, Professional> | null>(
-    null,
-  );
   const list = useRef<HTMLElement>(null);
-  const busy = pendingOperations > 0 || reconciling;
+  const busy = pendingOperations > 0;
   const trackOperation = useCallback(
     (pending: boolean) =>
       setPendingOperations((count) => count + (pending ? 1 : -1)),
@@ -69,7 +64,6 @@ function ProfessionalsRequest() {
   }, []);
   const onReadOnly = useCallback(() => setReadOnly(true), []);
   const acceptRecord = useCallback((record: Professional) => {
-    confirmationsDuringList.current?.set(record.id, record);
     setView((current) =>
       current.status === "success"
         ? {
@@ -91,7 +85,7 @@ function ProfessionalsRequest() {
         statusOrigin.current.focus();
       else editorContent.current?.focus();
     }
-  }, [stateAction, reconciling, pendingOperations]);
+  }, [stateAction, pendingOperations]);
   useEffect(() => {
     if (!selected && restoreEditorFocus.current) {
       restoreEditorFocus.current = false;
@@ -99,17 +93,9 @@ function ProfessionalsRequest() {
         origin.current.focus();
       else list.current?.focus();
     }
-  }, [selected, reconciling]);
+  }, [selected]);
   useEffect(() => {
     const controller = new AbortController();
-    // Keep only confirmations received during this list request. A delayed list
-    // must not overwrite a newer individual read; subsequent reloads start fresh.
-    const confirmations = new Map<string, Professional>();
-    confirmationsDuringList.current = confirmations;
-    const release = () => {
-      if (confirmationsDuringList.current === confirmations)
-        confirmationsDuringList.current = null;
-    };
     void listProfessionals({
       limit: DEFAULT_PAGE_SIZE,
       offset,
@@ -125,23 +111,16 @@ function ProfessionalsRequest() {
         )
           setView({
             status: "success",
-            page: {
-              ...result.data,
-              items: result.data.items.map(
-                (record) => confirmations.get(record.id) ?? record,
-              ),
-            },
+            page: result.data,
           });
         else setView({ status: "error" });
       })
       .catch(() => {
         if (!controller.signal.aborted && !unauthorized.current)
           setView({ status: "error" });
-      })
-      .finally(release);
+      });
     return () => {
       controller.abort();
-      release();
     };
   }, [offset, version, onUnauthorized]);
   function refresh() {
@@ -149,24 +128,15 @@ function ProfessionalsRequest() {
     setVersion((value) => value + 1);
   }
   function closeEditor() {
-    if (pendingOperations > 0 || stateAction) return;
+    if (pendingOperations > 0) return;
     restoreEditorFocus.current = true;
     setSelected(null);
-    setReconciling(false);
-  }
-  function confirmStateRecord(record: Professional) {
-    acceptRecord(record);
-    setStateAction((current) =>
-      current && current.record.id === record.id
-        ? { ...current, record }
-        : current,
-    );
-    if (record.id === selected) setEditorVersion((value) => value + 1);
+    setStateAction(null);
+    restoreStatusFocus.current = false;
   }
   function closeStateAction() {
     restoreStatusFocus.current = true;
     setStateAction(null);
-    setReconciling(false);
   }
   if (view.status === "unauthorized") return null;
   const canWrite =
@@ -199,7 +169,6 @@ function ProfessionalsRequest() {
         >
           <CreateProfessionalForm
             embedded
-            onReviewList={() => setCreating(false)}
             canWrite={canWrite && !stateAction}
             onCreated={() => {
               setOffset(FIRST_PAGE_OFFSET);
@@ -222,7 +191,7 @@ function ProfessionalsRequest() {
             open
             title="Editar profissional"
             onClose={closeEditor}
-            closeDisabled={pendingOperations > 0 || !!stateAction}
+            closeDisabled={pendingOperations > 0}
             fallbackFocusRef={list}
           >
             <div ref={editorContent} tabIndex={-1}>
@@ -231,14 +200,12 @@ function ProfessionalsRequest() {
                 professionalId={selected}
                 canWrite={canWrite && !stateAction}
                 blocked={busy || !!stateAction}
-                reloadVersion={editorVersion}
                 onRecordConfirmed={acceptRecord}
                 onClose={closeEditor}
                 onReadOnly={onReadOnly}
                 onUnauthorized={onUnauthorized}
                 onBusyChange={trackOperation}
-                onReconciliationChange={setReconciling}
-                renderActions={(record, disabled) => (
+                renderActions={(record, disabled, onChanged) => (
                   <>
                     <Button
                       ref={statusOrigin}
@@ -259,10 +226,16 @@ function ProfessionalsRequest() {
                         record={stateAction.record}
                         canWrite={canWrite}
                         onBusyChange={trackOperation}
-                        onReconciliationChange={setReconciling}
                         onReadOnly={onReadOnly}
                         onUnauthorized={onUnauthorized}
-                        onRecordConfirmed={confirmStateRecord}
+                        onRecordConfirmed={(confirmed) => {
+                          onChanged(confirmed);
+                          setStateAction((current) =>
+                            current
+                              ? { ...current, record: confirmed }
+                              : current,
+                          );
+                        }}
                         onClose={closeStateAction}
                       />
                     ) : null}
@@ -272,10 +245,16 @@ function ProfessionalsRequest() {
                         record={stateAction.record}
                         canWrite={canWrite}
                         onBusyChange={trackOperation}
-                        onReconciliationChange={setReconciling}
                         onReadOnly={onReadOnly}
                         onUnauthorized={onUnauthorized}
-                        onRecordConfirmed={confirmStateRecord}
+                        onRecordConfirmed={(confirmed) => {
+                          onChanged(confirmed);
+                          setStateAction((current) =>
+                            current
+                              ? { ...current, record: confirmed }
+                              : current,
+                          );
+                        }}
                         onClose={closeStateAction}
                       />
                     ) : null}

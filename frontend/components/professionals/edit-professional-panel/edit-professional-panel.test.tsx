@@ -24,7 +24,6 @@ test("ignora consulta da seleção anterior após abrir outro profissional", asy
     onUnauthorized: vi.fn(),
     onBusyChange: vi.fn(),
     onRecordConfirmed: vi.fn(),
-    onReconciliationChange: vi.fn(),
   };
   const view = render(
     <EditProfessionalPanel key="first" professionalId="first" {...props} />,

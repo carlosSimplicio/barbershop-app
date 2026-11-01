@@ -52,7 +52,7 @@ Aplique estas convenções às próximas features e ao código alterado no escop
 - Compartilhe validações puras entre operações que tenham o mesmo contrato de negócio. Preserve validadores próprios quando regras, normalização ou limites forem diferentes entre domínios.
 - Centralize mecanismos transversais já compartilhados, como extração da identidade autenticada e correspondência de rotas, mantendo regras e erros específicos no respectivo domínio.
 - Explique em comentários técnicos em inglês a intenção e o requisito protegido por decisões não evidentes, como uma decodificação em etapas; evite comentários que apenas repitam o código.
-- Ao definir campos opcionais, mutações e seus estados no frontend, siga os contratos de ausência, `null`, resultado incerto, sessão e coordenação de requisições descritos em `docs/architecture.md`.
+- Ao definir campos opcionais, mutações e seus estados no frontend, siga os contratos de ausência, `null`, tratamento de erros, sessão e coordenação de requisições descritos em `docs/architecture.md`.
 
 ## Código gerado e banco de dados
 

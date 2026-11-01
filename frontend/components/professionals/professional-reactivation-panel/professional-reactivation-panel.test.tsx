@@ -22,7 +22,6 @@ function renderPanel() {
       onReadOnly={vi.fn()}
       onUnauthorized={vi.fn()}
       onBusyChange={vi.fn()}
-      onReconciliationChange={vi.fn()}
     />,
   );
   fireEvent.change(screen.getByLabelText("Senha temporária para reativação"), {

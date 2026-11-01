@@ -112,7 +112,7 @@ test("trata falha de rede com mensagem genérica", async () => {
   );
 
   expect(
-    await screen.findByText(/Verifique sua conexão e atualize a lista/),
+    await screen.findByText(/Verifique sua conexão e tente novamente/),
   ).toBeInTheDocument();
   expect(screen.queryByText("network detail")).not.toBeInTheDocument();
 });
@@ -193,3 +193,33 @@ function apiError(status: number, code: string) {
     error: { code, message: "mensagem privada do servidor", request_id: "id" },
   };
 }
+
+test.each([500, 503])(
+  "HTTP %i no cadastro preserva entradas e permite novo envio explícito",
+  async (status) => {
+    vi.mocked(createProfessional).mockResolvedValue(
+      apiError(status, "read_only"),
+    );
+    const onCreated = vi.fn();
+    const onReadOnly = vi.fn();
+    render(
+      <CreateProfessionalForm onCreated={onCreated} onReadOnly={onReadOnly} />,
+    );
+    enterValidValues();
+    const submit = screen.getByRole("button", {
+      name: "Cadastrar profissional",
+    });
+    const password = screen.getByLabelText("Senha temporária");
+    const previousPassword = (password as HTMLInputElement).value;
+    fireEvent.click(submit);
+    await screen.findByText("Não foi possível cadastrar o profissional");
+    expect(submit).toBeEnabled();
+    expect(password).toHaveValue(previousPassword);
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(onReadOnly).not.toHaveBeenCalled();
+    expect(createProfessional).toHaveBeenCalledOnce();
+    fireEvent.click(submit);
+    await waitFor(() => expect(createProfessional).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(submit).toBeEnabled());
+  },
+);

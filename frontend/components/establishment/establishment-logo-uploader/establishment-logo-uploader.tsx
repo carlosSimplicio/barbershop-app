@@ -31,17 +31,13 @@ export function EstablishmentLogoUploader({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [showSelectedPreview, setShowSelectedPreview] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState<LogoFeedback | null>(null);
   const [imageVersion, setImageVersion] = useState(0);
   const [inputVersion, setInputVersion] = useState(0);
   const [uploadedWithoutRefresh, setUploadedWithoutRefresh] = useState(false);
-  const [confirmationNeeded, setConfirmationNeeded] = useState(false);
-  const [refreshingStatus, setRefreshingStatus] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef(false);
-  const refreshingStatusRef = useRef(false);
   const activeUpload = useRef<AbortController | null>(null);
 
   useEffect(
@@ -72,11 +68,9 @@ export function EstablishmentLogoUploader({
     : null;
 
   function chooseFile(selected: File | null) {
-    if (confirmationNeeded || refreshingStatus) return;
     setFeedback(null);
     setFile(selected);
     setPreviewUrl(selected ? URL.createObjectURL(selected) : null);
-    setShowSelectedPreview(Boolean(selected));
   }
 
   function clearSelection() {
@@ -88,12 +82,7 @@ export function EstablishmentLogoUploader({
     setFile(null);
     setPreviewUrl(null);
     setInputVersion((version) => version + 1);
-    setShowSelectedPreview(false);
     if (inputRef.current) inputRef.current.value = "";
-  }
-
-  function restoreSavedLogo() {
-    resetSelection();
   }
 
   function submit() {
@@ -101,8 +90,6 @@ export function EstablishmentLogoUploader({
       !file ||
       uploadRef.current ||
       uploading ||
-      confirmationNeeded ||
-      refreshingStatus ||
       disabled ||
       !settings.can_write
     ) {
@@ -111,7 +98,6 @@ export function EstablishmentLogoUploader({
 
     uploadRef.current = true;
     setUploading(true);
-    setShowSelectedPreview(true);
     onBusyChange(true);
     setFeedback(null);
     const controller = new AbortController();
@@ -122,11 +108,11 @@ export function EstablishmentLogoUploader({
         if (controller.signal.aborted) return;
         if (result.state === "error") {
           if (result.status >= 500) {
-            await reconcileUploadOutcome(controller.signal);
+            showUploadError();
             return;
           }
           if (result.error.code === "read_only") {
-            restoreSavedLogo();
+            resetSelection();
             onSettingsChange({ ...settings, can_write: false });
             setFeedback({
               title: "Configurações somente para leitura",
@@ -136,7 +122,7 @@ export function EstablishmentLogoUploader({
             });
             return;
           }
-          restoreSavedLogo();
+          resetSelection();
           const fieldError = result.error.fields?.find(
             (fieldError) => fieldError.field === "file",
           );
@@ -153,7 +139,7 @@ export function EstablishmentLogoUploader({
           return;
         }
         if (result.state !== "empty" || result.status !== 204) {
-          await reconcileUploadOutcome(controller.signal);
+          showUploadError();
           return;
         }
 
@@ -170,9 +156,8 @@ export function EstablishmentLogoUploader({
         });
         resetSelection();
       })
-      .catch(async () => {
-        if (controller.signal.aborted) return;
-        await reconcileUploadOutcome(controller.signal);
+      .catch(() => {
+        if (!controller.signal.aborted) showUploadError();
       })
       .finally(() => {
         if (controller.signal.aborted) return;
@@ -183,10 +168,12 @@ export function EstablishmentLogoUploader({
       });
   }
 
-  async function reconcileUploadOutcome(signal: AbortSignal) {
-    setConfirmationNeeded(true);
-    setShowSelectedPreview(Boolean(previewUrl));
-    await refreshCurrentSettings(signal);
+  function showUploadError() {
+    setFeedback({
+      variant: "error",
+      title: "Não foi possível enviar o logo",
+      message: "Tente novamente mais tarde.",
+    });
   }
 
   async function readCurrentSettings(signal: AbortSignal) {
@@ -196,7 +183,7 @@ export function EstablishmentLogoUploader({
         return refreshed.data;
       }
     } catch {
-      // The caller decides whether a failed refresh is recoverable or uncertain.
+      // The upload already succeeded; a failed read must not repeat it.
     }
     return null;
   }
@@ -213,57 +200,9 @@ export function EstablishmentLogoUploader({
     setImageVersion((version) => version + 1);
   }
 
-  async function refreshCurrentSettings(signal: AbortSignal) {
-    if (refreshingStatusRef.current) return;
-    refreshingStatusRef.current = true;
-    setRefreshingStatus(true);
-    setConfirmationNeeded(true);
-    onBusyChange(true);
-
-    let refreshedSettings: EstablishmentSettings | null;
-    try {
-      refreshedSettings = await readCurrentSettings(signal);
-    } finally {
-      refreshingStatusRef.current = false;
-      if (!signal.aborted) {
-        setRefreshingStatus(false);
-        onBusyChange(false);
-      }
-    }
-
-    if (signal.aborted) return;
-    if (!refreshedSettings) {
-      setFeedback({
-        title: "Não foi possível confirmar o envio",
-        message:
-          "A consulta das configurações também falhou. Atualize o estado do logo antes de enviar novamente.",
-        variant: "warning",
-      });
-      return;
-    }
-
-    applySettingsRefresh(refreshedSettings);
-    setConfirmationNeeded(false);
-    resetSelection();
-    setFeedback({
-      title: "Estado do logo atualizado",
-      message: "Confira o logo exibido antes de iniciar outro envio.",
-      variant: "warning",
-    });
-  }
-
-  function retryStatusRefresh() {
-    if (refreshingStatusRef.current) return;
-    const controller = new AbortController();
-    activeUpload.current = controller;
-    void refreshCurrentSettings(controller.signal).finally(() => {
-      if (activeUpload.current === controller) activeUpload.current = null;
-    });
-  }
-
   return (
     <section
-      aria-busy={uploading || refreshingStatus}
+      aria-busy={uploading}
       aria-labelledby="establishment-logo-title"
       className={styles.section}
     >
@@ -286,9 +225,9 @@ export function EstablishmentLogoUploader({
         </Feedback>
       ) : null}
 
-      {(showSelectedPreview && previewUrl) || currentLogoUrl ? (
+      {previewUrl || currentLogoUrl ? (
         <div className={styles.preview}>
-          {showSelectedPreview && previewUrl ? (
+          {previewUrl ? (
             <>
               <Image
                 alt="Pré-visualização do logo"
@@ -297,11 +236,11 @@ export function EstablishmentLogoUploader({
                 unoptimized
                 width={240}
               />
-              {file && !confirmationNeeded ? (
+              {file ? (
                 <Button
                   aria-label="Limpar arquivo selecionado"
                   className={styles.clearSelection}
-                  disabled={uploading || refreshingStatus}
+                  disabled={uploading}
                   onClick={clearSelection}
                   type="button"
                 >
@@ -328,13 +267,7 @@ export function EstablishmentLogoUploader({
 
       <FileField
         accept="image/png,image/jpeg,image/webp"
-        disabled={
-          !settings.can_write ||
-          disabled ||
-          uploading ||
-          confirmationNeeded ||
-          refreshingStatus
-        }
+        disabled={!settings.can_write || disabled || uploading}
         hint="PNG, JPEG ou WebP. Até 2 MiB e 4.096 × 4.096 pixels. O servidor confirma se a imagem é válida."
         id="establishment-logo-file"
         key={inputVersion}
@@ -344,24 +277,8 @@ export function EstablishmentLogoUploader({
       />
 
       <div className={styles.actions}>
-        {confirmationNeeded ? (
-          <Button
-            disabled={uploading || refreshingStatus}
-            onClick={retryStatusRefresh}
-            type="button"
-          >
-            {refreshingStatus ? "Atualizando…" : "Atualizar estado do logo"}
-          </Button>
-        ) : null}
         <Button
-          disabled={
-            !file ||
-            !settings.can_write ||
-            disabled ||
-            uploading ||
-            confirmationNeeded ||
-            refreshingStatus
-          }
+          disabled={!file || !settings.can_write || disabled || uploading}
           onClick={submit}
           type="button"
         >

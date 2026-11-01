@@ -30,7 +30,6 @@ test.each([
       onReadOnly={vi.fn()}
       onUnauthorized={onUnauthorized}
       onBusyChange={vi.fn()}
-      onReconciliationChange={vi.fn()}
     />,
   );
   fireEvent.click(

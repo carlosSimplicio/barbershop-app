@@ -46,17 +46,14 @@ type FeedbackState = {
 
 export function SettingsForm({
   settings: initialSettings,
-  onRefresh,
 }: {
   settings: EstablishmentSettings;
-  onRefresh: () => void;
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [draft, setDraft] = useState(() => createDraft(initialSettings));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [refreshNeeded, setRefreshNeeded] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const uploadingLogoRef = useRef(false);
   const submittingRef = useRef(false);
@@ -122,7 +119,6 @@ export function SettingsForm({
     if (
       submittingRef.current ||
       uploadingLogoRef.current ||
-      refreshNeeded ||
       !settings.can_write
     ) {
       return;
@@ -156,18 +152,29 @@ export function SettingsForm({
           setDraft(createDraft(refreshedSettings));
         }
         if (result.state === "empty" && result.status === 204) {
-          setRefreshNeeded(!refreshedSettings);
+          if (!refreshedSettings) {
+            // A 204 confirms the submitted fields even if reading computed metadata fails.
+            setSettings((current) => ({
+              ...current,
+              ...patch,
+              social_links: patch.social_links ?? current.social_links,
+            }));
+          }
           setFeedback({
             variant: refreshedSettings ? "success" : "warning",
             title: "Configurações salvas",
             message: refreshedSettings
               ? "Os dados do estabelecimento foram atualizados."
-              : "Os dados foram salvos. Atualize as configurações antes de fazer novas alterações.",
+              : "Os dados foram salvos, mas não foi possível atualizar os valores exibidos agora.",
           });
           setErrors({});
           return;
         }
-        if (result.state === "error" && result.error.code === "read_only") {
+        if (
+          result.state === "error" &&
+          result.status < 500 &&
+          result.error.code === "read_only"
+        ) {
           setSettings((current) => ({ ...current, can_write: false }));
           setFeedback({
             variant: "warning",
@@ -177,7 +184,7 @@ export function SettingsForm({
           });
           return;
         }
-        if (result.state === "error") {
+        if (result.state === "error" && result.status < 500) {
           const serverErrors = mapServerFieldErrors(result.error.fields ?? []);
           if (Object.keys(serverErrors).length > 0) {
             setErrors(serverErrors);
@@ -237,21 +244,13 @@ export function SettingsForm({
         </Feedback>
       ) : null}
       {feedback ? (
-        <Feedback
-          action={
-            refreshNeeded ? (
-              <Button onClick={onRefresh}>Atualizar configurações</Button>
-            ) : undefined
-          }
-          title={feedback.title}
-          variant={feedback.variant}
-        >
+        <Feedback title={feedback.title} variant={feedback.variant}>
           {feedback.message}
         </Feedback>
       ) : null}
 
       <EstablishmentLogoUploader
-        disabled={submitting || refreshNeeded}
+        disabled={submitting}
         onBusyChange={updateLogoBusy}
         onSettingsChange={setSettings}
         settings={settings}
@@ -264,9 +263,7 @@ export function SettingsForm({
       >
         <fieldset
           className={styles.fields}
-          disabled={
-            !settings.can_write || submitting || uploadingLogo || refreshNeeded
-          }
+          disabled={!settings.can_write || submitting || uploadingLogo}
         >
           <legend className={styles.visuallyHidden}>
             Dados do estabelecimento
@@ -411,11 +408,7 @@ export function SettingsForm({
 
         <Button
           disabled={
-            !settings.can_write ||
-            submitting ||
-            uploadingLogo ||
-            refreshNeeded ||
-            !hasChanges
+            !settings.can_write || submitting || uploadingLogo || !hasChanges
           }
           type="submit"
         >

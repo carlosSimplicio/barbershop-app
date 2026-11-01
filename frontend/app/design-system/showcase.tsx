@@ -433,8 +433,8 @@ export function DesignSystemShowcase() {
             fechamento com closeDisabled. O conteúdo permanece montado ao
             fechar; o fluxo consumidor controla o descarte de rascunhos. Na
             edição, ações e confirmações de estado ficam na mesma modal, fora do
-            formulário de edição. Envios e reconciliações de estado bloqueiam o
-            fechamento.
+            formulário de edição. Envios pendentes bloqueiam o fechamento. Após
+            erro, os controles ficam disponíveis novamente.
           </p>
           <Modal
             open={modalOpen}

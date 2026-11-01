@@ -87,22 +87,40 @@ test.each([
   null,
   {
     state: "error",
+    status: 500,
+    error: {
+      code: "read_only",
+      message: "raw",
+      request_id: "test",
+      fields: [{ field: "name", code: "invalid_name", message: "raw" }],
+    },
+  } satisfies Awaited<ReturnType<typeof createOffering>>,
+  {
+    state: "error",
     status: 503,
     error: { code: "internal_error", message: "raw", request_id: "test" },
   } as const,
   { state: "empty", status: 201 } as const,
-])("não anuncia sucesso nem repete resultado ambíguo %j", async (result) => {
-  if (result) vi.mocked(createOffering).mockResolvedValue(result);
-  else vi.mocked(createOffering).mockRejectedValue(new Error("raw"));
-  form();
-  fill();
-  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
-  expect(
-    await screen.findByText("Não foi possível confirmar o cadastro"),
-  ).toBeVisible();
-  expect(createOffering).toHaveBeenCalledOnce();
-  expect(screen.queryByText("Serviço cadastrado")).not.toBeInTheDocument();
-});
+])(
+  "mostra erro e permite nova tentativa explícita para resposta %j",
+  async (result) => {
+    if (result) vi.mocked(createOffering).mockResolvedValue(result);
+    else vi.mocked(createOffering).mockRejectedValue(new Error("raw"));
+    const callbacks = form();
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+    expect(
+      await screen.findByText("Não foi possível cadastrar o serviço"),
+    ).toBeVisible();
+    expect(createOffering).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole("button", { name: "Cadastrar serviço" }),
+    ).toBeEnabled();
+    expect(callbacks.onReadOnly).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Corte");
+    expect(screen.queryByText("Serviço cadastrado")).not.toBeInTheDocument();
+  },
+);
 
 test("impede submissões simultâneas e informa read_only", async () => {
   let finish!: (value: Awaited<ReturnType<typeof createOffering>>) => void;

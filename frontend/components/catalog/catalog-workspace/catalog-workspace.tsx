@@ -39,13 +39,11 @@ export function CatalogWorkspace() {
 
 function CatalogRequest() {
   const [creating, setCreating] = useState(false);
-  const [statusReconciling, setStatusReconciling] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
   const writing = pendingOperations > 0;
   const trackOperation = useCallback((busy: boolean) => {
     setPendingOperations((count) => count + (busy ? 1 : -1));
   }, []);
-  const [editorVersion, setEditorVersion] = useState(0);
   const editOrigin = useRef<HTMLButtonElement | null>(null);
   const restoreEditorFocus = useRef(false);
   const catalog = useRef<HTMLElement>(null);
@@ -69,7 +67,7 @@ function CatalogRequest() {
   }, [selected]);
 
   function closeEditor() {
-    if (writing || statusReconciling) return;
+    if (writing) return;
     restoreEditorFocus.current = true;
     setSelected(null);
   }
@@ -120,11 +118,7 @@ function CatalogRequest() {
   }, []);
   if (view.status === "unauthorized") return null;
   const canWrite =
-    !writing &&
-    !statusReconciling &&
-    !readOnly &&
-    view.status === "success" &&
-    view.page.can_write;
+    !writing && !readOnly && view.status === "success" && view.page.can_write;
   return (
     <OwnerPanelPage
       title="Serviços"
@@ -153,7 +147,6 @@ function CatalogRequest() {
           <CreateOfferingForm
             embedded
             canWrite={canWrite}
-            onReviewList={() => setCreating(false)}
             onBusyChange={trackOperation}
             onCreated={() => {
               setOffset(FIRST_PAGE_OFFSET);
@@ -175,30 +168,25 @@ function CatalogRequest() {
             open
             title="Editar serviço"
             onClose={closeEditor}
-            closeDisabled={writing || statusReconciling}
+            closeDisabled={writing}
             fallbackFocusRef={catalog}
           >
             <EditOfferingPanel
               embedded
               offeringId={selected}
               canWrite={canWrite}
-              blocked={writing || statusReconciling}
-              reloadVersion={editorVersion}
+              blocked={writing}
               onBusyChange={trackOperation}
               onRecordConfirmed={acceptRecord}
               onClose={closeEditor}
               onReadOnly={() => setReadOnly(true)}
               onUnauthorized={onUnauthorized}
-              renderActions={(record, disabled) => (
+              renderActions={(record, disabled, onChanged) => (
                 <OfferingStatusAction
                   record={record}
                   canWrite={canWrite && !disabled}
                   onBusyChange={trackOperation}
-                  onReconciliationChange={setStatusReconciling}
-                  onChanged={(confirmed) => {
-                    acceptRecord(confirmed);
-                    setEditorVersion((value) => value + 1);
-                  }}
+                  onChanged={onChanged}
                   onReadOnly={() => setReadOnly(true)}
                   onUnauthorized={onUnauthorized}
                 />
@@ -212,7 +200,7 @@ function CatalogRequest() {
           label="Catálogo de serviços"
           paginationLabel="Paginação de serviços"
           view={view}
-          busy={writing || statusReconciling}
+          busy={writing}
           messages={{
             loading: "Carregando serviços…",
             empty: "Nenhum serviço cadastrado.",

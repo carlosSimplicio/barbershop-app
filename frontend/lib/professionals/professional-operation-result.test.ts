@@ -2,13 +2,13 @@ import { expect, test } from "vitest";
 import { classifyProfessionalOperation } from "./professional-operation-result";
 import type { Professional } from "./professionals-api";
 
-test("trata resposta 200 sem contrato e falha de infraestrutura como resultado incerto", () => {
+test("trata resposta 200 sem contrato e falha de infraestrutura como erro comum", () => {
   expect(
     classifyProfessionalOperation(
       { state: "success", status: 200, data: {} as Professional },
       200,
     ).state,
-  ).toBe("uncertain");
+  ).toBe("rejected");
   expect(
     classifyProfessionalOperation(
       {
@@ -18,7 +18,7 @@ test("trata resposta 200 sem contrato e falha de infraestrutura como resultado i
       },
       200,
     ).state,
-  ).toBe("uncertain");
+  ).toBe("rejected");
   expect(
     classifyProfessionalOperation(
       {

@@ -1,5 +1,7 @@
 # Cadastro e gestão de serviços
 
+> Registro histórico: as etapas de resultado incerto e consulta de reconciliação deste plano foram substituídas. O frontend atual exibe erro e libera nova tentativa explícita, cancelamento e fechamento após falhas de rede, `5xx` ou respostas fora do contrato, sem consulta de confirmação. Consulte [Ciclo das mutações](../architecture.md#ciclo-das-mutações).
+
 Permitir ao proprietário cadastrar, consultar, editar, ativar e desativar serviços pelo painel, com preço exato em BRL, isolamento por estabelecimento e leitura após expiração do trial.
 
 ### 1. Persistir o catálogo de cada estabelecimento

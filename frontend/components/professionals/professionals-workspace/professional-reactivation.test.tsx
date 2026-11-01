@@ -159,76 +159,53 @@ test("valida senha sem comparação com a anterior e confirma somente após resp
   ).not.toBeInTheDocument();
 });
 
-test.each([true, false])(
-  "reconcilia resultado incerto com active=%s sem afirmar senha aplicada",
-  async (active) => {
-    vi.mocked(reactivateProfessional).mockRejectedValue(new Error("network"));
-    vi.mocked(getProfessional)
-      .mockResolvedValueOnce(result(false))
-      .mockResolvedValue(result(active));
+test.each([500, 503])(
+  "HTTP %i na reativação exibe erro e libera nova tentativa",
+  async (status) => {
+    vi.mocked(reactivateProfessional)
+      .mockResolvedValueOnce(failure(status, "internal_error"))
+      .mockResolvedValueOnce(result(true));
     await openPanel();
     enterPassword();
     confirm();
-    await screen.findByText("Não foi possível confirmar a reativação");
+    await screen.findByText("Não foi possível reativar o profissional");
     expect(
       screen.getByLabelText("Senha temporária para reativação"),
     ).toHaveValue("senha-temporaria");
     expect(
       screen.getByRole("button", { name: "Confirmar reativação" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
       screen.getByRole("button", { name: "Cancelar reativação" }),
-    ).toBeDisabled();
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Consultar cadastro do profissional",
-      }),
-    );
-    if (active) {
-      await screen.findByText("Cadastro ativo; senha não confirmada");
-      expect(
-        screen.getByText(/não informa qual senha foi aplicada/i),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByLabelText("Senha temporária para reativação"),
-      ).not.toBeInTheDocument();
-    } else
-      await waitFor(() =>
-        expect(
-          screen.getByLabelText("Senha temporária para reativação"),
-        ).toHaveValue(""),
-      );
-    expect(
-      screen.queryByText("Profissional reativado"),
-    ).not.toBeInTheDocument();
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
     expect(reactivateProfessional).toHaveBeenCalledOnce();
-    await waitFor(() => expect(getProfessional).toHaveBeenCalledTimes(3));
+    expect(getProfessional).toHaveBeenCalledOnce();
+    confirm();
+    await screen.findByText("Profissional reativado");
+    expect(reactivateProfessional).toHaveBeenCalledTimes(2);
+    expect(getProfessional).toHaveBeenCalledOnce();
   },
 );
 
-test("conflito não confirma credencial e exige consulta sem repetir a reativação", async () => {
+test("conflito informa que o profissional já está ativo e permite cancelar", async () => {
   vi.mocked(reactivateProfessional).mockResolvedValue(
     failure(409, "professional_already_active"),
   );
-  vi.mocked(getProfessional)
-    .mockResolvedValueOnce(result(false))
-    .mockResolvedValue(result(true));
   await openPanel();
   enterPassword();
   confirm();
   await screen.findByText("Profissional já está ativo");
   expect(
     screen.getByText(/Esta tentativa não alterou a senha nem as sessões/),
-  ).toBeInTheDocument();
+  ).toBeVisible();
   expect(screen.getByLabelText("Senha temporária para reativação")).toHaveValue(
     "",
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar cadastro do profissional" }),
-  );
-  await screen.findByText("Cadastro ativo; senha não confirmada");
-  expect(screen.queryByText("Profissional reativado")).not.toBeInTheDocument();
+  expect(getProfessional).toHaveBeenCalledOnce();
   expect(reactivateProfessional).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar reativação" }));
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
   expect(screen.queryByText("privado")).not.toBeInTheDocument();
 });
 
@@ -252,40 +229,25 @@ test("sincroniza lista e editor aberto preservando nome editado", async () => {
   await screen.findByText("Estado: Ativo");
   expect(screen.getByLabelText("Nome do profissional")).toHaveValue("Rascunho");
   expect(screen.getByRole("list")).not.toHaveTextContent("Rascunho");
-  expect(getProfessional).toHaveBeenCalledTimes(2);
+  expect(getProfessional).toHaveBeenCalledOnce();
 });
 
-test("mantém senha só na memória enquanto consulta falha e limpa ao reconciliar", async () => {
-  vi.mocked(reactivateProfessional).mockResolvedValue(
-    failure(503, "internal_error"),
-  );
-  vi.mocked(getProfessional)
-    .mockResolvedValueOnce(result(false))
-    .mockRejectedValueOnce(new Error("offline"))
-    .mockResolvedValue(result(false));
+test("falha de rede preserva senha para tentar novamente e cancelar a descarta", async () => {
+  vi.mocked(reactivateProfessional).mockRejectedValue(new Error("network"));
   await openPanel();
   enterPassword();
   confirm();
-  await screen.findByText("Não foi possível confirmar a reativação");
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar cadastro do profissional" }),
-  );
-  await screen.findByText("Não foi possível consultar o cadastro");
+  await screen.findByText("Não foi possível reativar o profissional");
   expect(screen.getByLabelText("Senha temporária para reativação")).toHaveValue(
     "senha-temporaria",
   );
-  expect(
-    screen.getByRole("button", { name: "Confirmar reativação" }),
-  ).toBeDisabled();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar cadastro do profissional" }),
-  );
-  await waitFor(() =>
-    expect(
-      screen.getByLabelText("Senha temporária para reativação"),
-    ).toHaveValue(""),
-  );
   expect(reactivateProfessional).toHaveBeenCalledOnce();
+  expect(getProfessional).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar reativação" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
+  expect(screen.getByLabelText("Senha temporária para reativação")).toHaveValue(
+    "",
+  );
 });
 
 test("read_only bloqueia demais escritas sem anunciar sucesso", async () => {
@@ -371,39 +333,20 @@ test("troca de identidade cancela envio e não publica confirmação antiga", as
   ).not.toBeInTheDocument();
 });
 
-test("descarta contexto do conflito anterior antes de nova tentativa incerta", async () => {
+test("nova tentativa com erro substitui mensagem de conflito anterior", async () => {
   vi.mocked(reactivateProfessional)
     .mockResolvedValueOnce(failure(409, "professional_already_active"))
     .mockRejectedValueOnce(new Error("network"));
-  vi.mocked(getProfessional)
-    .mockResolvedValueOnce(result(false))
-    .mockResolvedValueOnce(result(false))
-    .mockResolvedValueOnce(result(false))
-    .mockResolvedValue(result(true));
   await openPanel();
   enterPassword();
   confirm();
   await screen.findByText("Profissional já está ativo");
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar cadastro do profissional" }),
-  );
-  await waitFor(() =>
-    expect(
-      screen.getByLabelText("Senha temporária para reativação"),
-    ).toBeEnabled(),
-  );
   enterPassword("outra-temporaria");
   confirm();
-  await screen.findByText("Não foi possível confirmar a reativação");
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar cadastro do profissional" }),
-  );
-  await screen.findByText("Cadastro ativo; senha não confirmada");
+  await screen.findByText("Não foi possível reativar o profissional");
   expect(
-    screen.getByText(/não informa qual senha foi aplicada/i),
-  ).toBeInTheDocument();
-  expect(
-    screen.queryByText(/Esta tentativa não alterou sua senha/),
+    screen.queryByText("Profissional já está ativo"),
   ).not.toBeInTheDocument();
   expect(reactivateProfessional).toHaveBeenCalledTimes(2);
+  expect(getProfessional).toHaveBeenCalledOnce();
 });

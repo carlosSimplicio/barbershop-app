@@ -1,5 +1,7 @@
 # Consulta, edição, desativação e reativação de profissionais
 
+> Registro histórico: as etapas de resultado incerto e consulta de reconciliação deste plano foram substituídas. O frontend atual exibe erro e libera nova tentativa explícita, cancelamento e fechamento após falhas de rede, `5xx` ou respostas fora do contrato, sem consulta de confirmação. Consulte [Ciclo das mutações](../architecture.md#ciclo-das-mutações).
+
 Permitir ao proprietário administrar os profissionais existentes pelo painel, preservando identidade, isolamento do estabelecimento e segurança das credenciais e sessões.
 
 Decisões confirmadas nesta conversa: a reativação aceita qualquer senha temporária válida, inclusive com o mesmo valor da anterior; reativar um profissional já ativo retorna conflito sem alterar sua senha. Atualizar a arquitetura para permitir explicitamente essa reutilização, mantendo a invalidação das sessões e tokens anteriores e a troca obrigatória após o login. A edição abrange o nome; o e-mail permanece imutável conforme a arquitetura vigente.

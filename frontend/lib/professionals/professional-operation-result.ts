@@ -13,7 +13,6 @@ type ProfessionalOperationResult =
         | "unauthorized"
         | "missing"
         | "read_only"
-        | "uncertain"
         | "rejected"
         | "already_active";
     };
@@ -64,8 +63,5 @@ export function classifyProfessionalOperation(
     const fields = professionalFieldErrors(result.error.fields);
     if (Object.keys(fields).length) return { state: "validation", fields };
   }
-  return {
-    state:
-      result.status >= 500 || result.status < 400 ? "uncertain" : "rejected",
-  };
+  return { state: "rejected" };
 }

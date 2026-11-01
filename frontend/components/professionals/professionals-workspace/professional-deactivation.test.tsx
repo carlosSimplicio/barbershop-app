@@ -124,40 +124,28 @@ test("envia uma única desativação e atualiza a lista sem excluir o cadastro",
   );
 });
 
-test("consulta antes de outra ação após resultado incerto sem repetir POST", async () => {
-  vi.mocked(deactivateProfessional).mockRejectedValue(new Error("network"));
-  vi.mocked(getProfessional)
-    .mockResolvedValueOnce(result(true))
-    .mockResolvedValue(result(false));
+test("erro na desativação permite cancelar ou fechar sem consulta adicional", async () => {
+  vi.mocked(deactivateProfessional).mockResolvedValue({
+    state: "error",
+    status: 500,
+    error: { code: "internal_error", message: "raw", request_id: "test" },
+  });
   await confirmPanel();
   fireEvent.click(
     screen.getByRole("button", { name: "Confirmar desativação" }),
   );
-  await screen.findByText("Não foi possível confirmar a desativação");
-  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeDisabled();
-  fireEvent(
-    screen.getByRole("dialog", { name: "Editar profissional" }),
-    new Event("cancel", { cancelable: true }),
-  );
-  expect(
-    screen.getByRole("dialog", { name: "Editar profissional" }),
-  ).toBeVisible();
+  await screen.findByText("Não foi possível desativar o profissional");
   expect(
     screen.getByRole("button", { name: "Confirmar desativação" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   expect(
     screen.getByRole("button", { name: "Cancelar desativação" }),
-  ).toBeDisabled();
-  expect(
-    screen.getByRole("button", { name: "Atualizar lista" }),
-  ).toBeDisabled();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar estado do profissional" }),
-  );
-  await screen.findByText("Estado consultado");
-  expect(screen.getByRole("list")).toHaveTextContent("Inativo");
+  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
   expect(deactivateProfessional).toHaveBeenCalledOnce();
-  await waitFor(() => expect(getProfessional).toHaveBeenCalledTimes(3));
+  expect(getProfessional).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
 test("sincroniza estado no editor preservando seu rascunho", async () => {
@@ -205,7 +193,7 @@ test("read_only bloqueia todas as escritas sem mostrar mensagem bruta", async ()
   expect(screen.queryByText("privado")).not.toBeInTheDocument();
 });
 
-test("permite fechar confirmação e modal se a recarga do editor não encontrar o cadastro", async () => {
+test("usa resposta da desativação sem recarregar editor e permite fechar a modal", async () => {
   await confirmPanel();
   vi.mocked(getProfessional).mockResolvedValue({
     state: "error",
@@ -216,7 +204,8 @@ test("permite fechar confirmação e modal se a recarga do editor não encontrar
   fireEvent.click(
     screen.getByRole("button", { name: "Confirmar desativação" }),
   );
-  await screen.findByText("Profissional não encontrado");
+  await screen.findByText("Profissional desativado");
+  expect(getProfessional).toHaveBeenCalledOnce();
   fireEvent.click(screen.getByRole("button", { name: "Fechar confirmação" }));
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled(),

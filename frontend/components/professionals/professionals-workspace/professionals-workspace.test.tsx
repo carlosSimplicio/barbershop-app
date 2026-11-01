@@ -103,47 +103,28 @@ test("atualiza a lista após criar o profissional", async () => {
   expect(screen.getByLabelText("Senha temporária")).toHaveValue("");
 });
 
-test("preserva recusa de reenvio incerto ao fechar e reabrir a modal do profissional", async () => {
+test("erro no cadastro permite fechar e reabrir sem conferir a lista", async () => {
+  vi.mocked(createProfessional).mockRejectedValue(new Error("network"));
   vi.mocked(listProfessionals).mockResolvedValue(page([]));
-  vi.mocked(createProfessional).mockRejectedValue(new Error("response lost"));
   render(<ProfessionalsWorkspace />);
   await screen.findByText("Nenhum profissional cadastrado.");
   fillCreation();
   fireEvent.click(
     screen.getByRole("button", { name: "Cadastrar profissional" }),
   );
-  await screen.findByText("Não foi possível confirmar o cadastro");
+  await screen.findByText("Não foi possível cadastrar o profissional");
+  expect(
+    screen.getByRole("button", { name: "Cadastrar profissional" }),
+  ).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
   fireEvent.click(
     screen.getByRole("button", { name: "Adicionar profissional" }),
   );
   expect(
     screen.getByRole("button", { name: "Cadastrar profissional" }),
-  ).toBeDisabled();
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Conferir lista antes de novo cadastro",
-    }),
-  );
-  await waitFor(() => expect(listProfessionals).toHaveBeenCalledTimes(2));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Adicionar profissional" }),
-    ).toBeEnabled(),
-  );
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Adicionar profissional" }),
-  );
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Conferi a lista e desejo preencher outro cadastro",
-    }),
-  );
-  expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
   ).toBeEnabled();
   expect(createProfessional).toHaveBeenCalledOnce();
+  expect(listProfessionals).toHaveBeenCalledOnce();
 });
 
 function page(
@@ -273,32 +254,21 @@ test("envia apenas nome alterado uma vez e sincroniza lista com o registro persi
   expect(screen.getByLabelText("Nome do profissional")).toHaveValue("Beatriz");
 });
 
-test("reconcilia resultado incerto sem publicar ou perder o rascunho", async () => {
+test("erro de edição preserva rascunho sem atualizar a lista nem consultar o cadastro", async () => {
   await openEditor();
   vi.mocked(updateProfessional).mockRejectedValue(new Error("network"));
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Rascunho" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
-  await screen.findByText("Não foi possível confirmar a alteração");
+  await screen.findByText("Não foi possível salvar o profissional");
   expect(
     screen.getByRole("button", { name: "Salvar alterações" }),
-  ).toBeDisabled();
-  expect(screen.getByRole("list")).not.toHaveTextContent("Rascunho");
-  vi.mocked(getProfessional).mockResolvedValue(
-    recordResult({ ...professional, name: "Mudança externa", active: true }),
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Recarregar profissional" }),
-  );
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled(),
-  );
+  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
   expect(screen.getByLabelText("Nome do profissional")).toHaveValue("Rascunho");
-  expect(screen.getByRole("list")).toHaveTextContent("Mudança externa");
-  expect(screen.getByText("Estado: Ativo")).toBeInTheDocument();
+  expect(screen.getByRole("list")).not.toHaveTextContent("Rascunho");
+  expect(getProfessional).toHaveBeenCalledOnce();
   expect(updateProfessional).toHaveBeenCalledOnce();
 });
 
@@ -455,63 +425,42 @@ test("descarta PATCH obsoleto após troca de identidade e cancela a requisição
   ).not.toBeInTheDocument();
 });
 
-test("não restaura conteúdo se leitura atrasada terminar após 401 do editor", async () => {
-  await openEditor();
-  let finish!: (value: ReturnType<typeof page>) => void;
-  vi.mocked(listProfessionals).mockImplementation(
-    () =>
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
-  vi.mocked(getProfessional).mockResolvedValue(
-    failure(401, "authentication_required"),
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Recarregar profissional" }),
-  );
-  await waitFor(() =>
-    expect(screen.queryByLabelText("Nome")).not.toBeInTheDocument(),
-  );
-  await act(async () => finish(page([professional])));
-  expect(screen.queryByRole("list")).not.toBeInTheDocument();
-  expect(screen.queryByLabelText("Nome")).not.toBeInTheDocument();
-});
+test.each([500, 503])(
+  "erro HTTP %i da edição libera nova tentativa sem consultar cadastro",
+  async (status) => {
+    await openEditor();
+    vi.mocked(updateProfessional)
+      .mockResolvedValueOnce(failure(status, "internal_error"))
+      .mockResolvedValueOnce(
+        recordResult({ ...professional, name: "Registro novo" }),
+      );
+    fireEvent.change(screen.getByLabelText("Nome do profissional"), {
+      target: { value: "Registro novo" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText("Não foi possível salvar o profissional");
+    expect(
+      screen.getByRole("button", { name: "Salvar alterações" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
+    expect(updateProfessional).toHaveBeenCalledOnce();
+    expect(getProfessional).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText("Profissional atualizado");
+    expect(screen.getByRole("list")).toHaveTextContent("Registro novo");
+    expect(updateProfessional).toHaveBeenCalledTimes(2);
+    expect(getProfessional).toHaveBeenCalledOnce();
+  },
+);
 
-test("preserva confirmação individual recebida durante listagem atrasada", async () => {
-  await openEditor();
-  let finish!: (value: ReturnType<typeof page>) => void;
-  vi.mocked(listProfessionals).mockImplementation(
-    () =>
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
-  vi.mocked(getProfessional).mockResolvedValue(
-    recordResult({ ...professional, name: "Registro novo" }),
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Recarregar profissional" }),
-  );
-  await waitFor(() =>
-    expect(screen.getByLabelText("Nome do profissional")).toHaveValue(
-      "Registro novo",
-    ),
-  );
-  await act(async () => finish(page([professional])));
-  expect(screen.getByRole("list")).toHaveTextContent("Registro novo");
-});
-
-test("devolve foco após cancelar edição com resultado incerto", async () => {
+test("devolve foco após cancelar edição com erro", async () => {
   await openEditor();
   vi.mocked(updateProfessional).mockRejectedValue(new Error("network"));
   fireEvent.change(screen.getByLabelText("Nome do profissional"), {
     target: { value: "Rascunho" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
-  await screen.findByText("Não foi possível confirmar a alteração");
+  await screen.findByText("Não foi possível salvar o profissional");
   fireEvent.click(screen.getByRole("button", { name: "Cancelar edição" }));
   expect(screen.getByRole("button", { name: "Editar Ana Lima" })).toHaveFocus();
 });

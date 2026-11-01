@@ -19,7 +19,7 @@ import {
   emptyOfferingValues,
   focusOfferingError,
   offeringToFormValues,
-  reconcileOfferingValues,
+  mergeOfferingDraft,
   type FieldErrors,
 } from "@/lib/catalog/offering-form-model";
 import { OfferingFields } from "../offering-fields/offering-fields";
@@ -34,10 +34,13 @@ export type EditOfferingProps = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange?: (busy: boolean) => void;
-  reloadVersion?: number;
   embedded?: boolean;
   blocked?: boolean;
-  renderActions?: (record: Offering, disabled: boolean) => ReactNode;
+  renderActions?: (
+    record: Offering,
+    disabled: boolean,
+    onChanged: (record: Offering) => void,
+  ) => ReactNode;
 };
 type Load = "loading" | "ready" | "error" | "missing" | "unauthorized";
 type Notice = {
@@ -54,7 +57,6 @@ export function EditOfferingPanel({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  reloadVersion = 0,
   embedded = false,
   blocked = false,
   renderActions,
@@ -62,19 +64,25 @@ export function EditOfferingPanel({
   const [record, setRecord] = useState<Offering | null>(null);
   const [values, setValues] = useState(emptyOfferingValues);
   const [load, setLoad] = useState<Load>("loading");
-  const [loadedVersion, setLoadedVersion] = useState(reloadVersion);
   const [version, setVersion] = useState(0);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<Notice | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [uncertain, setUncertain] = useState(false);
-  const baseline = useRef<Offering | null>(null);
   const pending = useRef(false);
   const pendingErrorFocus = useRef(false);
   const focusOnLoad = useRef(true);
   const form = useRef<HTMLFormElement>(null);
   const panel = useRef<HTMLElement>(null);
   const mutation = useRef<AbortController | null>(null);
+  function applyRecord(confirmed: Offering, preserveDraft = true) {
+    setValues((current) =>
+      preserveDraft && record
+        ? mergeOfferingDraft(current, record, confirmed)
+        : offeringToFormValues(confirmed),
+    );
+    setRecord(confirmed);
+    onRecordConfirmed(confirmed);
+  }
   useEffect(() => () => mutation.current?.abort(), []);
   useEffect(() => {
     if (load === "ready" && focusOnLoad.current) {
@@ -105,57 +113,32 @@ export function EditOfferingPanel({
           setLoad("error");
           return;
         }
-        setLoadedVersion(reloadVersion);
+        setValues(offeringToFormValues(result.data));
         setRecord(result.data);
         onRecordConfirmed(result.data);
-        const previous = baseline.current;
-        setValues((current) =>
-          previous
-            ? reconcileOfferingValues(current, previous, result.data)
-            : offeringToFormValues(result.data),
-        );
-        baseline.current = result.data;
-        if (previous)
-          setNotice({
-            variant: "warning",
-            title: "Estado atualizado",
-            message:
-              "Campos editados preservados; os demais dados foram atualizados. Revise antes de salvar.",
-          });
-        setUncertain(false);
         setLoad("ready");
       })
       .catch(() => {
         if (!controller.signal.aborted) setLoad("error");
       });
     return () => controller.abort();
-  }, [offeringId, version, reloadVersion, onUnauthorized, onRecordConfirmed]);
+  }, [offeringId, version, onUnauthorized, onRecordConfirmed]);
 
   function reload() {
     if (pending.current) return;
     setLoad("loading");
     setVersion((value) => value + 1);
   }
-  function markUncertain() {
-    setUncertain(true);
+  function showError() {
     setNotice({
-      variant: "warning",
-      title: "Não foi possível confirmar a alteração",
-      message:
-        "Recarregue o serviço para conferir o estado salvo antes de enviar novamente. Seu rascunho será preservado.",
+      variant: "error",
+      title: "Não foi possível salvar o serviço",
+      message: "Tente novamente mais tarde.",
     });
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (
-      !record ||
-      !canWrite ||
-      pending.current ||
-      uncertain ||
-      load !== "ready" ||
-      loadedVersion !== reloadVersion
-    )
-      return;
+    if (!record || !canWrite || pending.current || load !== "ready") return;
     const checked = buildOfferingPatch(values, record);
     setErrors(checked.errors);
     if (!checked.request) {
@@ -193,15 +176,12 @@ export function EditOfferingPanel({
         return;
       }
       if (outcome.state === "confirmed") {
-        setRecord(outcome.record);
-        baseline.current = outcome.record;
-        setValues(offeringToFormValues(outcome.record));
+        applyRecord(outcome.record, false);
         setNotice({
           variant: "success",
           title: "Serviço atualizado",
           message: "As alterações foram salvas no catálogo.",
         });
-        onRecordConfirmed(outcome.record);
         return;
       }
       if (outcome.state === "read_only") {
@@ -218,15 +198,9 @@ export function EditOfferingPanel({
         setErrors(outcome.fields);
         return;
       }
-      if (outcome.state === "uncertain") markUncertain();
-      else
-        setNotice({
-          variant: "error",
-          title: "Não foi possível salvar o serviço",
-          message: "Verifique os dados e tente novamente.",
-        });
+      showError();
     } catch {
-      if (!controller.signal.aborted) markUncertain();
+      if (!controller.signal.aborted) showError();
     } finally {
       onBusyChange?.(false);
       if (!controller.signal.aborted) {
@@ -236,12 +210,7 @@ export function EditOfferingPanel({
     }
   }
   if (load === "unauthorized") return null;
-  const disabled =
-    !canWrite ||
-    submitting ||
-    uncertain ||
-    load !== "ready" ||
-    loadedVersion !== reloadVersion;
+  const disabled = !canWrite || submitting || load !== "ready";
   return (
     <section
       ref={panel}
@@ -252,7 +221,15 @@ export function EditOfferingPanel({
       {!embedded ? <h2>Editar serviço</h2> : null}
       {load === "loading" ? <p role="status">Carregando serviço…</p> : null}
       {load === "error" ? (
-        <Feedback variant="error" title="Não foi possível consultar o serviço">
+        <Feedback
+          variant="error"
+          title="Não foi possível consultar o serviço"
+          action={
+            <Button onClick={reload} disabled={submitting || blocked}>
+              Tentar novamente
+            </Button>
+          }
+        >
           Verifique sua conexão e tente novamente.
         </Feedback>
       ) : null}
@@ -289,16 +266,10 @@ export function EditOfferingPanel({
           </Button>
         </form>
       ) : null}
-      {/* Keep state confirmations dismissible if a later editor read fails. */}
-      {record ? renderActions?.(record, disabled) : null}
+      {/* Keep state confirmations dismissible when the edited resource is missing. */}
+      {record ? renderActions?.(record, disabled, applyRecord) : null}
       <div className={styles.actions}>
-        <Button
-          onClick={reload}
-          disabled={blocked || submitting || load === "loading"}
-        >
-          Recarregar serviço
-        </Button>
-        <Button onClick={onClose} disabled={blocked || submitting}>
+        <Button onClick={onClose} disabled={submitting || blocked}>
           Cancelar edição
         </Button>
       </div>

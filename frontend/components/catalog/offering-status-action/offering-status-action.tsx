@@ -3,11 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Feedback } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
-import {
-  getOffering,
-  setOfferingStatus,
-  type Offering,
-} from "@/lib/catalog/catalog-api";
+import { setOfferingStatus, type Offering } from "@/lib/catalog/catalog-api";
 import styles from "./offering-status-action.module.css";
 
 export type OfferingStatusProps = {
@@ -17,7 +13,6 @@ export type OfferingStatusProps = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange: (busy: boolean) => void;
-  onReconciliationChange?: (needed: boolean) => void;
 };
 type Notice = {
   title: string;
@@ -31,11 +26,9 @@ export function OfferingStatusAction({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  onReconciliationChange,
 }: OfferingStatusProps) {
   const [desiredActive, setDesiredActive] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [uncertain, setUncertain] = useState(false);
   const [missing, setMissing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -52,12 +45,8 @@ export function OfferingStatusAction({
     }
   }, [submitting, canWrite, notice]);
 
-  async function run(checkPersistedState: boolean) {
-    if (
-      pending.current ||
-      (!checkPersistedState &&
-        (!canWrite || desiredActive === null || uncertain || missing))
-    )
+  async function run() {
+    if (pending.current || !canWrite || desiredActive === null || missing)
       return;
     pending.current = true;
     setSubmitting(true);
@@ -65,17 +54,11 @@ export function OfferingStatusAction({
     const request = new AbortController();
     controller.current = request;
     try {
-      let result;
-      if (checkPersistedState)
-        result = await getOffering(record.id, request.signal);
-      else {
-        if (desiredActive === null) return;
-        result = await setOfferingStatus(
-          record.id,
-          desiredActive,
-          request.signal,
-        );
-      }
+      const result = await setOfferingStatus(
+        record.id,
+        desiredActive,
+        request.signal,
+      );
       if (request.signal.aborted) return;
       const outcome = classifyOfferingOperation(result, 200);
       if (outcome.state === "unauthorized") {
@@ -83,8 +66,6 @@ export function OfferingStatusAction({
         return;
       }
       if (outcome.state === "missing") {
-        onReconciliationChange?.(false);
-        setUncertain(false);
         setMissing(true);
         setDesiredActive(null);
         setNotice({
@@ -95,18 +76,14 @@ export function OfferingStatusAction({
         return;
       }
       if (outcome.state === "confirmed") {
-        onReconciliationChange?.(false);
-        setUncertain(false);
         setMissing(false);
         setDesiredActive(null);
         focusAfter.current = true;
         setNotice({
           variant: "success",
-          title: checkPersistedState
-            ? "Estado conferido"
-            : outcome.record.active
-              ? "Serviço ativado"
-              : "Serviço desativado",
+          title: outcome.record.active
+            ? "Serviço ativado"
+            : "Serviço desativado",
           message: outcome.record.active
             ? "O serviço está ativo no catálogo."
             : "O serviço está inativo e permanece no catálogo.",
@@ -123,52 +100,27 @@ export function OfferingStatusAction({
         });
         return;
       }
-      if (checkPersistedState)
-        setNotice({
-          variant: "error",
-          title: "Não foi possível consultar o estado",
-          message:
-            "Verifique sua conexão e consulte novamente antes de alterar.",
-        });
-      else if (outcome.state === "uncertain") markUncertain();
-      else
-        setNotice({
-          variant: "error",
-          title: "Não foi possível alterar o serviço",
-          message: "Atualize a lista e tente novamente.",
-        });
+      showError();
     } catch {
-      if (!request.signal.aborted) {
-        if (checkPersistedState)
-          setNotice({
-            variant: "error",
-            title: "Não foi possível consultar o estado",
-            message:
-              "Verifique sua conexão e consulte novamente antes de alterar.",
-          });
-        else markUncertain();
-      }
+      if (!request.signal.aborted) showError();
     } finally {
       pending.current = false;
       if (!request.signal.aborted) setSubmitting(false);
       onBusyChange(false);
     }
   }
-  function markUncertain() {
-    setUncertain(true);
-    onReconciliationChange?.(true);
+  function showError() {
     setNotice({
-      variant: "warning",
-      title: "Não foi possível confirmar a alteração de estado",
-      message:
-        "Consulte o serviço para conferir o estado salvo antes de repetir a ação.",
+      variant: "error",
+      title: "Não foi possível alterar o serviço",
+      message: "Tente novamente mais tarde.",
     });
   }
   return (
     <div ref={container} tabIndex={-1} className={styles.action}>
       <Button
         ref={action}
-        disabled={!canWrite || submitting || uncertain || missing}
+        disabled={!canWrite || submitting || missing}
         aria-label={`${record.active ? "Desativar" : "Ativar"} ${record.name}`}
         onClick={() => {
           setDesiredActive(!record.active);
@@ -177,7 +129,7 @@ export function OfferingStatusAction({
       >
         {record.active ? "Desativar" : "Ativar"}
       </Button>
-      {desiredActive !== null && !uncertain ? (
+      {desiredActive !== null ? (
         <div
           role="group"
           aria-label={`Confirmar alteração de ${record.name}`}
@@ -190,7 +142,7 @@ export function OfferingStatusAction({
           <div className={styles.buttons}>
             <Button
               disabled={!canWrite || submitting}
-              onClick={() => void run(false)}
+              onClick={() => void run()}
             >
               {desiredActive ? "Confirmar ativação" : "Confirmar desativação"}
             </Button>
@@ -211,11 +163,6 @@ export function OfferingStatusAction({
         <Feedback variant={notice.variant} title={notice.title}>
           {notice.message}
         </Feedback>
-      ) : null}
-      {uncertain ? (
-        <Button disabled={submitting} onClick={() => void run(true)}>
-          Consultar estado do serviço
-        </Button>
       ) : null}
     </div>
   );

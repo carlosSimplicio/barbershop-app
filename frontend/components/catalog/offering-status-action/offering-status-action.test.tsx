@@ -38,34 +38,20 @@ beforeEach(() => {
   vi.mocked(setOfferingStatus).mockReset();
 });
 
-test("recurso ausente resolve a reconciliação e permite sair da modal sem repetir a escrita", async () => {
-  vi.mocked(setOfferingStatus).mockRejectedValue(new Error("response lost"));
-  vi.mocked(getOffering).mockResolvedValue({
-    state: "error",
-    status: 404,
-    error: { code: "not_found", message: "raw", request_id: "test" },
-  });
-  const onReconciliationChange = vi.fn();
-  render(
-    <OfferingStatusAction
-      {...props()}
-      onReconciliationChange={onReconciliationChange}
-    />,
-  );
+test("falha de rede libera cancelamento sem consultar nem repetir a escrita", async () => {
+  vi.mocked(setOfferingStatus).mockRejectedValue(new Error("network"));
+  render(<OfferingStatusAction {...props()} />);
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
   fireEvent.click(
     screen.getByRole("button", { name: "Confirmar desativação" }),
   );
-  await screen.findByText("Não foi possível confirmar a alteração de estado");
-  expect(onReconciliationChange).toHaveBeenLastCalledWith(true);
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar estado do serviço" }),
-  );
-  await screen.findByText("Serviço não encontrado");
-  expect(onReconciliationChange).toHaveBeenLastCalledWith(false);
+  await screen.findByText("Não foi possível alterar o serviço");
   expect(
-    screen.queryByRole("button", { name: "Consultar estado do serviço" }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("button", { name: "Confirmar desativação" }),
+  ).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar alteração" }));
+  expect(screen.getByRole("button", { name: "Desativar Corte" })).toBeEnabled();
+  expect(getOffering).not.toHaveBeenCalled();
   expect(setOfferingStatus).toHaveBeenCalledOnce();
 });
 test("confirma o serviço e cancelar não grava", () => {
@@ -107,37 +93,37 @@ test("envia estado false explícito uma vez e atualiza o registro", async () => 
   );
   expect(await screen.findByText("Serviço desativado")).toBeVisible();
 });
-test("consulta estado antes de permitir repetir resultado ambíguo", async () => {
-  vi.mocked(setOfferingStatus).mockRejectedValue(new Error("raw"));
-  vi.mocked(getOffering).mockResolvedValue({
-    state: "success",
-    status: 200,
-    data: { ...record, active: false },
-  });
-  const callbacks = props();
-  render(<OfferingStatusAction {...callbacks} />);
-  fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
-  fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
-  );
-  expect(
-    await screen.findByText("Não foi possível confirmar a alteração de estado"),
-  ).toBeVisible();
-  expect(
-    screen.getByRole("button", { name: "Desativar Corte" }),
-  ).toBeDisabled();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Consultar estado do serviço" }),
-  );
-  await waitFor(() =>
-    expect(callbacks.onChanged).toHaveBeenCalledWith({
-      ...record,
-      active: false,
-    }),
-  );
-  expect(setOfferingStatus).toHaveBeenCalledOnce();
-  expect(await screen.findByText("Estado conferido")).toBeVisible();
-});
+test.each([500, 503])(
+  "HTTP %i exibe erro e permite repetir explicitamente",
+  async (status) => {
+    vi.mocked(setOfferingStatus)
+      .mockResolvedValueOnce({
+        state: "error",
+        status,
+        error: { code: "internal_error", message: "raw", request_id: "test" },
+      })
+      .mockResolvedValueOnce({
+        state: "success",
+        status: 200,
+        data: { ...record, active: false },
+      });
+    const callbacks = props();
+    render(<OfferingStatusAction {...callbacks} />);
+    fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmar desativação" }),
+    );
+    await screen.findByText("Não foi possível alterar o serviço");
+    expect(callbacks.onChanged).not.toHaveBeenCalled();
+    expect(setOfferingStatus).toHaveBeenCalledOnce();
+    expect(getOffering).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmar desativação" }),
+    );
+    await screen.findByText("Serviço desativado");
+    expect(setOfferingStatus).toHaveBeenCalledTimes(2);
+  },
+);
 test("bloqueia modo leitura e trata read_only recebido", async () => {
   const callbacks = props();
   const view = render(<OfferingStatusAction {...callbacks} canWrite={false} />);

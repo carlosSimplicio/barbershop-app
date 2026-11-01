@@ -39,7 +39,6 @@ export function CreateProfessionalForm({
   onUnauthorized,
   onBusyChange,
   embedded = false,
-  onReviewList,
 }: {
   onCreated: () => void;
   canWrite?: boolean;
@@ -47,7 +46,6 @@ export function CreateProfessionalForm({
   onUnauthorized?: () => void;
   onBusyChange?: (busy: boolean) => void;
   embedded?: boolean;
-  onReviewList?: () => void;
 }) {
   const [values, setValues] = useState<CreateProfessionalRequest>({
     name: "",
@@ -59,8 +57,6 @@ export function CreateProfessionalForm({
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const controller = useRef<AbortController | null>(null);
-  const [uncertain, setUncertain] = useState(false);
-  const [verification, setVerification] = useState(false);
   const focusAfterResponse = useRef(false);
   useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
@@ -91,7 +87,7 @@ export function CreateProfessionalForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submittingRef.current || !canWrite || uncertain) return;
+    if (submittingRef.current || !canWrite) return;
 
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -148,16 +144,6 @@ export function CreateProfessionalForm({
         focusAfterResponse.current = true;
         return;
       }
-      if (outcome.state === "uncertain") {
-        setUncertain(true);
-        setFeedback({
-          variant: "warning",
-          title: "Não foi possível confirmar o cadastro",
-          message:
-            "Atualize a lista para conferir se o profissional foi criado antes de tentar novamente.",
-        });
-        return;
-      }
       setFeedback({
         variant: "error",
         title: "Não foi possível cadastrar o profissional",
@@ -165,12 +151,10 @@ export function CreateProfessionalForm({
       });
     } catch {
       if (!requestController.signal.aborted) {
-        setUncertain(true);
         setFeedback({
-          variant: "warning",
-          title: "Não foi possível confirmar o cadastro",
-          message:
-            "Verifique sua conexão e atualize a lista para conferir o cadastro antes de tentar novamente.",
+          variant: "error",
+          title: "Não foi possível cadastrar o profissional",
+          message: "Verifique sua conexão e tente novamente.",
         });
       }
     } finally {
@@ -199,29 +183,6 @@ export function CreateProfessionalForm({
           {feedback.message}
         </Feedback>
       ) : null}
-      {uncertain ? (
-        <Button
-          disabled={!canWrite}
-          onClick={() => {
-            onCreated();
-            setVerification(true);
-            onReviewList?.();
-          }}
-        >
-          Conferir lista antes de novo cadastro
-        </Button>
-      ) : null}
-      {uncertain && verification && canWrite ? (
-        <Button
-          onClick={() => {
-            setUncertain(false);
-            setVerification(false);
-            setFeedback(null);
-          }}
-        >
-          Conferi a lista e desejo preencher outro cadastro
-        </Button>
-      ) : null}
       <form
         className={styles.form}
         noValidate
@@ -233,7 +194,7 @@ export function CreateProfessionalForm({
           hint={PROFESSIONAL_NAME_HINT}
           label="Nome"
           onChange={(event) => update("name", event.target.value)}
-          disabled={submitting || !canWrite || uncertain}
+          disabled={submitting || !canWrite}
           ref={nameRef}
           required
           value={values.name}
@@ -245,7 +206,7 @@ export function CreateProfessionalForm({
           label="E-mail"
           maxLength={EMAIL_MAX_LENGTH}
           onChange={(event) => update("email", event.target.value)}
-          disabled={submitting || !canWrite || uncertain}
+          disabled={submitting || !canWrite}
           ref={emailRef}
           required
           spellCheck={false}
@@ -258,12 +219,12 @@ export function CreateProfessionalForm({
           hint={TEMPORARY_PASSWORD_HINT}
           label="Senha temporária"
           onChange={(event) => update("temporary_password", event.target.value)}
-          disabled={submitting || !canWrite || uncertain}
+          disabled={submitting || !canWrite}
           ref={passwordRef}
           required
           value={values.temporary_password}
         />
-        <Button disabled={submitting || !canWrite || uncertain} type="submit">
+        <Button disabled={submitting || !canWrite} type="submit">
           {submitting ? "Cadastrando…" : "Cadastrar profissional"}
         </Button>
       </form>

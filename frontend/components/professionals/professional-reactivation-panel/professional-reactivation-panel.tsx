@@ -5,7 +5,6 @@ import { Button, Feedback, PasswordField } from "@/components/ui";
 import { validatePassword } from "@/lib/auth/password-validation/password-validation";
 import { TEMPORARY_PASSWORD_HINT } from "@/lib/professionals/professional-form-model";
 import {
-  getProfessional,
   reactivateProfessional,
   type Professional,
 } from "@/lib/professionals/professionals-api";
@@ -21,7 +20,6 @@ type Props = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange: (busy: boolean) => void;
-  onReconciliationChange: (needed: boolean) => void;
 };
 type Notice = {
   variant: "success" | "error" | "warning";
@@ -37,12 +35,10 @@ export function ProfessionalReactivationPanel({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  onReconciliationChange,
 }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
-  const [needsConsult, setNeedsConsult] = useState(false);
   const [finished, setFinished] = useState(false);
   const [missing, setMissing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -51,7 +47,6 @@ export function ProfessionalReactivationPanel({
   const panel = useRef<HTMLElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const focusError = useRef(false);
-  const conflict = useRef(false);
   useEffect(() => {
     panel.current?.focus();
     return () => controller.current?.abort();
@@ -62,35 +57,24 @@ export function ProfessionalReactivationPanel({
       field.current?.focus();
     }
   }, [submitting, error]);
-  function markUncertain() {
-    conflict.current = false;
-    setNeedsConsult(true);
-    onReconciliationChange(true);
+  function showError() {
     setNotice({
-      variant: "warning",
-      title: "Não foi possível confirmar a reativação",
-      message:
-        "Consulte o cadastro antes de outra ação. A senha permanece somente neste formulário enquanto a consulta está pendente; a reativação não será repetida automaticamente.",
+      variant: "error",
+      title: "Não foi possível reativar o profissional",
+      message: "Tente novamente mais tarde.",
     });
   }
-  async function run(read: boolean) {
-    if (
-      pending.current ||
-      (!read &&
-        (!canWrite || needsConsult || finished || missing || record.active))
-    )
+  async function run() {
+    if (pending.current || !canWrite || finished || missing || record.active)
       return;
-    if (!read) {
-      conflict.current = false;
-      const validation = validatePassword(
-        password,
-        "Informe uma senha temporária.",
-      );
-      setError(validation);
-      if (validation) {
-        field.current?.focus();
-        return;
-      }
+    const validation = validatePassword(
+      password,
+      "Informe uma senha temporária.",
+    );
+    setError(validation);
+    if (validation) {
+      field.current?.focus();
+      return;
     }
     pending.current = true;
     setSubmitting(true);
@@ -98,13 +82,11 @@ export function ProfessionalReactivationPanel({
     const request = new AbortController();
     controller.current = request;
     try {
-      const result = read
-        ? await getProfessional(record.id, request.signal)
-        : await reactivateProfessional(
-            record.id,
-            { temporary_password: password },
-            request.signal,
-          );
+      const result = await reactivateProfessional(
+        record.id,
+        { temporary_password: password },
+        request.signal,
+      );
       if (request.signal.aborted) return;
       const outcome = classifyProfessionalOperation(result, 200);
       if (outcome.state === "unauthorized") {
@@ -115,8 +97,6 @@ export function ProfessionalReactivationPanel({
       if (outcome.state === "missing") {
         setMissing(true);
         setPassword("");
-        setNeedsConsult(false);
-        onReconciliationChange(false);
         setNotice({
           variant: "warning",
           title: "Profissional não encontrado",
@@ -124,16 +104,12 @@ export function ProfessionalReactivationPanel({
         });
         return;
       }
-      if (outcome.state === "already_active" && !read) {
-        conflict.current = true;
+      if (outcome.state === "already_active") {
         setPassword("");
-        setNeedsConsult(true);
-        onReconciliationChange(true);
         setNotice({
-          variant: "warning",
+          variant: "error",
           title: "Profissional já está ativo",
-          message:
-            "Esta tentativa não alterou a senha nem as sessões. Consulte o cadastro; o acesso com a senha informada não foi confirmado.",
+          message: "Esta tentativa não alterou a senha nem as sessões.",
         });
         return;
       }
@@ -149,40 +125,17 @@ export function ProfessionalReactivationPanel({
       if (
         outcome.state === "confirmed" &&
         outcome.record.id === record.id &&
-        (read || outcome.record.active)
+        outcome.record.active
       ) {
         onRecordConfirmed(outcome.record);
         setPassword("");
         setError(undefined);
-        setNeedsConsult(false);
-        onReconciliationChange(false);
         setFinished(outcome.record.active);
-        if (read) {
-          setNotice({
-            variant: "warning",
-            title: outcome.record.active
-              ? "Cadastro ativo; senha não confirmada"
-              : "Cadastro consultado",
-            message: outcome.record.active
-              ? conflict.current
-                ? "O profissional está ativo. Esta tentativa não alterou sua senha. Confirme o acesso existente com o profissional."
-                : "A consulta confirma somente o estado do cadastro e não informa qual senha foi aplicada. Confirme o acesso com o profissional; nenhuma reativação foi repetida."
-              : "O profissional está inativo. A senha foi limpa; preencha-a se decidir tentar novamente.",
-          });
-        } else
-          setNotice({
-            variant: "success",
-            title: "Profissional reativado",
-            message:
-              "A troca de senha será obrigatória no próximo acesso. A senha temporária não poderá ser recuperada; compartilhe-a por um canal seguro.",
-          });
-        return;
-      }
-      if (read) {
         setNotice({
-          variant: "error",
-          title: "Não foi possível consultar o cadastro",
-          message: "Tente consultar novamente antes de outra ação.",
+          variant: "success",
+          title: "Profissional reativado",
+          message:
+            "A troca de senha será obrigatória no próximo acesso. A senha temporária não poderá ser recuperada; compartilhe-a por um canal seguro.",
         });
         return;
       }
@@ -191,24 +144,9 @@ export function ProfessionalReactivationPanel({
         focusError.current = true;
         return;
       }
-      if (outcome.state === "uncertain" || outcome.state === "confirmed")
-        markUncertain();
-      else
-        setNotice({
-          variant: "error",
-          title: "Não foi possível reativar o profissional",
-          message: "Confira os dados e tente novamente.",
-        });
+      showError();
     } catch {
-      if (!request.signal.aborted) {
-        if (read)
-          setNotice({
-            variant: "error",
-            title: "Não foi possível consultar o cadastro",
-            message: "Tente consultar novamente antes de outra ação.",
-          });
-        else markUncertain();
-      }
+      if (!request.signal.aborted) showError();
     } finally {
       onBusyChange(false);
       if (!request.signal.aborted) {
@@ -219,7 +157,7 @@ export function ProfessionalReactivationPanel({
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void run(false);
+    void run();
   }
   return (
     <section
@@ -248,7 +186,7 @@ export function ProfessionalReactivationPanel({
             hint={TEMPORARY_PASSWORD_HINT}
             value={password}
             error={error}
-            disabled={!canWrite || submitting || needsConsult}
+            disabled={!canWrite || submitting}
             required
             onChange={(event) => {
               setPassword(event.target.value);
@@ -258,20 +196,15 @@ export function ProfessionalReactivationPanel({
           />
           <Button
             type="submit"
-            disabled={!canWrite || submitting || needsConsult || record.active}
+            disabled={!canWrite || submitting || record.active}
           >
             {submitting ? "Aguarde…" : "Confirmar reativação"}
           </Button>
         </form>
       ) : null}
       <div className={styles.actions}>
-        {needsConsult ? (
-          <Button disabled={submitting} onClick={() => void run(true)}>
-            Consultar cadastro do profissional
-          </Button>
-        ) : null}
         <Button
-          disabled={submitting || needsConsult}
+          disabled={submitting}
           onClick={() => {
             setPassword("");
             onClose();

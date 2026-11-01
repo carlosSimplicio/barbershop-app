@@ -251,7 +251,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir que o proprietário cadastre profissional pela API com senha temporária e exigir troca no primeiro login.
 - [x] Restringir profissional com senha temporária à manutenção da sessão, troca de senha e logout, bloqueando recursos de domínio.
 - [x] Reativar profissional pela API com senha temporária válida inclusive igual ao valor anterior, novo hash, troca obrigatória e invalidação de sessões/tokens anteriores.
-- [x] Oferecer reativação com senha temporária pelo painel, inclusive reutilizando o valor anterior, sem expor a entrada nem afirmar credencial aplicada após consulta de resultado incerto.
+- [x] Oferecer reativação com senha temporária pelo painel, inclusive reutilizando o valor anterior, sem expor a entrada nem afirmar sucesso após erro.
 - [x] Aplicar limitação progressiva por IP e e-mail normalizado no login, com `429` e `Retry-After`.
 - [x] Estender a limitação progressiva à confirmação por IP e e-mail normalizado.
 - [x] Estender a limitação progressiva à solicitação de recuperação por IP e e-mail normalizado.
@@ -292,8 +292,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Permitir que `PATCH /api/v1/establishment/settings` altere o fuso somente enquanto o marcador operacional estiver ausente, sob o mesmo bloqueio transacional; integrar o marcador aos futuros primeiros agendamentos, bloqueios e lançamentos permanece pendente.
 - [x] Configurar pela API antecedência mínima e prazo de alteração em minutos não negativos, horizonte futuro em dias positivos e ausência/`null` como ausência de restrição.
 - [ ] Aplicar os limites configurados nas validações de criação, cancelamento e reagendamento de clientes.
-- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda, preservando links legados incompatíveis com o editor e exigindo reconciliação quando a consulta falha após salvamento confirmado.
-- [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após falha confirmada, reconciliar respostas ambíguas e conservar a seleção até a reconciliação quando necessário, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
+- [x] Criar painel de configurações do estabelecimento para editar dados da página pública e limites opcionais de agenda, preservando links legados incompatíveis com o editor e mantendo a edição disponível quando a consulta falha após salvamento confirmado.
+- [x] Permitir ao proprietário pré-visualizar no lugar da imagem publicada, limpar a seleção antes do envio, enviar e substituir o logo em Configurações com multipart e CSRF, atualizar o perfil após sucesso, restaurar o logo e limpar a seleção após recusa `4xx`, preservar a seleção e permitir nova tentativa explícita após erro de rede ou `5xx`, e bloquear alterações quando o trial expirar; não oferecer remoção do logo.
 - [ ] Não criar perfil ou painel de administrador da plataforma no MVP.
 
 ## 8. Logos e arquivos públicos
@@ -306,7 +306,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Definir interface de object storage por streams e chave UUID v4 opaca, com adaptador local atômico, não sobrescrevível e confinado à raiz.
 - [x] Disponibilizar o volume persistente próprio em `LOGO_STORAGE_DIR`, com permissões para o backend não privilegiado e preservação em deploys.
 - [x] Servir o logo atual por `GET /api/v1/public/establishments/{slug}/logo` somente quando publicável, com resolução central do slug, storage por interface, MIME/tamanho validados, `nosniff`, ETag SHA-256 e cache revalidável; trial expirado não oculta a imagem e nenhuma chave/caminho interno é exposto.
-- [x] Entregar em `/painel/configuracoes` o envio e a substituição do logo com pré-visualização substitutiva, limpeza da seleção temporária, mensagens de recusa, restauração do logo e limpeza do seletor após falha confirmada, reconciliação de respostas ambíguas, nova seleção para nova tentativa e atualização do endereço público após sucesso; conservar a consulta em `read_only` e não permitir remoção do logo publicado.
+- [x] Entregar em `/painel/configuracoes` o envio e a substituição do logo com pré-visualização substitutiva, limpeza da seleção temporária, mensagens de recusa, restauração do logo e limpeza do seletor após recusa `4xx`, seleção preservada para nova tentativa explícita após erro de rede ou `5xx` e atualização do endereço público após sucesso; conservar a consulta em `read_only` e não permitir remoção do logo publicado.
 
 ## 9. Administração de profissionais
 
@@ -317,9 +317,10 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Editar somente o nome de profissional ativo ou inativo pela API, com validação compartilhada, CSRF parametrizado e direito de escrita, preservando identidade e credenciais.
 - [x] Desativar profissionais pela API atomicamente com revogação de acesso e repetição segura.
 - [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
-- [x] Consultar individualmente e editar o nome de profissionais ativos e inativos em modal pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e reconciliação de resultado incerto.
-- [x] Desativar profissionais dentro da modal de edição pelo painel com confirmação de perda de acesso, envio único, sincronização de lista/editor e consulta após resultado incerto.
-- [x] Reativar profissionais dentro da modal de edição pelo painel com confirmação, senha temporária, conflito seguro, limpeza de entrada, coordenação e reconciliação do estado.
+- [x] Simplificar erros de mutações no frontend: `5xx`, rede e respostas fora do contrato exibem feedback e liberam os controles, sem estado incerto, consulta de confirmação ou conferência obrigatória; sincronizar testes e documentação.
+- [x] Consultar individualmente e editar o nome de profissionais ativos e inativos em modal pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e nova tentativa explícita após erro.
+- [x] Desativar profissionais dentro da modal de edição pelo painel com confirmação de perda de acesso, envio único, sincronização direta de lista/editor e tratamento local de erros.
+- [x] Reativar profissionais dentro da modal de edição pelo painel com confirmação, senha temporária, conflito seguro, limpeza de entrada, coordenação e tratamento local de erros.
 - [x] Oferecer cadastro em modal reutilizável aberta pelo botão `+` à direita do título de Profissionais, com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
@@ -338,8 +339,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Ativar e desativar serviço pela API com estado explícito idempotente, tenant, CSRF e direito de escrita.
 - [x] Listar serviços no painel com paginação, preço BRL exato, estados de consulta e somente leitura.
 - [x] Cadastrar serviço em modal reutilizável aberta pelo botão `+` à direita do título de Serviços, com preço decimal convertido exatamente em centavos, limites visíveis de nome, preço e duração, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
-- [x] Consultar e editar serviço em modal no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento e reconciliação que preserva o rascunho e sincroniza o registro persistido na lista.
-- [x] Ativar e desativar serviço dentro da modal de edição no painel com confirmação, coordenação dos envios e consulta após resultado ambíguo, atualizando lista e editor aberto.
+- [x] Consultar e editar serviço em modal no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento, preservação do rascunho após erro e sincronização do registro persistido na lista após sucesso.
+- [x] Ativar e desativar serviço dentro da modal de edição no painel com confirmação, coordenação dos envios e tratamento local de erros, atualizando diretamente lista e editor aberto após sucesso.
 - [x] Validar nome obrigatório normalizado com até 120 pontos de código, sem caractere NUL, e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
 - [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.
@@ -379,7 +380,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 - [x] Renderizar no servidor a página canônica do estabelecimento com metadados, nome, logo e informações opcionais preenchidas, com nova consulta ao servidor ao tentar novamente após falha temporária.
 - [x] Não renderizar seções vazias para informações públicas opcionais.
-- [x] Limpar seleção e pré-visualização do logo após recusas definitivas, inclusive no primeiro upload, preservando a reconciliação de falhas ambíguas.
+- [x] Limpar seleção e pré-visualização do logo após recusas definitivas, inclusive no primeiro upload, preservando seleção e permitindo nova tentativa explícita após erro de rede ou `5xx`.
 - [ ] Criar fluxo interativo para escolher serviço, profissional associado, dia e horário.
 - [ ] Coletar somente nome e telefone para criar o agendamento.
 - [ ] Criar agendamento com exatamente um serviço e um profissional.

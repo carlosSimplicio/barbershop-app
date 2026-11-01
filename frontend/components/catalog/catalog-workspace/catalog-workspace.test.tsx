@@ -246,14 +246,12 @@ test("abre cadastro pelo cabeçalho, mantém rascunho e impede fechar durante en
   expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
 });
 
-test("fechar e reabrir não libera reenvio de cadastro incerto sem conferir a lista", async () => {
+test("erro no cadastro permite fechar e reabrir sem conferir a lista", async () => {
+  vi.mocked(createOffering).mockRejectedValue(new Error("network"));
   vi.mocked(listOfferings).mockResolvedValue(page());
-  vi.mocked(createOffering).mockRejectedValue(new Error("response lost"));
   render(<CatalogWorkspace />);
   await screen.findByRole("list");
-  const open = () =>
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
-  open();
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
   fireEvent.change(screen.getByLabelText("Nome do serviço"), {
     target: { value: "Corte" },
   });
@@ -261,34 +259,17 @@ test("fechar e reabrir não libera reenvio de cadastro incerto sem conferir a li
     target: { value: "1,00" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
-  await screen.findByText("Não foi possível confirmar o cadastro");
-  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
-  open();
+  await screen.findByText("Não foi possível cadastrar o serviço");
   expect(
     screen.getByRole("button", { name: "Cadastrar serviço" }),
-  ).toBeDisabled();
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Conferir lista antes de novo cadastro",
-    }),
-  );
-  await waitFor(() => expect(listOfferings).toHaveBeenCalledTimes(2));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Adicionar serviço" }),
-    ).toBeEnabled(),
-  );
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  open();
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Conferi a lista e desejo preencher outro cadastro",
-    }),
-  );
+  ).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
   expect(
     screen.getByRole("button", { name: "Cadastrar serviço" }),
   ).toBeEnabled();
   expect(createOffering).toHaveBeenCalledOnce();
+  expect(listOfferings).toHaveBeenCalledOnce();
 });
 
 test("retorna foco à ação do registro ao cancelar edição", async () => {
@@ -309,13 +290,17 @@ test("retorna foco à ação do registro ao cancelar edição", async () => {
   expect(action).toHaveFocus();
 });
 
-test("reconciliação após edição ambígua atualiza também o catálogo", async () => {
+test("edição com erro preserva rascunho e atualiza catálogo somente após nova tentativa bem-sucedida", async () => {
   const confirmed = { ...records[0], price_cents: 200 };
   vi.mocked(listOfferings).mockResolvedValue(page());
-  vi.mocked(getOffering)
-    .mockResolvedValueOnce({ state: "success", status: 200, data: records[0] })
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  vi.mocked(updateOffering)
+    .mockRejectedValueOnce(new Error("network"))
     .mockResolvedValueOnce({ state: "success", status: 200, data: confirmed });
-  vi.mocked(updateOffering).mockRejectedValue(new Error("response lost"));
   render(<CatalogWorkspace />);
   fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
   const editor = screen.getByRole("region", { name: "Editar serviço" });
@@ -323,24 +308,17 @@ test("reconciliação após edição ambígua atualiza também o catálogo", asy
   fireEvent.change(within(editor).getByLabelText("Preço"), {
     target: { value: "2,00" },
   });
-  fireEvent.click(
-    within(editor).getByRole("button", { name: "Salvar alterações" }),
-  );
-  await screen.findByText("Não foi possível confirmar a alteração");
-  fireEvent.click(
-    within(editor).getByRole("button", { name: "Recarregar serviço" }),
-  );
-  await waitFor(() =>
-    expect(
-      within(editor).getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled(),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  await screen.findByText("Não foi possível salvar o serviço");
   expect(within(editor).getByLabelText("Preço")).toHaveValue("2,00");
+  expect(getOffering).toHaveBeenCalledOnce();
+  expect(updateOffering).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  await screen.findByText("Serviço atualizado");
   expect(
     screen.getByRole("list", { name: "Serviços cadastrados" }),
   ).toHaveTextContent(/R\$\s2,00/);
-  expect(updateOffering).toHaveBeenCalledOnce();
-  expect(getOffering).toHaveBeenCalledTimes(2);
+  expect(getOffering).toHaveBeenCalledOnce();
 });
 
 test("estado confirmado atualiza lista e editor aberto, bloqueando ações enquanto aguarda", async () => {
@@ -391,60 +369,36 @@ test("estado confirmado atualiza lista e editor aberto, bloqueando ações enqua
   );
 });
 
-test("mantém modal e edição bloqueadas até conferir resultado incerto da mudança de estado", async () => {
+test("erro na mudança de estado libera fechamento e nova tentativa sem consultar o serviço", async () => {
   vi.mocked(listOfferings).mockResolvedValue(page());
-  vi.mocked(setOfferingStatus).mockRejectedValue(new Error("network"));
-  let finish!: (value: Awaited<ReturnType<typeof getOffering>>) => void;
-  const inactive = { ...records[0], active: false };
-  vi.mocked(getOffering)
-    .mockResolvedValueOnce({ state: "success", status: 200, data: records[0] })
-    .mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-    )
-    .mockResolvedValue({ state: "success", status: 200, data: inactive });
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  vi.mocked(setOfferingStatus).mockResolvedValue({
+    state: "error",
+    status: 503,
+    error: { code: "internal_error", message: "raw", request_id: "test" },
+  });
   render(<CatalogWorkspace />);
   fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
-  const modal = screen.getByRole("dialog", { name: "Editar serviço" });
   fireEvent.click(
-    await within(modal).findByRole("button", { name: "Desativar Corte" }),
+    await screen.findByRole("button", { name: "Desativar Corte" }),
   );
   fireEvent.click(
-    within(modal).getByRole("button", { name: "Confirmar desativação" }),
+    screen.getByRole("button", { name: "Confirmar desativação" }),
   );
-  await screen.findByText("Não foi possível confirmar a alteração de estado");
+  await screen.findByText("Não foi possível alterar o serviço");
   expect(
-    within(modal).getByRole("button", { name: "Fechar modal" }),
-  ).toBeDisabled();
-  expect(
-    within(modal).getByRole("button", { name: "Cancelar edição" }),
-  ).toBeDisabled();
-  expect(
-    within(modal).getByRole("button", { name: "Salvar alterações" }),
-  ).toBeDisabled();
-  fireEvent(modal, new Event("cancel", { cancelable: true }));
-  expect(modal).toBeVisible();
-  fireEvent.click(
-    within(modal).getByRole("button", { name: "Consultar estado do serviço" }),
-  );
-  expect(
-    screen.getByRole("button", { name: "Atualizar lista" }),
-  ).toBeDisabled();
-  await act(async () =>
-    finish({ state: "success", status: 200, data: inactive }),
-  );
-  await waitFor(() =>
-    expect(
-      within(modal).getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled(),
-  );
-  expect(
-    within(modal).getByRole("button", { name: "Fechar modal" }),
+    screen.getByRole("button", { name: "Confirmar desativação" }),
   ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Cancelar edição" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeEnabled();
+  expect(getOffering).toHaveBeenCalledOnce();
   expect(setOfferingStatus).toHaveBeenCalledOnce();
-  expect(getOffering).toHaveBeenCalledTimes(3);
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
 test("lista oferece somente o lápis e a modal usa o estado recém-consultado para ativação", async () => {

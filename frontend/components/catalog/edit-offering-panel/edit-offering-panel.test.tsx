@@ -84,30 +84,38 @@ test("limpar duração envia null e cancelar não grava", async () => {
   expect(callbacks.onClose).toHaveBeenCalledOnce();
   expect(updateOffering).toHaveBeenCalledOnce();
 });
-test("preserva rascunho e exige recarga após resposta ambígua", async () => {
-  vi.mocked(updateOffering).mockRejectedValue(new Error("raw"));
-  render(<EditOfferingPanel {...props()} />);
-  await screen.findByLabelText("Preço");
-  fireEvent.change(screen.getByLabelText("Nome do serviço"), {
-    target: { value: "Novo nome" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
-  expect(
-    await screen.findByText("Não foi possível confirmar a alteração"),
-  ).toBeVisible();
-  expect(
-    screen.getByRole("button", { name: "Salvar alterações" }),
-  ).toBeDisabled();
-  expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Novo nome");
-  fireEvent.click(screen.getByRole("button", { name: "Recarregar serviço" }));
-  await waitFor(() =>
+test.each([500, 503])(
+  "preserva rascunho e libera nova tentativa após HTTP %i",
+  async (status) => {
+    vi.mocked(updateOffering)
+      .mockResolvedValueOnce({
+        state: "error",
+        status,
+        error: { code: "internal_error", message: "raw", request_id: "test" },
+      })
+      .mockResolvedValueOnce(success({ ...record, name: "Novo nome" }));
+    const callbacks = props();
+    render(<EditOfferingPanel {...callbacks} />);
+    await screen.findByLabelText("Preço");
+    fireEvent.change(screen.getByLabelText("Nome do serviço"), {
+      target: { value: "Novo nome" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText("Não foi possível salvar o serviço");
+    expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Novo nome");
     expect(
       screen.getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled(),
-  );
-  expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Novo nome");
-  expect(updateOffering).toHaveBeenCalledOnce();
-});
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Cancelar edição" }),
+    ).toBeEnabled();
+    expect(getOffering).toHaveBeenCalledOnce();
+    expect(updateOffering).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText("Serviço atualizado");
+    expect(updateOffering).toHaveBeenCalledTimes(2);
+  },
+);
 test("distingue erro de consulta, registro ausente e somente leitura", async () => {
   vi.mocked(getOffering)
     .mockRejectedValueOnce(new Error("raw"))
@@ -120,7 +128,7 @@ test("distingue erro de consulta, registro ausente e somente leitura", async () 
   expect(
     await screen.findByText("Não foi possível consultar o serviço"),
   ).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Recarregar serviço" }));
+  fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
   expect(await screen.findByText("Serviço não encontrado")).toBeVisible();
   expect(updateOffering).not.toHaveBeenCalled();
 });
@@ -187,28 +195,29 @@ test("desabilita edição em somente leitura e sinaliza expiração da API", asy
   expect(await screen.findByText("Edição indisponível")).toBeVisible();
 });
 
-test("recarga preserva nome editado sem reenviar preço alterado por outro acesso", async () => {
-  vi.mocked(getOffering)
-    .mockResolvedValueOnce(success())
-    .mockResolvedValueOnce(success({ ...record, price_cents: 200 }));
-  vi.mocked(updateOffering)
-    .mockRejectedValueOnce(new Error("network"))
-    .mockResolvedValueOnce(
-      success({ ...record, name: "Novo nome", price_cents: 200 }),
-    );
-  render(<EditOfferingPanel {...props()} />);
+test("atualização de estado preserva nome editado sem reenviar preço recebido", async () => {
+  vi.mocked(updateOffering).mockResolvedValue(
+    success({ ...record, name: "Novo nome", price_cents: 200 }),
+  );
+  render(
+    <EditOfferingPanel
+      {...props()}
+      renderActions={(_record, _disabled, onChanged) => (
+        <button
+          onClick={() =>
+            onChanged({ ...record, price_cents: 200, active: true })
+          }
+        >
+          Alterar estado
+        </button>
+      )}
+    />,
+  );
   await screen.findByLabelText("Preço");
   fireEvent.change(screen.getByLabelText("Nome do serviço"), {
     target: { value: "Novo nome" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
-  await screen.findByText("Não foi possível confirmar a alteração");
-  fireEvent.click(screen.getByRole("button", { name: "Recarregar serviço" }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Salvar alterações" }),
-    ).toBeEnabled(),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Alterar estado" }));
   expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Novo nome");
   expect(screen.getByLabelText("Preço")).toHaveValue("2,00");
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
@@ -218,4 +227,5 @@ test("recarga preserva nome editado sem reenviar preço alterado por outro acess
     { name: "Novo nome" },
     expect.any(AbortSignal),
   );
+  expect(getOffering).toHaveBeenCalledOnce();
 });

@@ -33,10 +33,12 @@ type Props = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange: (busy: boolean) => void;
-  onReconciliationChange: (needed: boolean) => void;
-  reloadVersion?: number;
   embedded?: boolean;
-  renderActions?: (record: Professional, disabled: boolean) => ReactNode;
+  renderActions?: (
+    record: Professional,
+    disabled: boolean,
+    onChanged: (record: Professional) => void,
+  ) => ReactNode;
 };
 type Load = "loading" | "ready" | "error" | "missing";
 type Notice = {
@@ -54,27 +56,31 @@ export function EditProfessionalPanel({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  onReconciliationChange,
-  reloadVersion = 0,
   embedded = false,
   renderActions,
 }: Props) {
   const [record, setRecord] = useState<Professional | null>(null);
   const [name, setName] = useState("");
   const [load, setLoad] = useState<Load>("loading");
-  const [loadedVersion, setLoadedVersion] = useState(reloadVersion);
   const [version, setVersion] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [uncertain, setUncertain] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<Notice | null>(null);
-  const baseline = useRef<Professional | null>(null);
   const pending = useRef(false);
   const mutation = useRef<AbortController | null>(null);
   const field = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLElement>(null);
   const focusError = useRef(false);
   const focusInitial = useRef(true);
+  function applyRecord(confirmed: Professional, preserveDraft = true) {
+    setName((current) =>
+      preserveDraft && record && current.trim() !== record.name
+        ? current
+        : confirmed.name,
+    );
+    setRecord(confirmed);
+    onRecordConfirmed(confirmed);
+  }
   useEffect(() => () => mutation.current?.abort(), []);
   useEffect(() => {
     if (load === "ready" && focusInitial.current) {
@@ -116,27 +122,10 @@ export function EditProfessionalPanel({
           setLoad("error");
           return;
         }
-        const previous = baseline.current;
-        const confirmed = result.data;
-        setName((current) =>
-          previous && current.trim() !== previous.name
-            ? current
-            : confirmed.name,
-        );
-        baseline.current = confirmed;
-        setRecord(confirmed);
-        onRecordConfirmed(confirmed);
-        setLoadedVersion(reloadVersion);
-        setUncertain(false);
-        onReconciliationChange(false);
+        setName(result.data.name);
+        setRecord(result.data);
+        onRecordConfirmed(result.data);
         setLoad("ready");
-        if (previous)
-          setNotice({
-            variant: "warning",
-            title: "Estado atualizado",
-            message:
-              "Seu rascunho foi preservado. Confira o nome antes de salvar.",
-          });
       })
       .catch(() => {
         if (!controller.signal.aborted) setLoad("error");
@@ -149,33 +138,25 @@ export function EditProfessionalPanel({
   }, [
     professionalId,
     version,
-    reloadVersion,
     onBusyChange,
     onRecordConfirmed,
     onUnauthorized,
-    onReconciliationChange,
   ]);
-  function markUncertain() {
-    setUncertain(true);
-    onReconciliationChange(true);
+  function reload() {
+    if (pending.current || blocked) return;
+    setLoad("loading");
+    setVersion((value) => value + 1);
+  }
+  function showError() {
     setNotice({
-      variant: "warning",
-      title: "Não foi possível confirmar a alteração",
-      message:
-        "Recarregue o profissional antes de enviar novamente. Seu rascunho será preservado.",
+      variant: "error",
+      title: "Não foi possível salvar o profissional",
+      message: "Tente novamente mais tarde.",
     });
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (
-      !record ||
-      !canWrite ||
-      pending.current ||
-      uncertain ||
-      load !== "ready" ||
-      loadedVersion !== reloadVersion
-    )
-      return;
+    if (!record || !canWrite || pending.current || load !== "ready") return;
     const validation = validateProfessionalName(name);
     setError(validation);
     if (validation) {
@@ -225,10 +206,7 @@ export function EditProfessionalPanel({
         outcome.state === "confirmed" &&
         outcome.record.id === professionalId
       ) {
-        setRecord(outcome.record);
-        baseline.current = outcome.record;
-        setName(outcome.record.name);
-        onRecordConfirmed(outcome.record);
+        applyRecord(outcome.record, false);
         setNotice({
           variant: "success",
           title: "Profissional atualizado",
@@ -241,16 +219,9 @@ export function EditProfessionalPanel({
         focusError.current = true;
         return;
       }
-      if (outcome.state === "uncertain" || outcome.state === "confirmed")
-        markUncertain();
-      else
-        setNotice({
-          variant: "error",
-          title: "Não foi possível salvar o profissional",
-          message: "Confira os dados e tente novamente.",
-        });
+      showError();
     } catch {
-      if (!controller.signal.aborted) markUncertain();
+      if (!controller.signal.aborted) showError();
     } finally {
       onBusyChange(false);
       if (!controller.signal.aborted) {
@@ -259,12 +230,7 @@ export function EditProfessionalPanel({
       }
     }
   }
-  const disabled =
-    !canWrite ||
-    submitting ||
-    uncertain ||
-    load !== "ready" ||
-    loadedVersion !== reloadVersion;
+  const disabled = !canWrite || submitting || load !== "ready";
   return (
     <section
       ref={panel}
@@ -280,6 +246,11 @@ export function EditProfessionalPanel({
         <Feedback
           variant="error"
           title="Não foi possível consultar o profissional"
+          action={
+            <Button onClick={reload} disabled={submitting || blocked}>
+              Tentar novamente
+            </Button>
+          }
         >
           Verifique sua conexão e tente novamente.
         </Feedback>
@@ -322,24 +293,10 @@ export function EditProfessionalPanel({
           </Button>
         </form>
       ) : null}
-      {/* Keep state confirmations dismissible if a later editor read fails. */}
-      {record ? renderActions?.(record, disabled) : null}
+      {/* Keep state confirmations dismissible when the edited resource is missing. */}
+      {record ? renderActions?.(record, disabled, applyRecord) : null}
       <div className={styles.actions}>
-        <Button
-          disabled={submitting || load === "loading" || (blocked && !uncertain)}
-          onClick={() => {
-            if (!pending.current) {
-              setLoad("loading");
-              setVersion((value) => value + 1);
-            }
-          }}
-        >
-          Recarregar profissional
-        </Button>
-        <Button
-          disabled={submitting || (blocked && !uncertain)}
-          onClick={onClose}
-        >
+        <Button onClick={onClose} disabled={submitting || blocked}>
           Cancelar edição
         </Button>
       </div>
