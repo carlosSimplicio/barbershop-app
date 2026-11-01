@@ -55,6 +55,30 @@ export function Modal({
     };
   }, [open, fallbackFocusRef]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (!dialogRef.current?.contains(document.activeElement))
+      titleRef.current?.focus();
+    if (!closeDisabled) return;
+    function protectPendingDialog(event: KeyboardEvent) {
+      // Disabling the focused submit button can move focus to the body.
+      // Capture keys there as well, before native dialog dismissal or tabbing.
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+      } else if (
+        event.key === "Tab" &&
+        !dialogRef.current?.contains(document.activeElement)
+      ) {
+        event.preventDefault();
+        titleRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", protectPendingDialog, true);
+    return () =>
+      document.removeEventListener("keydown", protectPendingDialog, true);
+  }, [open, closeDisabled]);
+
   return (
     <dialog
       ref={dialogRef}

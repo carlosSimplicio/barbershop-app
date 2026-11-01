@@ -74,6 +74,12 @@ test("apresenta estado vazio quando a resposta não tem profissionais", async ()
     await screen.findByText("Nenhum profissional cadastrado."),
   ).toHaveAttribute("role", "status");
   expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("navigation", { name: "Paginação de profissionais" }),
+  ).toBeVisible();
+  expect(screen.getByText("Página 1")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Próxima" })).toBeDisabled();
 });
 
 test("pagina a lista e impede avançar além da última página", async () => {

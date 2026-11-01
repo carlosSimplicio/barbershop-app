@@ -17,6 +17,7 @@ export type OfferingStatusProps = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange: (busy: boolean) => void;
+  onReconciliationChange?: (needed: boolean) => void;
 };
 type Notice = {
   title: string;
@@ -30,6 +31,7 @@ export function OfferingStatusAction({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
+  onReconciliationChange,
 }: OfferingStatusProps) {
   const [desiredActive, setDesiredActive] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -81,6 +83,8 @@ export function OfferingStatusAction({
         return;
       }
       if (outcome.state === "missing") {
+        onReconciliationChange?.(false);
+        setUncertain(false);
         setMissing(true);
         setDesiredActive(null);
         setNotice({
@@ -91,6 +95,7 @@ export function OfferingStatusAction({
         return;
       }
       if (outcome.state === "confirmed") {
+        onReconciliationChange?.(false);
         setUncertain(false);
         setMissing(false);
         setDesiredActive(null);
@@ -151,6 +156,7 @@ export function OfferingStatusAction({
   }
   function markUncertain() {
     setUncertain(true);
+    onReconciliationChange?.(true);
     setNotice({
       variant: "warning",
       title: "Não foi possível confirmar a alteração de estado",

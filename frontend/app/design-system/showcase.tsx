@@ -14,6 +14,9 @@ import {
   Modal,
   PasswordField,
   RecordList,
+  RecordListPanel,
+  RecordSummary,
+  type RecordListView,
   SelectField,
   TextareaField,
   TextField,
@@ -22,11 +25,18 @@ import {
 import styles from "./showcase.module.css";
 
 type Theme = "light" | "dark";
+type ListExampleState = "success" | "loading" | "error" | "empty" | "long";
 
 const sampleRecords = [
   { id: "ana-lima", name: "Ana Lima", detail: "ana@example.test" },
   { id: "bia-souza", name: "Beatriz Souza", detail: "bia@example.test" },
 ];
+
+const longSampleRecords = Array.from({ length: 20 }, (_, index) => ({
+  id: `record-${index + 1}`,
+  name: `Registro de exemplo ${index + 1}`,
+  detail: "Detalhes para conferir a rolagem interna da lista.",
+}));
 
 const swatches = [
   ["Azul principal", "--color-primary", "primary"],
@@ -367,11 +377,34 @@ export function DesignSystemShowcase() {
             />
           </div>
         </Showcase>
+        <Showcase title="Painel de lista e itens compartilhados">
+          <p>
+            RecordListPanel reúne atualização, carregamento, erro, vazio e
+            paginação. RecordSummary organiza nome, detalhes, situação textual e
+            ações; cada fluxo define seus próprios campos, permissões e
+            callbacks. Ambos acompanham o tema e empilham conteúdo e ações em
+            telas estreitas.
+          </p>
+          <p>
+            Os rótulos identificam região, lista e paginação. O carregamento é
+            anunciado e bloqueia a atualização; operações pendentes bloqueiam os
+            controles. A referência da região permite devolver o foco após
+            fechar editores ou modais.
+          </p>
+          <RecordListPanelExample />
+          <p>
+            A área de itens tem altura limitada e rolagem interna. Título,
+            atualização e paginação ficam fora dela. Use Tab para focar a região
+            da lista e as teclas de navegação para rolar; o foco das ações deve
+            continuar visível. Selecione “Lista longa” para conferir o
+            comportamento.
+          </p>
+        </Showcase>
       </section>
 
       <section className={styles.section} id="modals">
         <SectionHeading
-          description="Modal controlada e reutilizável, com título obrigatório, descrição opcional e conteúdo livre."
+          description="Modal controlada e reutilizável para cadastro e edição, com título obrigatório, descrição opcional e conteúdo livre."
           number="05"
           title="Modais"
         />
@@ -398,7 +431,10 @@ export function DesignSystemShowcase() {
             indisponível. Feche pelo × ou Escape; o foco volta ao acionador.
             Cliques no fundo não fecham a modal. Durante um envio, bloqueie o
             fechamento com closeDisabled. O conteúdo permanece montado ao
-            fechar; o fluxo consumidor controla o descarte de rascunhos.
+            fechar; o fluxo consumidor controla o descarte de rascunhos. Na
+            edição, ações e confirmações de estado ficam na mesma modal, fora do
+            formulário de edição. Envios e reconciliações de estado bloqueiam o
+            fechamento.
           </p>
           <Modal
             open={modalOpen}
@@ -440,6 +476,88 @@ export function DesignSystemShowcase() {
         React disponível somente em desenvolvimento
       </footer>
     </main>
+  );
+}
+
+function RecordListPanelExample() {
+  const [mode, setMode] = useState<ListExampleState>("success");
+  const [offset, setOffset] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const records = mode === "long" ? longSampleRecords : sampleRecords;
+  const limit = mode === "long" ? longSampleRecords.length : 1;
+  const view: RecordListView<(typeof sampleRecords)[number]> =
+    mode === "success" || mode === "empty" || mode === "long"
+      ? {
+          status: "success",
+          page: {
+            items:
+              mode === "empty" ? [] : records.slice(offset, offset + limit),
+            offset: mode === "empty" ? 0 : offset,
+            limit,
+            has_more: mode !== "empty" && offset + limit < records.length,
+          },
+        }
+      : { status: mode };
+  return (
+    <>
+      <div className={styles.actionGrid}>
+        <SelectField
+          label="Estado da lista"
+          value={mode}
+          onChange={(event) => {
+            setMode(event.target.value as ListExampleState);
+            setOffset(0);
+          }}
+        >
+          <option value="success">Com registros</option>
+          <option value="loading">Carregando</option>
+          <option value="error">Erro</option>
+          <option value="empty">Vazio</option>
+          <option value="long">Lista longa (20 itens)</option>
+        </SelectField>
+        <Button aria-pressed={busy} onClick={() => setBusy(!busy)}>
+          {busy ? "Liberar controles da lista" : "Simular operação pendente"}
+        </Button>
+      </div>
+      <RecordListPanel
+        title="Registros de exemplo"
+        label="Lista de exemplo"
+        paginationLabel="Paginação de exemplo"
+        view={view}
+        busy={busy}
+        messages={{
+          loading: "Carregando registros…",
+          empty: "Nenhum registro cadastrado.",
+          errorTitle: "Não foi possível consultar os registros",
+          errorDescription: "Tente atualizar a lista novamente.",
+        }}
+        getKey={(record) => record.id}
+        onRefresh={() => setMode("success")}
+        onPageChange={setOffset}
+        renderItem={(record) => (
+          <RecordSummary
+            title={record.name}
+            status={{
+              label: record.id === "ana-lima" ? "Ativo" : "Inativo",
+              tone: record.id === "ana-lima" ? "success" : "neutral",
+            }}
+            actions={
+              <IconButton
+                aria-label="Editar registro"
+                title="Editar registro"
+                disabled={busy}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m16 3 5 5-13 13-5 1 1-5L16 3ZM14 5l5 5" />
+                </svg>
+              </IconButton>
+            }
+          >
+            <span>{record.detail}</span>
+          </RecordSummary>
+        )}
+      />
+    </>
   );
 }
 

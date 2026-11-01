@@ -210,6 +210,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar `Modal` reutilizável no design system com `dialog` nativo, foco inicial e retorno ao acionador, teclado, fundo inerte, rolagem responsiva e fechamento bloqueável durante envios.
 - [x] Criar padrões compartilhados de feedback.
 - [x] Criar padrões compartilhados para estados vazios com lista semântica e anúncio acessível.
+- [x] Compartilhar `RecordListPanel` e `RecordSummary` entre serviços e profissionais, com estados de consulta, atualização, paginação sempre visível após consulta bem-sucedida, rolagem interna dos itens acessível por teclado, referência de foco, detalhes e ações responsivas, com botões de ícone compactos para atualizar e editar; preservar permissões e operações específicas em cada domínio.
 - [ ] Fazer todo o frontend seguir o design system e manter nele, no mesmo trabalho, qualquer novo componente, variante ou estado visual necessário ao produto.
 - [ ] Garantir navegação por teclado, foco visível, contraste, rótulos acessíveis e alvos de toque adequados.
 - [ ] Implementar interface e mensagens em `pt-BR`, valores em `BRL` e datas no fuso do estabelecimento.
@@ -316,9 +317,9 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Editar somente o nome de profissional ativo ou inativo pela API, com validação compartilhada, CSRF parametrizado e direito de escrita, preservando identidade e credenciais.
 - [x] Desativar profissionais pela API atomicamente com revogação de acesso e repetição segura.
 - [x] Reativar profissionais pela API atomicamente com senha temporária, conflito para ativo e serialização concorrente.
-- [x] Consultar individualmente e editar o nome de profissionais ativos e inativos pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e reconciliação de resultado incerto.
-- [x] Desativar profissionais pelo painel com confirmação de perda de acesso, envio único, sincronização de lista/editor e consulta após resultado incerto.
-- [x] Reativar profissionais pelo painel com confirmação, senha temporária, conflito seguro, limpeza de entrada, coordenação e reconciliação do estado.
+- [x] Consultar individualmente e editar o nome de profissionais ativos e inativos em modal pelo painel, com direitos compartilhados, coordenação de operações, cancelamento e reconciliação de resultado incerto.
+- [x] Desativar profissionais dentro da modal de edição pelo painel com confirmação de perda de acesso, envio único, sincronização de lista/editor e consulta após resultado incerto.
+- [x] Reativar profissionais dentro da modal de edição pelo painel com confirmação, senha temporária, conflito seguro, limpeza de entrada, coordenação e reconciliação do estado.
 - [x] Oferecer cadastro em modal reutilizável aberta pelo botão `+` à direita do título de Profissionais, com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [ ] Associar explicitamente serviços oferecidos por cada profissional.
@@ -337,8 +338,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Ativar e desativar serviço pela API com estado explícito idempotente, tenant, CSRF e direito de escrita.
 - [x] Listar serviços no painel com paginação, preço BRL exato, estados de consulta e somente leitura.
 - [x] Cadastrar serviço em modal reutilizável aberta pelo botão `+` à direita do título de Serviços, com preço decimal convertido exatamente em centavos, limites visíveis de nome, preço e duração, duração padrão, erros por campo e bloqueio de envio simultâneo e modo somente leitura.
-- [x] Consultar e editar serviço no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento e reconciliação que preserva o rascunho e sincroniza o registro persistido na lista.
-- [x] Ativar e desativar serviço no painel com confirmação, coordenação dos envios e consulta após resultado ambíguo, atualizando lista e editor aberto.
+- [x] Consultar e editar serviço em modal no painel com PATCH parcial, duração vazia como 30 minutos, cancelamento e reconciliação que preserva o rascunho e sincroniza o registro persistido na lista.
+- [x] Ativar e desativar serviço dentro da modal de edição no painel com confirmação, coordenação dos envios e consulta após resultado ambíguo, atualizando lista e editor aberto.
 - [x] Validar nome obrigatório normalizado com até 120 pontos de código, sem caractere NUL, e preço de 0 a 9.999.999 centavos no backend; nomes repetidos e serviços gratuitos são permitidos.
 - [x] Validar duração de 1 a 1.440 minutos inteiros no backend e usar 30 minutos quando omitida ou nula no cadastro.
 - [ ] Manter preço e duração iguais para todos os profissionais associados.

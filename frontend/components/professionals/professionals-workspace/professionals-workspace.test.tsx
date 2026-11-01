@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -251,6 +252,14 @@ test("envia apenas nome alterado uma vez e sincroniza lista com o registro persi
     { name: "Beatriz" },
     expect.any(AbortSignal),
   );
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeDisabled();
+  fireEvent(
+    screen.getByRole("dialog", { name: "Editar profissional" }),
+    new Event("cancel", { cancelable: true }),
+  );
+  expect(
+    screen.getByRole("dialog", { name: "Editar profissional" }),
+  ).toBeVisible();
   expect(
     screen.getByRole("button", { name: "Atualizar lista" }),
   ).toBeDisabled();
@@ -505,4 +514,33 @@ test("devolve foco após cancelar edição com resultado incerto", async () => {
   await screen.findByText("Não foi possível confirmar a alteração");
   fireEvent.click(screen.getByRole("button", { name: "Cancelar edição" }));
   expect(screen.getByRole("button", { name: "Editar Ana Lima" })).toHaveFocus();
+});
+
+test("o lápis abre edição em modal e as ações de estado usam o cadastro consultado", async () => {
+  vi.mocked(listProfessionals).mockResolvedValue(
+    page([{ ...professional, active: true }]),
+  );
+  vi.mocked(getProfessional).mockResolvedValue(recordResult(professional));
+  render(<ProfessionalsWorkspace />);
+  const list = await screen.findByRole("list", {
+    name: "Profissionais cadastrados",
+  });
+  expect(
+    within(list).queryByRole("button", { name: /Desativar|Reativar/ }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    within(list).getByRole("button", { name: "Editar Ana Lima" }),
+  );
+  const modal = screen.getByRole("dialog", { name: "Editar profissional" });
+  await waitFor(() =>
+    expect(
+      within(modal).getByRole("button", { name: "Reativar Ana Lima" }),
+    ).toBeEnabled(),
+  );
+  expect(
+    within(modal).getByRole("heading", { name: "Editar profissional" }),
+  ).toHaveFocus();
+  expect(
+    within(modal).queryByRole("button", { name: "Desativar Ana Lima" }),
+  ).not.toBeInTheDocument();
 });

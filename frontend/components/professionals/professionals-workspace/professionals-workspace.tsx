@@ -48,6 +48,7 @@ function ProfessionalsRequest() {
     useState<ProfessionalStateAction | null>(null);
   const [editorVersion, setEditorVersion] = useState(0);
   const statusOrigin = useRef<HTMLButtonElement | null>(null);
+  const editorContent = useRef<HTMLDivElement>(null);
   const restoreStatusFocus = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
@@ -84,13 +85,13 @@ function ProfessionalsRequest() {
     );
   }, []);
   useEffect(() => {
-    if (!stateAction && restoreStatusFocus.current) {
+    if (!stateAction && restoreStatusFocus.current && pendingOperations === 0) {
       restoreStatusFocus.current = false;
       if (statusOrigin.current?.isConnected && !statusOrigin.current.disabled)
         statusOrigin.current.focus();
-      else list.current?.focus();
+      else editorContent.current?.focus();
     }
-  }, [stateAction, reconciling]);
+  }, [stateAction, reconciling, pendingOperations]);
   useEffect(() => {
     if (!selected && restoreEditorFocus.current) {
       restoreEditorFocus.current = false;
@@ -148,6 +149,7 @@ function ProfessionalsRequest() {
     setVersion((value) => value + 1);
   }
   function closeEditor() {
+    if (pendingOperations > 0 || stateAction) return;
     restoreEditorFocus.current = true;
     setSelected(null);
     setReconciling(false);
@@ -215,76 +217,77 @@ function ProfessionalsRequest() {
           </Feedback>
         ) : null}
         {selected ? (
-          <EditProfessionalPanel
+          <Modal
             key={selected}
-            professionalId={selected}
-            canWrite={canWrite && !stateAction}
-            blocked={busy || !!stateAction}
-            reloadVersion={editorVersion}
-            onRecordConfirmed={acceptRecord}
+            open
+            title="Editar profissional"
             onClose={closeEditor}
-            onReadOnly={onReadOnly}
-            onUnauthorized={onUnauthorized}
-            onBusyChange={trackOperation}
-            onReconciliationChange={setReconciling}
-          />
-        ) : null}
-        {stateAction?.kind === "deactivation" ? (
-          <ProfessionalDeactivationPanel
-            key={`deactivation:${stateAction.record.id}`}
-            record={stateAction.record}
-            canWrite={canWrite}
-            onBusyChange={trackOperation}
-            onReconciliationChange={setReconciling}
-            onReadOnly={onReadOnly}
-            onUnauthorized={onUnauthorized}
-            onRecordConfirmed={confirmStateRecord}
-            onClose={closeStateAction}
-          />
-        ) : null}
-        {stateAction?.kind === "reactivation" ? (
-          <ProfessionalReactivationPanel
-            key={`reactivation:${stateAction.record.id}`}
-            record={stateAction.record}
-            canWrite={canWrite}
-            onBusyChange={trackOperation}
-            onReconciliationChange={setReconciling}
-            onReadOnly={onReadOnly}
-            onUnauthorized={onUnauthorized}
-            onRecordConfirmed={confirmStateRecord}
-            onClose={closeStateAction}
-          />
+            closeDisabled={pendingOperations > 0 || !!stateAction}
+            fallbackFocusRef={list}
+          >
+            <div ref={editorContent} tabIndex={-1}>
+              <EditProfessionalPanel
+                embedded
+                professionalId={selected}
+                canWrite={canWrite && !stateAction}
+                blocked={busy || !!stateAction}
+                reloadVersion={editorVersion}
+                onRecordConfirmed={acceptRecord}
+                onClose={closeEditor}
+                onReadOnly={onReadOnly}
+                onUnauthorized={onUnauthorized}
+                onBusyChange={trackOperation}
+                onReconciliationChange={setReconciling}
+                renderActions={(record, disabled) => (
+                  <>
+                    <Button
+                      ref={statusOrigin}
+                      disabled={disabled || !!stateAction}
+                      aria-label={`${record.active ? "Desativar" : "Reativar"} ${record.name}`}
+                      onClick={() =>
+                        setStateAction({
+                          kind: record.active ? "deactivation" : "reactivation",
+                          record,
+                        })
+                      }
+                    >
+                      {record.active ? "Desativar" : "Reativar"}
+                    </Button>
+                    {stateAction?.kind === "deactivation" ? (
+                      <ProfessionalDeactivationPanel
+                        key={`deactivation:${stateAction.record.id}`}
+                        record={stateAction.record}
+                        canWrite={canWrite}
+                        onBusyChange={trackOperation}
+                        onReconciliationChange={setReconciling}
+                        onReadOnly={onReadOnly}
+                        onUnauthorized={onUnauthorized}
+                        onRecordConfirmed={confirmStateRecord}
+                        onClose={closeStateAction}
+                      />
+                    ) : null}
+                    {stateAction?.kind === "reactivation" ? (
+                      <ProfessionalReactivationPanel
+                        key={`reactivation:${stateAction.record.id}`}
+                        record={stateAction.record}
+                        canWrite={canWrite}
+                        onBusyChange={trackOperation}
+                        onReconciliationChange={setReconciling}
+                        onReadOnly={onReadOnly}
+                        onUnauthorized={onUnauthorized}
+                        onRecordConfirmed={confirmStateRecord}
+                        onClose={closeStateAction}
+                      />
+                    ) : null}
+                  </>
+                )}
+              />
+            </div>
+          </Modal>
         ) : null}
         <ProfessionalsListPanel
           view={view}
           busy={busy || !!stateAction}
-          renderActions={(record) =>
-            record.active ? (
-              <Button
-                key="deactivation"
-                disabled={!canWrite || !!stateAction}
-                aria-label={`Desativar ${record.name}`}
-                onClick={(event) => {
-                  statusOrigin.current = event.currentTarget;
-                  setStateAction({ kind: "deactivation", record });
-                }}
-              >
-                Desativar
-              </Button>
-            ) : (
-              <Button
-                key="reactivation"
-                disabled={!canWrite || !!stateAction}
-                aria-label={`Reativar ${record.name}`}
-                onClick={(event) => {
-                  statusOrigin.current = event.currentTarget;
-                  setStateAction({ kind: "reactivation", record });
-                }}
-              >
-                Reativar
-              </Button>
-            )
-          }
           listRef={list}
           onRefresh={refresh}
           onPageChange={(next) => {

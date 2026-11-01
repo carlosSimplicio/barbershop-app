@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Button, Feedback, TextField } from "@/components/ui";
 import {
   getProfessional,
@@ -29,6 +35,8 @@ type Props = {
   onBusyChange: (busy: boolean) => void;
   onReconciliationChange: (needed: boolean) => void;
   reloadVersion?: number;
+  embedded?: boolean;
+  renderActions?: (record: Professional, disabled: boolean) => ReactNode;
 };
 type Load = "loading" | "ready" | "error" | "missing";
 type Notice = {
@@ -48,6 +56,8 @@ export function EditProfessionalPanel({
   onBusyChange,
   onReconciliationChange,
   reloadVersion = 0,
+  embedded = false,
+  renderActions,
 }: Props) {
   const [record, setRecord] = useState<Professional | null>(null);
   const [name, setName] = useState("");
@@ -69,13 +79,13 @@ export function EditProfessionalPanel({
   useEffect(() => {
     if (load === "ready" && focusInitial.current) {
       focusInitial.current = false;
-      panel.current?.focus();
+      if (!embedded) panel.current?.focus();
     }
     if (!submitting && focusError.current) {
       focusError.current = false;
       field.current?.focus();
     }
-  }, [load, submitting, error]);
+  }, [load, submitting, error, embedded]);
   useEffect(() => {
     const controller = new AbortController();
     let counted = true;
@@ -260,9 +270,9 @@ export function EditProfessionalPanel({
       ref={panel}
       tabIndex={-1}
       aria-label="Editar profissional"
-      className={formStyles.panel}
+      className={embedded ? formStyles.embedded : formStyles.panel}
     >
-      <h2>Editar profissional</h2>
+      {!embedded ? <h2>Editar profissional</h2> : null}
       {load === "loading" ? (
         <p role="status">Carregando profissional…</p>
       ) : null}
@@ -312,6 +322,8 @@ export function EditProfessionalPanel({
           </Button>
         </form>
       ) : null}
+      {/* Keep state confirmations dismissible if a later editor read fails. */}
+      {record ? renderActions?.(record, disabled) : null}
       <div className={styles.actions}>
         <Button
           disabled={submitting || load === "loading" || (blocked && !uncertain)}

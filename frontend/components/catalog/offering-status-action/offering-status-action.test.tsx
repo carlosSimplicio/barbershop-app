@@ -37,6 +37,37 @@ beforeEach(() => {
   vi.mocked(getOffering).mockReset();
   vi.mocked(setOfferingStatus).mockReset();
 });
+
+test("recurso ausente resolve a reconciliação e permite sair da modal sem repetir a escrita", async () => {
+  vi.mocked(setOfferingStatus).mockRejectedValue(new Error("response lost"));
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "error",
+    status: 404,
+    error: { code: "not_found", message: "raw", request_id: "test" },
+  });
+  const onReconciliationChange = vi.fn();
+  render(
+    <OfferingStatusAction
+      {...props()}
+      onReconciliationChange={onReconciliationChange}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmar desativação" }),
+  );
+  await screen.findByText("Não foi possível confirmar a alteração de estado");
+  expect(onReconciliationChange).toHaveBeenLastCalledWith(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Consultar estado do serviço" }),
+  );
+  await screen.findByText("Serviço não encontrado");
+  expect(onReconciliationChange).toHaveBeenLastCalledWith(false);
+  expect(
+    screen.queryByRole("button", { name: "Consultar estado do serviço" }),
+  ).not.toBeInTheDocument();
+  expect(setOfferingStatus).toHaveBeenCalledOnce();
+});
 test("confirma o serviço e cancelar não grava", () => {
   render(<OfferingStatusAction {...props()} />);
   fireEvent.click(screen.getByRole("button", { name: "Desativar Corte" }));

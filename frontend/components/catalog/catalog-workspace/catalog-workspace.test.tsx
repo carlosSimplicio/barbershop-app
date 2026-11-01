@@ -391,70 +391,130 @@ test("estado confirmado atualiza lista e editor aberto, bloqueando ações enqua
   );
 });
 
-test("mantém bloqueio global até concluir todas as consultas de estado pendentes", async () => {
+test("mantém modal e edição bloqueadas até conferir resultado incerto da mudança de estado", async () => {
   vi.mocked(listOfferings).mockResolvedValue(page());
   vi.mocked(setOfferingStatus).mockRejectedValue(new Error("network"));
-  let first!: (value: Awaited<ReturnType<typeof getOffering>>) => void;
-  let second!: (value: Awaited<ReturnType<typeof getOffering>>) => void;
+  let finish!: (value: Awaited<ReturnType<typeof getOffering>>) => void;
+  const inactive = { ...records[0], active: false };
   vi.mocked(getOffering)
+    .mockResolvedValueOnce({ state: "success", status: 200, data: records[0] })
     .mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          first = resolve;
+          finish = resolve;
         }),
     )
-    .mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          second = resolve;
-        }),
-    );
+    .mockResolvedValue({ state: "success", status: 200, data: inactive });
   render(<CatalogWorkspace />);
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Corte" }));
+  const modal = screen.getByRole("dialog", { name: "Editar serviço" });
   fireEvent.click(
-    await screen.findByRole("button", { name: "Desativar Corte" }),
+    await within(modal).findByRole("button", { name: "Desativar Corte" }),
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Confirmar desativação" }),
+    within(modal).getByRole("button", { name: "Confirmar desativação" }),
   );
   await screen.findByText("Não foi possível confirmar a alteração de estado");
-  fireEvent.click(screen.getByRole("button", { name: "Ativar Barba" }));
-  fireEvent.click(screen.getByRole("button", { name: "Confirmar ativação" }));
-  await waitFor(() =>
-    expect(
-      screen.getAllByText("Não foi possível confirmar a alteração de estado"),
-    ).toHaveLength(2),
-  );
-  const consult = screen.getAllByRole("button", {
-    name: "Consultar estado do serviço",
-  });
-  fireEvent.click(consult[0]);
-  fireEvent.click(consult[1]);
-  expect(getOffering).toHaveBeenCalledTimes(2);
-  await act(async () =>
-    first({
-      state: "success",
-      status: 200,
-      data: { ...records[0], active: false },
-    }),
-  );
   expect(
-    screen.getByRole("button", { name: "Adicionar serviço" }),
+    within(modal).getByRole("button", { name: "Fechar modal" }),
   ).toBeDisabled();
+  expect(
+    within(modal).getByRole("button", { name: "Cancelar edição" }),
+  ).toBeDisabled();
+  expect(
+    within(modal).getByRole("button", { name: "Salvar alterações" }),
+  ).toBeDisabled();
+  fireEvent(modal, new Event("cancel", { cancelable: true }));
+  expect(modal).toBeVisible();
+  fireEvent.click(
+    within(modal).getByRole("button", { name: "Consultar estado do serviço" }),
+  );
   expect(
     screen.getByRole("button", { name: "Atualizar lista" }),
   ).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
   await act(async () =>
-    second({
-      state: "success",
-      status: 200,
-      data: { ...records[1], active: true },
-    }),
+    finish({ state: "success", status: 200, data: inactive }),
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Adicionar serviço" }),
+      within(modal).getByRole("button", { name: "Salvar alterações" }),
     ).toBeEnabled(),
   );
-  expect(screen.getByRole("button", { name: "Atualizar lista" })).toBeEnabled();
+  expect(
+    within(modal).getByRole("button", { name: "Fechar modal" }),
+  ).toBeEnabled();
+  expect(setOfferingStatus).toHaveBeenCalledOnce();
+  expect(getOffering).toHaveBeenCalledTimes(3);
+});
+
+test("lista oferece somente o lápis e a modal usa o estado recém-consultado para ativação", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: { ...records[0], active: false },
+  });
+  render(<CatalogWorkspace />);
+  const list = await screen.findByRole("list", {
+    name: "Serviços cadastrados",
+  });
+  expect(
+    within(list).queryByRole("button", { name: /Ativar|Desativar/ }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(within(list).getByRole("button", { name: "Editar Corte" }));
+  const modal = screen.getByRole("dialog", { name: "Editar serviço" });
+  expect(
+    await within(modal).findByRole("button", { name: "Ativar Corte" }),
+  ).toBeEnabled();
+  expect(
+    within(modal).getByRole("heading", { name: "Editar serviço" }),
+  ).toHaveFocus();
+  expect(
+    within(modal).queryByRole("button", { name: "Desativar Corte" }),
+  ).not.toBeInTheDocument();
+});
+
+test("salvamento do serviço bloqueia fechar e mudar estado até a resposta", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  vi.mocked(getOffering).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: records[0],
+  });
+  let finish!: (value: Awaited<ReturnType<typeof updateOffering>>) => void;
+  vi.mocked(updateOffering).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<CatalogWorkspace />);
+  const origin = await screen.findByRole("button", { name: "Editar Corte" });
+  origin.focus();
+  fireEvent.click(origin);
+  const modal = screen.getByRole("dialog", { name: "Editar serviço" });
+  fireEvent.change(await within(modal).findByLabelText("Preço"), {
+    target: { value: "2,00" },
+  });
+  fireEvent.click(
+    within(modal).getByRole("button", { name: "Salvar alterações" }),
+  );
+  expect(
+    within(modal).getByRole("button", { name: "Fechar modal" }),
+  ).toBeDisabled();
+  expect(
+    within(modal).getByRole("button", { name: "Desativar Corte" }),
+  ).toBeDisabled();
+  fireEvent(modal, new Event("cancel", { cancelable: true }));
+  expect(modal).toBeVisible();
+  await act(async () =>
+    finish({
+      state: "success",
+      status: 200,
+      data: { ...records[0], price_cents: 200 },
+    }),
+  );
+  fireEvent.click(within(modal).getByRole("button", { name: "Fechar modal" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(origin).toHaveFocus();
 });

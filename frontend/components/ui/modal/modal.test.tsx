@@ -97,6 +97,17 @@ test("bloqueia Escape e fechar durante envio", () => {
   origin.focus();
   fireEvent.click(origin);
   expect(screen.getByRole("button", { name: "Fechar modal" })).toBeDisabled();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    expect(
+      fireEvent.keyDown(
+        attempt === 0 ? screen.getByRole("dialog") : document.body,
+        {
+          key: "Escape",
+          cancelable: true,
+        },
+      ),
+    ).toBe(false);
+  }
   fireEvent(
     screen.getByRole("dialog"),
     new Event("cancel", { cancelable: true }),
@@ -104,6 +115,9 @@ test("bloqueia Escape e fechar durante envio", () => {
   expect(screen.getByRole("dialog")).toBeVisible();
   view.unmount();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(
+    fireEvent.keyDown(document.body, { key: "Escape", cancelable: true }),
+  ).toBe(true);
 });
 
 test("devolve foco ao destino alternativo se a origem estiver desabilitada ao fechar", () => {

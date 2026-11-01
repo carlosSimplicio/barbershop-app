@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Button, Feedback } from "@/components/ui";
 import { classifyOfferingOperation } from "@/lib/catalog/offering-operation-result";
 import {
@@ -29,6 +35,9 @@ export type EditOfferingProps = {
   onUnauthorized: () => void;
   onBusyChange?: (busy: boolean) => void;
   reloadVersion?: number;
+  embedded?: boolean;
+  blocked?: boolean;
+  renderActions?: (record: Offering, disabled: boolean) => ReactNode;
 };
 type Load = "loading" | "ready" | "error" | "missing" | "unauthorized";
 type Notice = {
@@ -46,6 +55,9 @@ export function EditOfferingPanel({
   onUnauthorized,
   onBusyChange,
   reloadVersion = 0,
+  embedded = false,
+  blocked = false,
+  renderActions,
 }: EditOfferingProps) {
   const [record, setRecord] = useState<Offering | null>(null);
   const [values, setValues] = useState(emptyOfferingValues);
@@ -67,13 +79,13 @@ export function EditOfferingPanel({
   useEffect(() => {
     if (load === "ready" && focusOnLoad.current) {
       focusOnLoad.current = false;
-      panel.current?.focus();
+      if (!embedded) panel.current?.focus();
     }
     if (!submitting && load === "ready" && pendingErrorFocus.current) {
       pendingErrorFocus.current = false;
       focusOfferingError(form.current, errors);
     }
-  }, [load, errors, submitting]);
+  }, [load, errors, submitting, embedded]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -235,9 +247,9 @@ export function EditOfferingPanel({
       ref={panel}
       tabIndex={-1}
       aria-label="Editar serviço"
-      className={formStyles.panel}
+      className={embedded ? formStyles.embedded : formStyles.panel}
     >
-      <h2>Editar serviço</h2>
+      {!embedded ? <h2>Editar serviço</h2> : null}
       {load === "loading" ? <p role="status">Carregando serviço…</p> : null}
       {load === "error" ? (
         <Feedback variant="error" title="Não foi possível consultar o serviço">
@@ -277,11 +289,16 @@ export function EditOfferingPanel({
           </Button>
         </form>
       ) : null}
+      {/* Keep state confirmations dismissible if a later editor read fails. */}
+      {record ? renderActions?.(record, disabled) : null}
       <div className={styles.actions}>
-        <Button onClick={reload} disabled={submitting || load === "loading"}>
+        <Button
+          onClick={reload}
+          disabled={blocked || submitting || load === "loading"}
+        >
           Recarregar serviço
         </Button>
-        <Button onClick={onClose} disabled={submitting}>
+        <Button onClick={onClose} disabled={blocked || submitting}>
           Cancelar edição
         </Button>
       </div>

@@ -58,10 +58,15 @@ beforeEach(() => {
       can_write: true,
     },
   });
+  vi.mocked(getProfessional).mockResolvedValue(result(false));
 });
 test("oferece reativação somente para inativo e permite cancelar limpando a senha", async () => {
   render(<ProfessionalsWorkspace />);
-  fireEvent.click(await screen.findByRole("button", { name: "Reativar Ana" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Ana" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Reativar Ana" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
   fireEvent.change(screen.getByLabelText("Senha temporária para reativação"), {
     target: { value: "senha-temporaria" },
   });
@@ -89,7 +94,11 @@ function failure(status: number, code: string) {
 }
 async function openPanel() {
   const rendered = render(<ProfessionalsWorkspace />);
-  fireEvent.click(await screen.findByRole("button", { name: "Reativar Ana" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Ana" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Reativar Ana" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
   return rendered;
 }
 function enterPassword(value = "senha-temporaria") {
@@ -135,6 +144,7 @@ test("valida senha sem comparação com a anterior e confirma somente após resp
   expect(
     screen.getByRole("button", { name: "Atualizar lista" }),
   ).toBeDisabled();
+  vi.mocked(getProfessional).mockResolvedValue(result(true));
   await act(async () => finish(result(true)));
   expect(screen.getByText("Profissional reativado")).toBeInTheDocument();
   expect(
@@ -153,7 +163,9 @@ test.each([true, false])(
   "reconcilia resultado incerto com active=%s sem afirmar senha aplicada",
   async (active) => {
     vi.mocked(reactivateProfessional).mockRejectedValue(new Error("network"));
-    vi.mocked(getProfessional).mockResolvedValue(result(active));
+    vi.mocked(getProfessional)
+      .mockResolvedValueOnce(result(false))
+      .mockResolvedValue(result(active));
     await openPanel();
     enterPassword();
     confirm();
@@ -190,10 +202,7 @@ test.each([true, false])(
       screen.queryByText("Profissional reativado"),
     ).not.toBeInTheDocument();
     expect(reactivateProfessional).toHaveBeenCalledOnce();
-    expect(getProfessional).toHaveBeenCalledExactlyOnceWith(
-      "ana-id",
-      expect.any(AbortSignal),
-    );
+    await waitFor(() => expect(getProfessional).toHaveBeenCalledTimes(3));
   },
 );
 
@@ -201,7 +210,9 @@ test("conflito não confirma credencial e exige consulta sem repetir a reativaç
   vi.mocked(reactivateProfessional).mockResolvedValue(
     failure(409, "professional_already_active"),
   );
-  vi.mocked(getProfessional).mockResolvedValue(result(true));
+  vi.mocked(getProfessional)
+    .mockResolvedValueOnce(result(false))
+    .mockResolvedValue(result(true));
   await openPanel();
   enterPassword();
   confirm();
@@ -237,6 +248,7 @@ test("sincroniza lista e editor aberto preservando nome editado", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Reativar Ana" }));
   enterPassword();
   confirm();
+  await screen.findByText("Profissional reativado");
   await screen.findByText("Estado: Ativo");
   expect(screen.getByLabelText("Nome do profissional")).toHaveValue("Rascunho");
   expect(screen.getByRole("list")).not.toHaveTextContent("Rascunho");
@@ -248,6 +260,7 @@ test("mantém senha só na memória enquanto consulta falha e limpa ao reconcili
     failure(503, "internal_error"),
   );
   vi.mocked(getProfessional)
+    .mockResolvedValueOnce(result(false))
     .mockRejectedValueOnce(new Error("offline"))
     .mockResolvedValue(result(false));
   await openPanel();
@@ -305,7 +318,7 @@ test("401 limpa conteúdo protegido sem outra consulta de sessão", async () => 
   expect(
     screen.queryByLabelText("Senha temporária para reativação"),
   ).not.toBeInTheDocument();
-  expect(getProfessional).not.toHaveBeenCalled();
+  expect(getProfessional).toHaveBeenCalledOnce();
   expect(listProfessionals).toHaveBeenCalledOnce();
 });
 
@@ -364,7 +377,9 @@ test("descarta contexto do conflito anterior antes de nova tentativa incerta", a
     .mockRejectedValueOnce(new Error("network"));
   vi.mocked(getProfessional)
     .mockResolvedValueOnce(result(false))
-    .mockResolvedValueOnce(result(true));
+    .mockResolvedValueOnce(result(false))
+    .mockResolvedValueOnce(result(false))
+    .mockResolvedValue(result(true));
   await openPanel();
   enterPassword();
   confirm();
