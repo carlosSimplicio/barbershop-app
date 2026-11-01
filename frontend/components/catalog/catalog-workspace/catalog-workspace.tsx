@@ -134,7 +134,6 @@ function CatalogRequest() {
           fallbackFocusRef={catalog}
         >
           <CreateOfferingForm
-            embedded
             canWrite={canWrite}
             onBusyChange={trackOperation}
             onCreated={() => {
@@ -162,7 +161,6 @@ function CatalogRequest() {
             fallbackFocusRef={catalog}
           >
             <EditOfferingPanel
-              embedded
               offeringId={selected}
               canWrite={canWrite}
               blocked={writing}

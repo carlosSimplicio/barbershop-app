@@ -26,14 +26,12 @@ export function CreateOfferingForm({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  embedded = false,
 }: {
   canWrite: boolean;
   onCreated: () => void;
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange?: (busy: boolean) => void;
-  embedded?: boolean;
 }) {
   const [values, setValues] = useState<OfferingValues>(emptyOfferingValues);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -115,11 +113,7 @@ export function CreateOfferingForm({
     setFeedback(null);
   }
   return (
-    <section
-      aria-label="Cadastrar serviço"
-      className={embedded ? styles.embedded : styles.panel}
-    >
-      {!embedded ? <h2>Cadastrar serviço</h2> : null}
+    <section aria-label="Cadastrar serviço" className={styles.panel}>
       {feedback ? (
         <Feedback variant={feedback.variant} title={feedback.title}>
           {feedback.message}

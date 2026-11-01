@@ -33,7 +33,6 @@ type Props = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange: (busy: boolean) => void;
-  embedded?: boolean;
   renderActions?: (
     record: Professional,
     disabled: boolean,
@@ -56,7 +55,6 @@ export function EditProfessionalPanel({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  embedded = false,
   renderActions,
 }: Props) {
   const [record, setRecord] = useState<Professional | null>(null);
@@ -67,9 +65,7 @@ export function EditProfessionalPanel({
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<Notice | null>(null);
   const field = useRef<HTMLInputElement>(null);
-  const panel = useRef<HTMLElement>(null);
   const focusError = useRef(false);
-  const focusInitial = useRef(true);
   function applyRecord(confirmed: Professional, preserveDraft = true) {
     setName((current) =>
       preserveDraft && record && current.trim() !== record.name
@@ -80,15 +76,11 @@ export function EditProfessionalPanel({
     onRecordConfirmed(confirmed);
   }
   useEffect(() => {
-    if (load === "ready" && focusInitial.current) {
-      focusInitial.current = false;
-      if (!embedded) panel.current?.focus();
-    }
     if (!submitting && focusError.current) {
       focusError.current = false;
       field.current?.focus();
     }
-  }, [load, submitting, error, embedded]);
+  }, [load, submitting, error]);
   useEffect(() => {
     const controller = new AbortController();
     let counted = true;
@@ -238,13 +230,7 @@ export function EditProfessionalPanel({
     </ModalActions>
   );
   return (
-    <section
-      ref={panel}
-      tabIndex={-1}
-      aria-label="Editar profissional"
-      className={embedded ? formStyles.embedded : formStyles.panel}
-    >
-      {!embedded ? <h2>Editar profissional</h2> : null}
+    <section aria-label="Editar profissional" className={formStyles.panel}>
       {record ? (
         renderActions ? (
           renderActions(record, disabled, applyRecord)

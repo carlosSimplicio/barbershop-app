@@ -34,7 +34,6 @@ export type EditOfferingProps = {
   onReadOnly: () => void;
   onUnauthorized: () => void;
   onBusyChange?: (busy: boolean) => void;
-  embedded?: boolean;
   blocked?: boolean;
   renderActions?: (
     record: Offering,
@@ -57,7 +56,6 @@ export function EditOfferingPanel({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  embedded = false,
   blocked = false,
   renderActions,
 }: EditOfferingProps) {
@@ -69,9 +67,7 @@ export function EditOfferingPanel({
   const [notice, setNotice] = useState<Notice | null>(null);
   const { submitting, begin, isPending } = useMutationRequest(onBusyChange);
   const pendingErrorFocus = useRef(false);
-  const focusOnLoad = useRef(true);
   const form = useRef<HTMLFormElement>(null);
-  const panel = useRef<HTMLElement>(null);
   function applyRecord(confirmed: Offering, preserveDraft = true) {
     setValues((current) =>
       preserveDraft && record
@@ -82,15 +78,11 @@ export function EditOfferingPanel({
     onRecordConfirmed(confirmed);
   }
   useEffect(() => {
-    if (load === "ready" && focusOnLoad.current) {
-      focusOnLoad.current = false;
-      if (!embedded) panel.current?.focus();
-    }
     if (!submitting && load === "ready" && pendingErrorFocus.current) {
       pendingErrorFocus.current = false;
       focusOfferingError(form.current, errors);
     }
-  }, [load, errors, submitting, embedded]);
+  }, [load, errors, submitting]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -218,13 +210,7 @@ export function EditOfferingPanel({
     </ModalActions>
   );
   return (
-    <section
-      ref={panel}
-      tabIndex={-1}
-      aria-label="Editar serviço"
-      className={embedded ? formStyles.embedded : formStyles.panel}
-    >
-      {!embedded ? <h2>Editar serviço</h2> : null}
+    <section aria-label="Editar serviço" className={formStyles.panel}>
       {record ? (
         renderActions ? (
           renderActions(record, disabled, applyRecord)

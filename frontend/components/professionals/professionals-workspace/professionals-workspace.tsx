@@ -135,7 +135,6 @@ function ProfessionalsRequest() {
           fallbackFocusRef={list}
         >
           <CreateProfessionalForm
-            embedded
             canWrite={canWrite && !confirming}
             onCreated={() => {
               setOffset(FIRST_PAGE_OFFSET);
@@ -163,7 +162,6 @@ function ProfessionalsRequest() {
             fallbackFocusRef={list}
           >
             <EditProfessionalPanel
-              embedded
               professionalId={selected}
               canWrite={canWrite && !confirming}
               blocked={busy || confirming}

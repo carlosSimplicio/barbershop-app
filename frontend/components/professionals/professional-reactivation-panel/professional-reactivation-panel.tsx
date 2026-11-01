@@ -195,7 +195,7 @@ export function ProfessionalReactivationPanel({
       <section
         aria-label="Reativar profissional"
         aria-busy={submitting}
-        className={formStyles.embedded}
+        className={formStyles.panel}
       >
         <p>Reativar “{record.name}”?</p>
         <p>

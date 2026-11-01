@@ -45,14 +45,12 @@ export function CreateProfessionalForm({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
-  embedded = false,
 }: {
   onCreated: () => void;
   canWrite?: boolean;
   onReadOnly?: () => void;
   onUnauthorized?: () => void;
   onBusyChange?: (busy: boolean) => void;
-  embedded?: boolean;
 }) {
   const [values, setValues] = useState<CreateProfessionalRequest>({
     name: "",
@@ -164,17 +162,7 @@ export function CreateProfessionalForm({
   }
 
   return (
-    <section
-      aria-label={embedded ? "Cadastrar profissional" : undefined}
-      aria-labelledby={embedded ? undefined : "create-professional-title"}
-      className={embedded ? styles.embedded : styles.panel}
-    >
-      {!embedded ? (
-        <div className={styles.heading}>
-          <h2 id="create-professional-title">Cadastrar profissional</h2>
-          <p>Crie o acesso inicial para quem trabalha no estabelecimento.</p>
-        </div>
-      ) : null}
+    <section aria-label="Cadastrar profissional" className={styles.panel}>
       {feedback ? (
         <Feedback title={feedback.title} variant={feedback.variant}>
           {feedback.message}

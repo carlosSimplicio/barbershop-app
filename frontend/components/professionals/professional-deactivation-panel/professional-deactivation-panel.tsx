@@ -110,10 +110,7 @@ export function ProfessionalDeactivationPanel({
       fallbackFocusRef={fallbackFocusRef}
       closeDisabled={submitting}
     >
-      <section
-        aria-label="Desativar profissional"
-        className={formStyles.embedded}
-      >
+      <section aria-label="Desativar profissional" className={formStyles.panel}>
         <p>Desativar “{record.name}”?</p>
         <p>
           As sessões serão encerradas e o profissional não poderá entrar. O
