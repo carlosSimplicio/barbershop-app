@@ -217,7 +217,11 @@ export function EditOfferingPanel({
           {submitting ? "Salvando…" : "Salvar"}
         </Button>
       ) : null}
-      <Button onClick={onClose} disabled={submitting || blocked}>
+      <Button
+        variant="secondary"
+        onClick={onClose}
+        disabled={submitting || blocked}
+      >
         Cancelar
       </Button>
     </ModalActions>

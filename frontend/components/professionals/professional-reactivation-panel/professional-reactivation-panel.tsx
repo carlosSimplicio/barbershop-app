@@ -171,6 +171,7 @@ export function ProfessionalReactivationPanel({
         </Button>
       ) : null}
       <Button
+        variant="secondary"
         disabled={submitting}
         onClick={() => {
           setPassword("");

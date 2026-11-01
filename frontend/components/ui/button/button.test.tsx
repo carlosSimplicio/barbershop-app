@@ -4,35 +4,46 @@ import { expect, test, vi } from "vitest";
 
 import { Button } from "./button";
 
-test("permite configurar conteúdo, ação, atributos nativos e ref", () => {
-  const handleClick = vi.fn();
-  const ref = createRef<HTMLButtonElement>();
+test.each(["primary", "secondary"] as const)(
+  "variante %s preserva conteúdo, ação, atributos nativos e ref",
+  (variant) => {
+    const handleClick = vi.fn();
+    const ref = createRef<HTMLButtonElement>();
 
-  render(
-    <Button data-context="cadastro" onClick={handleClick} ref={ref}>
-      Criar meu espaço
-    </Button>,
-  );
+    render(
+      <Button
+        variant={variant}
+        data-context="cadastro"
+        onClick={handleClick}
+        ref={ref}
+      >
+        Criar meu espaço
+      </Button>,
+    );
 
-  const button = screen.getByRole("button", { name: "Criar meu espaço" });
-  fireEvent.click(button);
+    const button = screen.getByRole("button", { name: "Criar meu espaço" });
+    fireEvent.click(button);
 
-  expect(handleClick).toHaveBeenCalledOnce();
-  expect(button).toHaveAttribute("data-context", "cadastro");
-  expect(button).toHaveAttribute("type", "button");
-  expect(ref.current).toBe(button);
-});
+    expect(handleClick).toHaveBeenCalledOnce();
+    expect(button).toHaveAttribute("data-context", "cadastro");
+    expect(button).toHaveAttribute("type", "button");
+    expect(ref.current).toBe(button);
+  },
+);
 
-test("não executa a ação quando está desabilitado", () => {
-  const handleClick = vi.fn();
+test.each(["primary", "secondary"] as const)(
+  "variante %s não executa a ação quando está desabilitada",
+  (variant) => {
+    const handleClick = vi.fn();
 
-  render(
-    <Button disabled onClick={handleClick}>
-      Salvar
-    </Button>,
-  );
+    render(
+      <Button variant={variant} disabled onClick={handleClick}>
+        Salvar
+      </Button>,
+    );
 
-  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
-  expect(handleClick).not.toHaveBeenCalled();
-});
+    expect(handleClick).not.toHaveBeenCalled();
+  },
+);

@@ -144,6 +144,15 @@ export function DesignSystemShowcase() {
               Criar meu espaço <ChevronIcon />
             </Button>
             <Button disabled>Indisponível</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setActionMessage("Ação cancelada.")}
+            >
+              Cancelar
+            </Button>
+            <Button variant="secondary" disabled>
+              Cancelar
+            </Button>
             <IconButton
               aria-label={
                 iconPressed ? "Desmarcar favorito" : "Marcar favorito"
@@ -168,6 +177,9 @@ export function DesignSystemShowcase() {
           </p>
           <p className={styles.instruction}>
             Use ponteiro e Tab para conferir hover, foco, clique e estado ativo.
+            Button usa a variante primary por padrão. Ações de cancelamento usam
+            a variante secondary, com fundo branco, texto escuro e borda,
+            inclusive no tema escuro, sem a sombra da ação principal.
           </p>
         </Showcase>
         <Showcase title="Links de ação">
@@ -470,7 +482,10 @@ export function DesignSystemShowcase() {
                   <Button onClick={() => setConfirmationOpen(false)}>
                     Confirmar
                   </Button>
-                  <Button onClick={() => setConfirmationOpen(false)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmationOpen(false)}
+                  >
                     Cancelar
                   </Button>
                 </ModalActions>

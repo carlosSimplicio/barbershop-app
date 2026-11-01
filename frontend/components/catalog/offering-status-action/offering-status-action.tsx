@@ -168,7 +168,11 @@ export function OfferingStatusAction({
               >
                 Confirmar
               </Button>
-              <Button disabled={submitting} onClick={closeConfirmation}>
+              <Button
+                variant="secondary"
+                disabled={submitting}
+                onClick={closeConfirmation}
+              >
                 Cancelar
               </Button>
             </ModalActions>

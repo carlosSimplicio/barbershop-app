@@ -10,6 +10,8 @@
 [data-theme="light"] {
   --color-primary: #2677a4;
   --color-primary-hover: #236b95;
+  --color-secondary: #ffffff;
+  --color-on-secondary: #17384d;
   --color-accent: #d7eef9;
   --color-ink: #17384d;
   --color-muted: #557184;

@@ -204,7 +204,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Usar apenas estado, efeitos e Context nativos do React; Context não funciona como cache genérico de API.
 - [x] Criar componentes e estilos próprios com CSS ou SCSS, sem Tailwind, shadcn/ui ou kit equivalente.
 - [x] Centralizar cores, tipografia, espaçamento, raios, sombras e temas claro e escuro em tokens visuais compartilhados.
-- [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado.
+- [x] Criar botões configuráveis com estados normal, hover, foco, pressionado e desabilitado; oferecer variante primária e secundária com fundo branco, texto escuro e borda para cancelamento, aplicada aos fluxos e à referência do design system.
 - [x] Criar primitivas e wrappers configuráveis de formulário com rótulo, ajuda, erro e estados acessíveis, incluindo `Textarea` e `TextareaField` para conteúdo multilinha e `FileField` para seleção de imagens.
 - [ ] Criar padrões compartilhados para tabelas.
 - [x] Criar `Modal` reutilizável no design system com `dialog` nativo, foco inicial e retorno ao acionador, teclado, fundo inerte, rolagem responsiva e fechamento bloqueável durante envios.

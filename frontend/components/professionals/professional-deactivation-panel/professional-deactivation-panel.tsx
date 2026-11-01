@@ -136,7 +136,7 @@ export function ProfessionalDeactivationPanel({
               {submitting ? "Aguarde…" : "Confirmar"}
             </Button>
           ) : null}
-          <Button disabled={submitting} onClick={onClose}>
+          <Button variant="secondary" disabled={submitting} onClick={onClose}>
             {finished || missing ? "Fechar" : "Cancelar"}
           </Button>
         </ModalActions>
