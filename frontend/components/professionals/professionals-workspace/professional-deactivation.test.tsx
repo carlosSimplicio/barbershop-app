@@ -100,7 +100,7 @@ test("envia uma única desativação e atualiza a lista sem excluir o cadastro",
     screen.getByRole("button", { name: "Atualizar lista" }),
   ).toBeDisabled();
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
   await act(async () => finish(result(false)));
   expect(screen.getByRole("list")).toHaveTextContent("Ana");
@@ -178,7 +178,7 @@ test("read_only bloqueia todas as escritas sem mostrar mensagem bruta", async ()
   );
   await screen.findByText("Modo somente leitura");
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Confirmar desativação" }),

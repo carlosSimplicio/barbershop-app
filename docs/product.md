@@ -120,6 +120,8 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 
 ### Administração do catálogo
 
+- Nos painéis de Serviços e Profissionais, o cadastro abre em modal pelo botão `+` no canto superior direito, alinhado ao título da seção. A ação fica indisponível sem direito de escrita confirmado. Fechar por `×` ou Escape preserva o rascunho apenas em memória; sair do fluxo ou trocar de identidade o descarta. Durante envio, o fechamento fica bloqueado. Após sucesso, a modal mantém a confirmação e a senha temporária do profissional é limpa. Se o resultado for incerto, fechar e reabrir não libera outro envio: a ação de conferir atualiza a lista e fecha a modal para inspeção; depois é necessário reabrir e confirmar que conferiu antes de preencher outro cadastro.
+
 - O proprietário pode cadastrar, listar, consultar, editar, ativar e desativar serviços do próprio estabelecimento pela API e em `/painel/servicos`. O cadastro cria serviço ativo; a associação a profissionais permanece explícita e será entregue no respectivo escopo.
 - A listagem paginada inclui ativos e inativos, nome, preço em BRL, duração e estado, com carregamento, vazio, erro e nova tentativa. Com acesso expirado, mantém a consulta e informa modo somente leitura, bloqueando alterações.
 - Os formulários de cadastro e edição apresentam antecipadamente nome obrigatório com até 120 caracteres, preço de R$ 0,00 a R$ 99.999,99 com até duas casas decimais e duração de 1 a 1.440 minutos. O cadastro valida campos por conveniência, usa 30 minutos quando a duração estiver vazia e impede envio simultâneo. Após confirmação, atualiza a lista; falha na recarga não desfaz o sucesso e resposta ambígua orienta conferir a lista antes de reenviar.

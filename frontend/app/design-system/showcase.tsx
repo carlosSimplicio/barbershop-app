@@ -11,6 +11,7 @@ import {
   FileField,
   Feedback,
   IconButton,
+  Modal,
   PasswordField,
   RecordList,
   SelectField,
@@ -43,6 +44,8 @@ export function DesignSystemShowcase() {
   );
   const [iconPressed, setIconPressed] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("(11) 99999-0000");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalBusy, setModalBusy] = useState(false);
 
   return (
     <main className={styles.page} data-theme={theme}>
@@ -77,6 +80,7 @@ export function DesignSystemShowcase() {
         <a href="#actions">Ações</a>
         <a href="#fields">Campos</a>
         <a href="#states">Estados</a>
+        <a href="#modals">Modais</a>
         <a href="#accessibility">Acessibilidade</a>
       </nav>
 
@@ -365,10 +369,56 @@ export function DesignSystemShowcase() {
         </Showcase>
       </section>
 
+      <section className={styles.section} id="modals">
+        <SectionHeading
+          description="Modal controlada e reutilizável, com título obrigatório, descrição opcional e conteúdo livre."
+          number="05"
+          title="Modais"
+        />
+        <Showcase title="Cadastro em modal">
+          <div className={styles.actionGrid}>
+            <strong>Exemplo de seção</strong>
+            <IconButton
+              aria-label="Adicionar registro"
+              aria-haspopup="dialog"
+              onClick={() => setModalOpen(true)}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </IconButton>
+          </div>
+          <p>
+            Use o botão + à direita do título da seção para abrir um cadastro. A
+            modal acompanha o tema claro ou escuro e permite rolagem em telas
+            estreitas.
+          </p>
+          <p>
+            O foco começa no título, Tab permanece na modal e o fundo fica
+            indisponível. Feche pelo × ou Escape; o foco volta ao acionador.
+            Cliques no fundo não fecham a modal. Durante um envio, bloqueie o
+            fechamento com closeDisabled. O conteúdo permanece montado ao
+            fechar; o fluxo consumidor controla o descarte de rascunhos.
+          </p>
+          <Modal
+            open={modalOpen}
+            title="Novo registro"
+            description="Exemplo com formulário e bloqueio durante envio."
+            closeDisabled={modalBusy}
+            onClose={() => setModalOpen(false)}
+          >
+            <TextField label="Nome do registro" />
+            <Button onClick={() => setModalBusy(!modalBusy)}>
+              {modalBusy ? "Concluir envio simulado" : "Simular envio"}
+            </Button>
+          </Modal>
+        </Showcase>
+      </section>
+
       <section className={styles.section} id="accessibility">
         <SectionHeading
           description="Regras mínimas incorporadas aos componentes compartilhados."
-          number="05"
+          number="06"
           title="Acessibilidade"
         />
         <div className={styles.ruleGrid}>

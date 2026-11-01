@@ -4,8 +4,23 @@
 }
 
 .intro {
-  max-width: 48rem;
   padding: var(--space-5) 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.titleRow h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  flex-shrink: 0;
 }
 
 .eyebrow {
@@ -22,6 +37,7 @@
 }
 
 .intro p {
+  max-width: 48rem;
   margin: 0;
   color: var(--color-muted);
   line-height: 1.6;

@@ -74,13 +74,18 @@ test("libera cadastro quando a consulta volta a responder com catálogo vazio e 
 
   render(<CatalogWorkspace />);
   await screen.findByText("Não foi possível consultar os serviços");
-  expect(screen.getByLabelText("Nome do serviço")).toBeDisabled();
-  expect(screen.getByLabelText("Preço")).toBeDisabled();
-  expect(screen.getByLabelText("Duração (minutos)")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Adicionar serviço" }),
+  ).toBeDisabled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
   await screen.findByText("Nenhum serviço cadastrado.");
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+  expect(
+    screen.getByRole("dialog", { name: "Cadastrar serviço" }),
+  ).toBeVisible();
   expect(screen.getByLabelText("Nome do serviço")).toBeEnabled();
   expect(screen.getByLabelText("Preço")).toBeEnabled();
   expect(screen.getByLabelText("Duração (minutos)")).toBeEnabled();
@@ -185,6 +190,7 @@ test("mantém criação confirmada quando a recarga da lista falha", async () =>
   });
   render(<CatalogWorkspace />);
   await screen.findByRole("list");
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
   fireEvent.change(screen.getByLabelText("Nome do serviço"), {
     target: { value: "Corte" },
   });
@@ -197,6 +203,92 @@ test("mantém criação confirmada quando a recarga da lista falha", async () =>
     await screen.findByText("Não foi possível consultar os serviços"),
   ).toBeVisible();
   expect(screen.getByText("Serviço cadastrado")).toBeVisible();
+});
+
+test("abre cadastro pelo cabeçalho, mantém rascunho e impede fechar durante envio", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  let finish!: (value: Awaited<ReturnType<typeof createOffering>>) => void;
+  vi.mocked(createOffering).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<CatalogWorkspace />);
+  await screen.findByRole("list");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  const action = screen.getByRole("button", { name: "Adicionar serviço" });
+  expect(action.closest("header")).toContainElement(
+    screen.getByRole("heading", { level: 1, name: "Serviços" }),
+  );
+  action.focus();
+  fireEvent.click(action);
+  fireEvent.change(screen.getByLabelText("Nome do serviço"), {
+    target: { value: "Corte" },
+  });
+  fireEvent.change(screen.getByLabelText("Preço"), {
+    target: { value: "1,00" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  expect(action).toHaveFocus();
+  fireEvent.click(action);
+  expect(screen.getByLabelText("Preço")).toHaveValue("1,00");
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  expect(screen.getByRole("button", { name: "Fechar modal" })).toBeDisabled();
+  fireEvent(
+    screen.getByRole("dialog"),
+    new Event("cancel", { cancelable: true }),
+  );
+  expect(screen.getByRole("dialog")).toBeVisible();
+  await act(async () =>
+    finish({ state: "success", status: 201, data: records[0] }),
+  );
+  expect(await screen.findByText("Serviço cadastrado")).toBeVisible();
+});
+
+test("fechar e reabrir não libera reenvio de cadastro incerto sem conferir a lista", async () => {
+  vi.mocked(listOfferings).mockResolvedValue(page());
+  vi.mocked(createOffering).mockRejectedValue(new Error("response lost"));
+  render(<CatalogWorkspace />);
+  await screen.findByRole("list");
+  const open = () =>
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+  open();
+  fireEvent.change(screen.getByLabelText("Nome do serviço"), {
+    target: { value: "Corte" },
+  });
+  fireEvent.change(screen.getByLabelText("Preço"), {
+    target: { value: "1,00" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar serviço" }));
+  await screen.findByText("Não foi possível confirmar o cadastro");
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  open();
+  expect(
+    screen.getByRole("button", { name: "Cadastrar serviço" }),
+  ).toBeDisabled();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Conferir lista antes de novo cadastro",
+    }),
+  );
+  await waitFor(() => expect(listOfferings).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Adicionar serviço" }),
+    ).toBeEnabled(),
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  open();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Conferi a lista e desejo preencher outro cadastro",
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Cadastrar serviço" }),
+  ).toBeEnabled();
+  expect(createOffering).toHaveBeenCalledOnce();
 });
 
 test("retorna foco à ação do registro ao cancelar edição", async () => {
@@ -279,7 +371,7 @@ test("estado confirmado atualiza lista e editor aberto, bloqueando ações enqua
     within(editor).getByRole("button", { name: "Salvar alterações" }),
   ).toBeDisabled();
   expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
+    screen.getByRole("button", { name: "Adicionar serviço" }),
   ).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Atualizar lista" }),
@@ -346,7 +438,7 @@ test("mantém bloqueio global até concluir todas as consultas de estado pendent
     }),
   );
   expect(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
+    screen.getByRole("button", { name: "Adicionar serviço" }),
   ).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Atualizar lista" }),
@@ -361,7 +453,7 @@ test("mantém bloqueio global até concluir todas as consultas de estado pendent
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Cadastrar serviço" }),
+      screen.getByRole("button", { name: "Adicionar serviço" }),
     ).toBeEnabled(),
   );
   expect(screen.getByRole("button", { name: "Atualizar lista" })).toBeEnabled();

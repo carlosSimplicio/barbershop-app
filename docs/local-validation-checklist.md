@@ -101,7 +101,8 @@ Pré-condição: A publicável e duas imagens válidas de conteúdos diferentes.
 
 Pré-condição: proprietário A autenticado com trial ativo. Mantenha-o neste perfil e use outro navegador/perfil para o fluxo do profissional.
 
-- [ ] Abrir `/painel/profissionais`: conferir lista vazia inicialmente, rótulos, dicas dos campos e controles de escrita liberados somente após confirmação de `can_write`.
+- [ ] Abrir `/painel/profissionais`: conferir lista vazia inicialmente e botão `+` liberado somente após confirmação de `can_write`. Os campos de cadastro devem aparecer apenas na modal.
+- [ ] Clicar em `+` no canto superior direito, alinhado ao título “Profissionais”: abrir a modal “Cadastrar profissional”, com foco no título. Preencher um rascunho, fechar por `×` e reabrir: preservar os campos somente em memória.
 - [ ] Tentar nome vazio, nome acima de 120 pontos de código, e-mail inválido e senha temporária fora da política: conferir erros sem criar cadastro parcial.
 - [ ] Cadastrar profissional A com nome contendo espaços nas extremidades, e-mail exclusivo e senha temporária válida: esperar `201`, nome normalizado na lista, estado ativo e senha limpa do formulário.
 - [ ] Conferir que a resposta contém apenas ID, nome, e-mail e estado ativo, sem senha, hash ou sessão. A senha temporária não deve ser recuperável pela interface.
@@ -139,7 +140,8 @@ Pré-condição: sessão do profissional A aberta em outro perfil e proprietári
 
 ## Fluxo 8 — Criar, editar, desativar e reativar serviços
 
-- [ ] Como proprietário A, abrir `/painel/servicos`: conferir estado vazio ou lista com nome, preço BRL, duração e estado. Conferir limites visíveis nos formulários.
+- [ ] Como proprietário A, abrir `/painel/servicos`: conferir estado vazio ou lista com nome, preço BRL, duração e estado. O cadastro deve estar inicialmente fechado; ao abrir a modal, conferir os limites visíveis dos campos.
+- [ ] Clicar em `+` no canto superior direito, alinhado ao título “Serviços”: abrir a modal “Cadastrar serviço”. Conferir teclado, foco no título e preservação do rascunho ao fechar e reabrir.
 - [ ] Cadastrar serviço gratuito com duração vazia: esperar `201`, estado ativo, preço `R$ 0,00` e duração de 30 minutos.
 - [ ] Cadastrar outro serviço com preço `35,90` e duração `17`: conferir `price_cents: 3590`, duração preservada e apresentação em BRL. Não exigir duração múltipla de 15.
 - [ ] Cadastrar nome repetido: permitir. Conferir normalização de espaços nas extremidades e limite de 120 pontos de código sem nome vazio ou caractere NUL.
@@ -198,7 +200,7 @@ Execute com A ainda em trial ativo. Restaure cada falha antes do próximo cenár
 - [ ] Simular falha na consulta de configurações ao entrar em `/painel`: mostrar erro e nova tentativa; não redirecionar ao login por indisponibilidade. Restaurar e seguir ao destino correto.
 - [ ] Interromper leitura de profissionais/serviços: mostrar erro e tentativa de recarga, com escritas bloqueadas enquanto `can_write` não estiver confirmado. Restaurar e conferir a liberação.
 - [ ] Confirmar cadastro de profissional/serviço e falhar somente a recarga posterior da lista: manter sucesso e senha temporária limpa; tentar novamente deve recuperar a leitura, sem repetir o cadastro.
-- [ ] Perder a resposta do cadastro: não anunciar sucesso nem reenviar automaticamente; orientar conferir a lista antes de outro cadastro.
+- [ ] Perder a resposta do cadastro de serviço/profissional: não anunciar sucesso nem reenviar automaticamente. Fechar e reabrir a modal não deve liberar novo envio. Usar “Conferir lista antes de novo cadastro”: fechar a modal e atualizar a lista para inspeção. Reabrir pelo `+` e confirmar que conferiu antes de liberar o formulário.
 - [ ] Perder resposta da edição de profissional/serviço: preservar rascunho, manter a lista com dados confirmados e exigir “Recarregar profissional”/“Recarregar serviço” antes de novo envio.
 - [ ] Em duas sessões do proprietário, editar preço no serviço em uma e duração na outra. Após reconciliação, campos não editados devem receber os valores persistidos atuais; novo PATCH não deve sobrescrever a mudança concorrente.
 - [ ] Perder resposta de desativação/reativação de profissional ou mudança de estado de serviço: exigir “Consultar estado” antes de liberar outra ação, sem repetir mutação ou afirmar sucesso apenas com base na intenção enviada.
@@ -258,6 +260,7 @@ COMMIT;
 
 - [ ] Percorrer com Tab e Shift+Tab home, cadastro, login, recuperação, configurações, profissionais, serviços, confirmações de ação e `/testes`: conferir rótulos, foco visível, ordem coerente e acionamento por teclado.
 - [ ] Conferir `aria-current` no link correto da navegação do painel; a entrada `/painel` não deve marcar Profissionais antecipadamente.
+- [ ] Nas duas modais, conferir Tab e Shift+Tab contidos, fundo sem interação, fechamento por `×`/Escape com retorno do foco e rolagem interna em telas baixas; durante envio, `×` e Escape não devem fechar. Clique no fundo não deve descartar o cadastro.
 - [ ] Conferir erros associados aos campos, mensagens de carregamento/vazio/erro/sucesso e foco devolvido após cancelamentos; estados desabilitados não devem permitir envio duplicado.
 - [ ] Repetir os fluxos visuais nos temas claro e escuro do sistema e em viewport estreito e desktop: sem campos cortados ou ações inacessíveis, com nomes/e-mails longos quebrando adequadamente.
 - [ ] Abrir `/design-system` em desenvolvimento: conferir componentes reais e estados usados no produto. Na verificação de build de produção do fluxo 14, a rota deve resultar em página não encontrada.

@@ -284,7 +284,7 @@ test("read_only bloqueia demais escritas sem anunciar sucesso", async () => {
   confirm();
   await screen.findByText("Modo somente leitura");
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "Confirmar reativação" }),

@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Button, Feedback, RecordList } from "@/components/ui";
+import {
+  Button,
+  Feedback,
+  IconButton,
+  Modal,
+  RecordList,
+} from "@/components/ui";
+import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
 import {
   DEFAULT_PAGE_SIZE,
   FIRST_PAGE_OFFSET,
@@ -35,6 +42,7 @@ export function CatalogWorkspace() {
 }
 
 function CatalogRequest() {
+  const [creating, setCreating] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
   const writing = pendingOperations > 0;
   const trackOperation = useCallback((busy: boolean) => {
@@ -98,152 +106,176 @@ function CatalogRequest() {
     );
   }, []);
   if (view.status === "unauthorized") return null;
+  const canWrite =
+    !writing && !readOnly && view.status === "success" && view.page.can_write;
   return (
-    <div className={styles.workspace}>
-      <CreateOfferingForm
-        canWrite={
-          !writing &&
-          !readOnly &&
-          view.status === "success" &&
-          view.page.can_write
-        }
-        onBusyChange={trackOperation}
-        onCreated={() => {
-          setOffset(FIRST_PAGE_OFFSET);
-          refresh();
-        }}
-        onReadOnly={() => setReadOnly(true)}
-        onUnauthorized={onUnauthorized}
-      />
-      {readOnly || (view.status === "success" && !view.page.can_write) ? (
-        <Feedback variant="warning" title="Modo somente leitura">
-          Você pode consultar os serviços. Alterações ficam disponíveis com
-          acesso ativo.
-        </Feedback>
-      ) : null}
-      {selected ? (
-        <EditOfferingPanel
-          key={selected}
-          offeringId={selected}
-          canWrite={
-            !writing &&
-            !readOnly &&
-            view.status === "success" &&
-            view.page.can_write
-          }
-          reloadVersion={editorVersion}
-          onBusyChange={trackOperation}
-          onRecordConfirmed={acceptRecord}
-          onClose={() => {
-            setSelected(null);
-            if (editOrigin.current?.isConnected) editOrigin.current.focus();
-            else catalog.current?.focus();
-          }}
-          onReadOnly={() => setReadOnly(true)}
-          onUnauthorized={onUnauthorized}
-        />
-      ) : null}
-      <section
-        ref={catalog}
-        tabIndex={-1}
-        aria-label="Catálogo de serviços"
-        aria-busy={view.status === "loading"}
-        className={styles.panel}
-      >
-        <h2>Serviços cadastrados</h2>
-        <Button
-          onClick={refresh}
-          disabled={writing || view.status === "loading"}
+    <OwnerPanelPage
+      title="Serviços"
+      description="Organize os serviços, preços e durações do estabelecimento."
+      actions={
+        <IconButton
+          aria-label="Adicionar serviço"
+          aria-haspopup="dialog"
+          disabled={!canWrite}
+          onClick={() => setCreating(true)}
         >
-          Atualizar lista
-        </Button>
-        {view.status === "loading" ? (
-          <p role="status" aria-live="polite">
-            Carregando serviços…
-          </p>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </IconButton>
+      }
+    >
+      <div className={styles.workspace}>
+        <Modal
+          open={creating}
+          title="Cadastrar serviço"
+          onClose={() => setCreating(false)}
+          closeDisabled={writing}
+          fallbackFocusRef={catalog}
+        >
+          <CreateOfferingForm
+            embedded
+            canWrite={canWrite}
+            onReviewList={() => setCreating(false)}
+            onBusyChange={trackOperation}
+            onCreated={() => {
+              setOffset(FIRST_PAGE_OFFSET);
+              refresh();
+            }}
+            onReadOnly={() => setReadOnly(true)}
+            onUnauthorized={onUnauthorized}
+          />
+        </Modal>
+        {readOnly || (view.status === "success" && !view.page.can_write) ? (
+          <Feedback variant="warning" title="Modo somente leitura">
+            Você pode consultar os serviços. Alterações ficam disponíveis com
+            acesso ativo.
+          </Feedback>
         ) : null}
-        {view.status === "error" ? (
-          <>
-            <Feedback
-              variant="error"
-              title="Não foi possível consultar os serviços"
-            >
-              Verifique sua conexão e tente novamente.
-            </Feedback>
-            <Button onClick={refresh}>Tentar novamente</Button>
-          </>
+        {selected ? (
+          <EditOfferingPanel
+            key={selected}
+            offeringId={selected}
+            canWrite={
+              !writing &&
+              !readOnly &&
+              view.status === "success" &&
+              view.page.can_write
+            }
+            reloadVersion={editorVersion}
+            onBusyChange={trackOperation}
+            onRecordConfirmed={acceptRecord}
+            onClose={() => {
+              setSelected(null);
+              if (editOrigin.current?.isConnected) editOrigin.current.focus();
+              else catalog.current?.focus();
+            }}
+            onReadOnly={() => setReadOnly(true)}
+            onUnauthorized={onUnauthorized}
+          />
         ) : null}
-        {view.status === "success" ? (
-          <>
-            <RecordList
-              items={view.page.items}
-              getKey={(item) => item.id}
-              label="Serviços cadastrados"
-              emptyMessage="Nenhum serviço cadastrado."
-              renderItem={(item) => (
-                <div className={styles.record}>
-                  <div className={styles.details}>
-                    <strong>{item.name}</strong>
-                    <span>{formatOfferingPrice(item.price_cents)}</span>
-                    <span>{item.duration_minutes} minutos</span>
-                  </div>
-                  <div className={styles.recordActions}>
-                    <span>{item.active ? "Ativo" : "Inativo"}</span>
-                    <Button
-                      disabled={writing || readOnly || !view.page.can_write}
-                      onClick={(event) => {
-                        editOrigin.current = event.currentTarget;
-                        setSelected(item.id);
-                      }}
-                      aria-label={`Editar ${item.name}`}
-                    >
-                      Editar
-                    </Button>
-                    <OfferingStatusAction
-                      record={item}
-                      canWrite={!writing && !readOnly && view.page.can_write}
-                      onBusyChange={trackOperation}
-                      onChanged={(record) => {
-                        acceptRecord(record);
-                        if (selected === record.id)
-                          setEditorVersion((value) => value + 1);
-                      }}
-                      onReadOnly={() => setReadOnly(true)}
-                      onUnauthorized={onUnauthorized}
-                    />
-                  </div>
-                </div>
-              )}
-            />
-            <nav
-              aria-label="Paginação de serviços"
-              className={styles.pagination}
-            >
-              <Button
-                disabled={writing || offset === FIRST_PAGE_OFFSET}
-                onClick={() =>
-                  changePage(
-                    Math.max(FIRST_PAGE_OFFSET, offset - DEFAULT_PAGE_SIZE),
-                  )
-                }
+        <section
+          ref={catalog}
+          tabIndex={-1}
+          aria-label="Catálogo de serviços"
+          aria-busy={view.status === "loading"}
+          className={styles.panel}
+        >
+          <h2>Serviços cadastrados</h2>
+          <Button
+            onClick={refresh}
+            disabled={writing || view.status === "loading"}
+          >
+            Atualizar lista
+          </Button>
+          {view.status === "loading" ? (
+            <p role="status" aria-live="polite">
+              Carregando serviços…
+            </p>
+          ) : null}
+          {view.status === "error" ? (
+            <>
+              <Feedback
+                variant="error"
+                title="Não foi possível consultar os serviços"
               >
-                Anterior
-              </Button>
-              <span>Página {Math.floor(offset / DEFAULT_PAGE_SIZE) + 1}</span>
-              <Button
-                disabled={
-                  writing ||
-                  !view.page.has_more ||
-                  offset > MAX_PAGE_OFFSET - DEFAULT_PAGE_SIZE
-                }
-                onClick={() => changePage(offset + DEFAULT_PAGE_SIZE)}
+                Verifique sua conexão e tente novamente.
+              </Feedback>
+              <Button onClick={refresh}>Tentar novamente</Button>
+            </>
+          ) : null}
+          {view.status === "success" ? (
+            <>
+              <RecordList
+                items={view.page.items}
+                getKey={(item) => item.id}
+                label="Serviços cadastrados"
+                emptyMessage="Nenhum serviço cadastrado."
+                renderItem={(item) => (
+                  <div className={styles.record}>
+                    <div className={styles.details}>
+                      <strong>{item.name}</strong>
+                      <span>{formatOfferingPrice(item.price_cents)}</span>
+                      <span>{item.duration_minutes} minutos</span>
+                    </div>
+                    <div className={styles.recordActions}>
+                      <span>{item.active ? "Ativo" : "Inativo"}</span>
+                      <Button
+                        disabled={writing || readOnly || !view.page.can_write}
+                        onClick={(event) => {
+                          editOrigin.current = event.currentTarget;
+                          setSelected(item.id);
+                        }}
+                        aria-label={`Editar ${item.name}`}
+                      >
+                        Editar
+                      </Button>
+                      <OfferingStatusAction
+                        record={item}
+                        canWrite={!writing && !readOnly && view.page.can_write}
+                        onBusyChange={trackOperation}
+                        onChanged={(record) => {
+                          acceptRecord(record);
+                          if (selected === record.id)
+                            setEditorVersion((value) => value + 1);
+                        }}
+                        onReadOnly={() => setReadOnly(true)}
+                        onUnauthorized={onUnauthorized}
+                      />
+                    </div>
+                  </div>
+                )}
+              />
+              <nav
+                aria-label="Paginação de serviços"
+                className={styles.pagination}
               >
-                Próxima
-              </Button>
-            </nav>
-          </>
-        ) : null}
-      </section>
-    </div>
+                <Button
+                  disabled={writing || offset === FIRST_PAGE_OFFSET}
+                  onClick={() =>
+                    changePage(
+                      Math.max(FIRST_PAGE_OFFSET, offset - DEFAULT_PAGE_SIZE),
+                    )
+                  }
+                >
+                  Anterior
+                </Button>
+                <span>Página {Math.floor(offset / DEFAULT_PAGE_SIZE) + 1}</span>
+                <Button
+                  disabled={
+                    writing ||
+                    !view.page.has_more ||
+                    offset > MAX_PAGE_OFFSET - DEFAULT_PAGE_SIZE
+                  }
+                  onClick={() => changePage(offset + DEFAULT_PAGE_SIZE)}
+                >
+                  Próxima
+                </Button>
+              </nav>
+            </>
+          ) : null}
+        </section>
+      </div>
+    </OwnerPanelPage>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, IconButton, Modal } from "@/components/ui";
+import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
 import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
   listProfessionals,
@@ -35,6 +36,7 @@ export function ProfessionalsWorkspace() {
   );
 }
 function ProfessionalsRequest() {
+  const [creating, setCreating] = useState(false);
   const unauthorized = useRef(false);
   const [view, setView] = useState<ProfessionalsView>({ status: "loading" });
   const [offset, setOffset] = useState(FIRST_PAGE_OFFSET);
@@ -168,105 +170,133 @@ function ProfessionalsRequest() {
   const canWrite =
     !busy && !readOnly && view.status === "success" && view.page.can_write;
   return (
-    <div className={styles.workspace}>
-      <CreateProfessionalForm
-        canWrite={canWrite && !stateAction}
-        onCreated={() => {
-          setOffset(FIRST_PAGE_OFFSET);
-          refresh();
-        }}
-        onBusyChange={trackOperation}
-        onReadOnly={onReadOnly}
-        onUnauthorized={onUnauthorized}
-      />
-      {readOnly || (view.status === "success" && !view.page.can_write) ? (
-        <Feedback variant="warning" title="Modo somente leitura">
-          Você pode consultar os profissionais. Alterações ficam disponíveis com
-          acesso ativo.
-        </Feedback>
-      ) : null}
-      {selected ? (
-        <EditProfessionalPanel
-          key={selected}
-          professionalId={selected}
-          canWrite={canWrite && !stateAction}
-          blocked={busy || !!stateAction}
-          reloadVersion={editorVersion}
-          onRecordConfirmed={acceptRecord}
-          onClose={closeEditor}
-          onReadOnly={onReadOnly}
-          onUnauthorized={onUnauthorized}
-          onBusyChange={trackOperation}
-          onReconciliationChange={setReconciling}
+    <OwnerPanelPage
+      title="Profissionais"
+      description="Cadastre e acompanhe os profissionais que atendem no estabelecimento."
+      actions={
+        <IconButton
+          aria-label="Adicionar profissional"
+          aria-haspopup="dialog"
+          disabled={!canWrite || !!stateAction}
+          onClick={() => setCreating(true)}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </IconButton>
+      }
+    >
+      <div className={styles.workspace}>
+        <Modal
+          open={creating}
+          title="Cadastrar profissional"
+          description="Crie o acesso inicial para quem trabalha no estabelecimento."
+          onClose={() => setCreating(false)}
+          closeDisabled={busy}
+          fallbackFocusRef={list}
+        >
+          <CreateProfessionalForm
+            embedded
+            onReviewList={() => setCreating(false)}
+            canWrite={canWrite && !stateAction}
+            onCreated={() => {
+              setOffset(FIRST_PAGE_OFFSET);
+              refresh();
+            }}
+            onBusyChange={trackOperation}
+            onReadOnly={onReadOnly}
+            onUnauthorized={onUnauthorized}
+          />
+        </Modal>
+        {readOnly || (view.status === "success" && !view.page.can_write) ? (
+          <Feedback variant="warning" title="Modo somente leitura">
+            Você pode consultar os profissionais. Alterações ficam disponíveis
+            com acesso ativo.
+          </Feedback>
+        ) : null}
+        {selected ? (
+          <EditProfessionalPanel
+            key={selected}
+            professionalId={selected}
+            canWrite={canWrite && !stateAction}
+            blocked={busy || !!stateAction}
+            reloadVersion={editorVersion}
+            onRecordConfirmed={acceptRecord}
+            onClose={closeEditor}
+            onReadOnly={onReadOnly}
+            onUnauthorized={onUnauthorized}
+            onBusyChange={trackOperation}
+            onReconciliationChange={setReconciling}
+          />
+        ) : null}
+        {stateAction?.kind === "deactivation" ? (
+          <ProfessionalDeactivationPanel
+            key={`deactivation:${stateAction.record.id}`}
+            record={stateAction.record}
+            canWrite={canWrite}
+            onBusyChange={trackOperation}
+            onReconciliationChange={setReconciling}
+            onReadOnly={onReadOnly}
+            onUnauthorized={onUnauthorized}
+            onRecordConfirmed={confirmStateRecord}
+            onClose={closeStateAction}
+          />
+        ) : null}
+        {stateAction?.kind === "reactivation" ? (
+          <ProfessionalReactivationPanel
+            key={`reactivation:${stateAction.record.id}`}
+            record={stateAction.record}
+            canWrite={canWrite}
+            onBusyChange={trackOperation}
+            onReconciliationChange={setReconciling}
+            onReadOnly={onReadOnly}
+            onUnauthorized={onUnauthorized}
+            onRecordConfirmed={confirmStateRecord}
+            onClose={closeStateAction}
+          />
+        ) : null}
+        <ProfessionalsListPanel
+          view={view}
+          busy={busy || !!stateAction}
+          renderActions={(record) =>
+            record.active ? (
+              <Button
+                key="deactivation"
+                disabled={!canWrite || !!stateAction}
+                aria-label={`Desativar ${record.name}`}
+                onClick={(event) => {
+                  statusOrigin.current = event.currentTarget;
+                  setStateAction({ kind: "deactivation", record });
+                }}
+              >
+                Desativar
+              </Button>
+            ) : (
+              <Button
+                key="reactivation"
+                disabled={!canWrite || !!stateAction}
+                aria-label={`Reativar ${record.name}`}
+                onClick={(event) => {
+                  statusOrigin.current = event.currentTarget;
+                  setStateAction({ kind: "reactivation", record });
+                }}
+              >
+                Reativar
+              </Button>
+            )
+          }
+          listRef={list}
+          onRefresh={refresh}
+          onPageChange={(next) => {
+            setView({ status: "loading" });
+            setOffset(next);
+          }}
+          onEdit={(record, button) => {
+            origin.current = button;
+            setSelected(record.id);
+          }}
         />
-      ) : null}
-      {stateAction?.kind === "deactivation" ? (
-        <ProfessionalDeactivationPanel
-          key={`deactivation:${stateAction.record.id}`}
-          record={stateAction.record}
-          canWrite={canWrite}
-          onBusyChange={trackOperation}
-          onReconciliationChange={setReconciling}
-          onReadOnly={onReadOnly}
-          onUnauthorized={onUnauthorized}
-          onRecordConfirmed={confirmStateRecord}
-          onClose={closeStateAction}
-        />
-      ) : null}
-      {stateAction?.kind === "reactivation" ? (
-        <ProfessionalReactivationPanel
-          key={`reactivation:${stateAction.record.id}`}
-          record={stateAction.record}
-          canWrite={canWrite}
-          onBusyChange={trackOperation}
-          onReconciliationChange={setReconciling}
-          onReadOnly={onReadOnly}
-          onUnauthorized={onUnauthorized}
-          onRecordConfirmed={confirmStateRecord}
-          onClose={closeStateAction}
-        />
-      ) : null}
-      <ProfessionalsListPanel
-        view={view}
-        busy={busy || !!stateAction}
-        renderActions={(record) =>
-          record.active ? (
-            <Button
-              key="deactivation"
-              disabled={!canWrite || !!stateAction}
-              aria-label={`Desativar ${record.name}`}
-              onClick={(event) => {
-                statusOrigin.current = event.currentTarget;
-                setStateAction({ kind: "deactivation", record });
-              }}
-            >
-              Desativar
-            </Button>
-          ) : (
-            <Button
-              key="reactivation"
-              disabled={!canWrite || !!stateAction}
-              aria-label={`Reativar ${record.name}`}
-              onClick={(event) => {
-                statusOrigin.current = event.currentTarget;
-                setStateAction({ kind: "reactivation", record });
-              }}
-            >
-              Reativar
-            </Button>
-          )
-        }
-        listRef={list}
-        onRefresh={refresh}
-        onPageChange={(next) => {
-          setView({ status: "loading" });
-          setOffset(next);
-        }}
-        onEdit={(record, button) => {
-          origin.current = button;
-          setSelected(record.id);
-        }}
-      />
-    </div>
+      </div>
+    </OwnerPanelPage>
   );
 }

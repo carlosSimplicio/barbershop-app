@@ -38,12 +38,16 @@ export function CreateProfessionalForm({
   onReadOnly,
   onUnauthorized,
   onBusyChange,
+  embedded = false,
+  onReviewList,
 }: {
   onCreated: () => void;
   canWrite?: boolean;
   onReadOnly?: () => void;
   onUnauthorized?: () => void;
   onBusyChange?: (busy: boolean) => void;
+  embedded?: boolean;
+  onReviewList?: () => void;
 }) {
   const [values, setValues] = useState<CreateProfessionalRequest>({
     name: "",
@@ -180,13 +184,16 @@ export function CreateProfessionalForm({
 
   return (
     <section
-      aria-labelledby="create-professional-title"
-      className={styles.panel}
+      aria-label={embedded ? "Cadastrar profissional" : undefined}
+      aria-labelledby={embedded ? undefined : "create-professional-title"}
+      className={embedded ? styles.embedded : styles.panel}
     >
-      <div className={styles.heading}>
-        <h2 id="create-professional-title">Cadastrar profissional</h2>
-        <p>Crie o acesso inicial para quem trabalha no estabelecimento.</p>
-      </div>
+      {!embedded ? (
+        <div className={styles.heading}>
+          <h2 id="create-professional-title">Cadastrar profissional</h2>
+          <p>Crie o acesso inicial para quem trabalha no estabelecimento.</p>
+        </div>
+      ) : null}
       {feedback ? (
         <Feedback title={feedback.title} variant={feedback.variant}>
           {feedback.message}
@@ -198,6 +205,7 @@ export function CreateProfessionalForm({
           onClick={() => {
             onCreated();
             setVerification(true);
+            onReviewList?.();
           }}
         >
           Conferir lista antes de novo cadastro

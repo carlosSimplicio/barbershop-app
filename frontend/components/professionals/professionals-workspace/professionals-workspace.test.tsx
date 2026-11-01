@@ -75,6 +75,15 @@ test("atualiza a lista após criar o profissional", async () => {
 
   render(<ProfessionalsWorkspace />);
   await screen.findByText("Nenhum profissional cadastrado.");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  const action = screen.getByRole("button", { name: "Adicionar profissional" });
+  expect(action.closest("header")).toContainElement(
+    screen.getByRole("heading", { name: "Profissionais", level: 1 }),
+  );
+  fireEvent.click(action);
+  expect(
+    screen.getByRole("dialog", { name: "Cadastrar profissional" }),
+  ).toBeVisible();
   fireEvent.change(screen.getByLabelText("Nome"), {
     target: { value: "Ana Lima" },
   });
@@ -90,6 +99,50 @@ test("atualiza a lista após criar o profissional", async () => {
 
   expect(await screen.findByText("Ana Lima")).toBeInTheDocument();
   await waitFor(() => expect(listProfessionals).toHaveBeenCalledTimes(2));
+  expect(screen.getByLabelText("Senha temporária")).toHaveValue("");
+});
+
+test("preserva recusa de reenvio incerto ao fechar e reabrir a modal do profissional", async () => {
+  vi.mocked(listProfessionals).mockResolvedValue(page([]));
+  vi.mocked(createProfessional).mockRejectedValue(new Error("response lost"));
+  render(<ProfessionalsWorkspace />);
+  await screen.findByText("Nenhum profissional cadastrado.");
+  fillCreation();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Cadastrar profissional" }),
+  );
+  await screen.findByText("Não foi possível confirmar o cadastro");
+  fireEvent.click(screen.getByRole("button", { name: "Fechar modal" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Adicionar profissional" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Cadastrar profissional" }),
+  ).toBeDisabled();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Conferir lista antes de novo cadastro",
+    }),
+  );
+  await waitFor(() => expect(listProfessionals).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Adicionar profissional" }),
+    ).toBeEnabled(),
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Adicionar profissional" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Conferi a lista e desejo preencher outro cadastro",
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Cadastrar profissional" }),
+  ).toBeEnabled();
+  expect(createProfessional).toHaveBeenCalledOnce();
 });
 
 function page(
@@ -121,11 +174,11 @@ test("bloqueia cadastro enquanto direitos estão pendentes ou recusados", async 
   });
   render(<ProfessionalsWorkspace />);
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
   await screen.findByText("Nenhum profissional cadastrado.");
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
 });
 
@@ -202,7 +255,7 @@ test("envia apenas nome alterado uma vez e sincroniza lista com o registro persi
     screen.getByRole("button", { name: "Atualizar lista" }),
   ).toBeDisabled();
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
   await act(async () =>
     finish(recordResult({ ...professional, name: "Beatriz" })),
@@ -249,7 +302,7 @@ test("propaga read_only da edição a todas as escritas mantendo leitura", async
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
   await screen.findByText("Modo somente leitura");
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
   expect(screen.getByLabelText("Nome do profissional")).toBeDisabled();
   expect(screen.getByRole("list")).toHaveTextContent("Ana Lima");
@@ -316,10 +369,13 @@ test("mantém sucesso do cadastro se a atualização da lista falhar", async () 
   expect(screen.getByText("Profissional cadastrado")).toBeInTheDocument();
   expect(screen.getByLabelText("Senha temporária")).toHaveValue("");
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
 });
 function fillCreation() {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Adicionar profissional" }),
+  );
   fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ana" } });
   fireEvent.change(screen.getByLabelText("E-mail"), {
     target: { value: "ana@example.test" },
@@ -341,7 +397,7 @@ test("read_only recebido no cadastro bloqueia também editor", async () => {
     screen.getByRole("button", { name: "Salvar alterações" }),
   ).toBeDisabled();
   expect(
-    screen.getByRole("button", { name: "Cadastrar profissional" }),
+    screen.getByRole("button", { name: "Adicionar profissional" }),
   ).toBeDisabled();
 });
 

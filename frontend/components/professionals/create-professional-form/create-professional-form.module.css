@@ -13,6 +13,12 @@
   gap: var(--space-2);
 }
 
+.embedded {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
 .heading h2,
 .heading p {
   margin: 0;

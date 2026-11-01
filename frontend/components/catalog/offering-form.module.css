@@ -10,6 +10,11 @@
 .panel h2 {
   margin: 0;
 }
+.embedded {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
 .form {
   display: grid;
   max-width: 38rem;
