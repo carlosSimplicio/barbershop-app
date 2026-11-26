@@ -650,6 +650,38 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}/weekly-schedule:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getProfessionalWeeklySchedule
+      summary: Consulta a jornada semanal do profissional
+      description: O proprietário consulta profissionais ativos e inativos do próprio estabelecimento. O profissional consulta somente a própria jornada após a troca obrigatória de senha, quando exigida. A leitura permanece disponível em modo somente leitura.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+      responses:
+        "200":
+          description: Jornada no fuso do estabelecimento, com os períodos ordenados por dia e início e o direito de escrita atual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalWeeklyScheduleResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals/{professional_id}/deactivation:
     parameters:
       - name: professional_id
@@ -934,6 +966,40 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    ProfessionalWorkPeriod:
+      type: object
+      additionalProperties: false
+      required: [weekday, start_time, end_time]
+      properties:
+        weekday:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: Dia ISO da semana, de segunda-feira a domingo.
+        start_time:
+          type: string
+          pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Início local no formato HH:mm.
+        end_time:
+          type: string
+          pattern: '^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
+          description: Fim local no formato HH:mm. Use 24:00 para a meia-noite ao fim do dia.
+    ProfessionalWeeklyScheduleResponse:
+      type: object
+      required: [professional_id, time_zone, can_write, periods]
+      properties:
+        professional_id:
+          type: string
+          format: uuid
+        time_zone:
+          type: string
+          description: Identificador IANA do fuso do estabelecimento.
+        can_write:
+          type: boolean
+        periods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfessionalWorkPeriod"
     ProfessionalServiceRequest:
       type: object
       additionalProperties: false

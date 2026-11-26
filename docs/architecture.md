@@ -83,6 +83,11 @@
 
 - A migration `00009_services.sql` persiste `services` com UUID, tenant, nome, centavos inteiros, duração em minutos, estado e datas. A FK preserva o estabelecimento e a chave composta permite referências futuras no mesmo tenant. Nome não é único, limites de produto pertencem ao Go e serviços não iniciam o marcador de dados operacionais.
 
+## Jornada semanal
+
+- O slice `internal/professionals/schedule` entrega `GET /professionals/{professional_id}/weekly-schedule`. A sessão fornece o tenant. Proprietários consultam profissionais ativos ou inativos, e profissionais consultam apenas a própria jornada após a troca obrigatória de senha. O alvo precisa ter perfil e papel profissional no tenant. UUID inválido recebe `400`. Alvo inexistente ou fora do escopo recebe `404`.
+- A consulta devolve `professional_id`, fuso IANA do estabelecimento, `periods` em ordem de dia ISO e início com horários locais em `HH:mm` (ou array vazio), e `can_write`. O direito central traduz somente `ErrReadOnly` para uma leitura bem-sucedida com `can_write: false`. Falhas de infraestrutura permanecem erros da API.
+
 ## Serviços por profissional
 
 - O slice `internal/professionals/offerings` tem store, caso de uso e handler próprios, compostos explicitamente na API e na integração sem ampliar o store legado de profissionais/credenciais. `GET /professionals/{professional_id}/services` autoriza somente proprietário e valida profissional, perfil, papel e tenant, com `404` uniforme para alvos ausentes, externos ou de proprietário; UUID inválido recebe `400`.

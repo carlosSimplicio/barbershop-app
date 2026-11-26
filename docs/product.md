@@ -107,6 +107,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - A associação determina elegibilidade, mas não redefine preço ou duração do serviço. A eventual comissão específica continua configurada separadamente para o par profissional-serviço.
 - Preço e duração pertencem ao serviço e são iguais para todos os profissionais associados; não crie sobrescritas por profissional no MVP.
 - Cada profissional possui jornada semanal recorrente própria, editável por ele ou pelo proprietário.
+- A API já permite ao proprietário consultar a jornada de profissionais ativos e inativos do próprio estabelecimento. O profissional consulta somente a própria jornada depois da troca obrigatória de senha, quando exigida. A consulta permanece disponível após a expiração do trial e informa o fuso do estabelecimento e o direito de escrita.
 - Permita vários períodos no mesmo dia, como `08:00–12:00` e `13:00–18:00`, sem sobreposição entre períodos.
 - Proprietário e profissional podem criar bloqueios pontuais para compromissos, folgas ou outras indisponibilidades.
 - Serviço exige nome não vazio após remover espaços nas extremidades, com até 120 pontos de código Unicode e sem caractere nulo (`U+0000`); nomes repetidos são permitidos no mesmo estabelecimento.

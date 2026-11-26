@@ -11,6 +11,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getProfessionalScheduleTimeZone = `-- name: GetProfessionalScheduleTimeZone :one
+SELECT e.time_zone
+FROM professionals AS p
+JOIN users AS u ON (u.id, u.establishment_id) = (p.user_id, p.establishment_id)
+JOIN establishments AS e ON e.id = p.establishment_id
+WHERE p.establishment_id = $1 AND p.user_id = $2 AND u.role = 'professional'
+`
+
+type GetProfessionalScheduleTimeZoneParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	UserID          pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetProfessionalScheduleTimeZone(ctx context.Context, arg GetProfessionalScheduleTimeZoneParams) (string, error) {
+	row := q.db.QueryRow(ctx, getProfessionalScheduleTimeZone, arg.EstablishmentID, arg.UserID)
+	var time_zone string
+	err := row.Scan(&time_zone)
+	return time_zone, err
+}
+
 const listProfessionalWorkPeriods = `-- name: ListProfessionalWorkPeriods :many
 SELECT weekday, start_minute, end_minute
 FROM professional_work_periods
