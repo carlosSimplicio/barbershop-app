@@ -30,6 +30,7 @@ import (
 	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
 	"barbershop-app/backend/internal/professionals/offerings"
+	"barbershop-app/backend/internal/professionals/schedule"
 
 	"github.com/gin-gonic/gin"
 )
@@ -128,6 +129,8 @@ func run() error {
 	catalogService := catalog.NewService(catalogStore, writeEntitlements)
 	professionalServicesStore := offerings.NewPostgresStore(pool)
 	professionalServices := offerings.NewService(professionalServicesStore, writeEntitlements)
+	professionalScheduleStore := schedule.NewPostgresStore(pool)
+	professionalSchedule := schedule.NewService(professionalScheduleStore, writeEntitlements)
 	professionalStore := professionals.NewPostgresStore(pool)
 	professionalService := professionals.NewService(professionalStore, passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
@@ -140,6 +143,7 @@ func run() error {
 		professionals.NewHandler(professionalService),
 		catalog.NewHandler(catalogService),
 		offerings.NewHandler(professionalServices),
+		schedule.NewHandler(professionalSchedule),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())

@@ -323,6 +323,18 @@ Restaurar frontend de desenvolvimento após essa conferência:
 docker compose -f compose.yaml -f compose.dev.yaml up -d --build --no-deps frontend
 ```
 
+## Fluxo 15 — Jornada semanal do profissional
+
+Use um profissional fictício do estabelecimento A com a troca obrigatória de senha ainda pendente e dois perfis de navegador para alternar entre proprietário e profissional. Faça as gravações com o trial ativo e repita a consulta após a expiração simulada no fluxo 12.
+
+- [ ] Em Profissionais, abra a edição, altere o nome sem salvar e abra “Jornada”. Confira os sete dias, o fuso de A e a jornada vazia no primeiro acesso. Adicione dois períodos no mesmo dia, incluindo um com fim às `24:00`, e outro a partir de `00:00` no dia seguinte. Salve e confirme “Jornada salva”. Ao fechar com Escape ou “Cancelar”, confira retorno do foco a “Jornada” e o nome ainda em rascunho, sem alteração na lista. Enquanto A não possuir dados operacionais, confirme que o fuso permanece editável em Configurações após salvar a jornada.
+- [ ] Como profissional com troca obrigatória pendente, confira a ausência do link em `/testes` e acesso direto a `/painel/minha-jornada` encaminhado a `/testes`. Repita o acesso direto como visitante (destino `/login`) e proprietário (destino `/painel`). Em nenhum desses acessos a página deve consultar a jornada.
+- [ ] Depois de trocar a senha, acesse “Minha jornada” por `/testes`, confira os períodos salvos pelo proprietário e altere um horário. Salve, reabra a jornada como proprietário e confirme a alteração. Remova todos os períodos no outro perfil, salve e confira que a semana vazia persiste nos dois acessos.
+- [ ] Tente salvar períodos sobrepostos e um intervalo passando da meia-noite. Confira a mensagem de validação e a preservação da semana gravada. Atrase um salvamento para conferir que não há envio duplicado e que a modal bloqueia seu fechamento e as demais operações do painel até a resposta.
+- [ ] Repita os dois acessos em telas estreitas (320 px e 375 px). Percorra início, fim, adicionar, remover e salvar por teclado e toque. Confira alvos de toque, foco visível, campos e ações sem rolagem horizontal e os botões “Salvar” e “Cancelar” alinhados na modal.
+- [ ] Com mais de 20 períodos em um dia, altere um horário, troque de página e volte para confirmar o rascunho. Adicione um período e confira o foco em “Início”, inclusive se for criada uma nova página. Tente salvar com um campo inválido em outra página e confira a abertura da página e o foco no campo. Corrija e salve a semana inteira. Após confirmar, confira que “Salvar” fica desabilitado até uma nova edição.
+- [ ] Após a expiração simulada do trial, confira a consulta nos dois acessos e o salvamento desabilitado. O proprietário também deve conseguir abrir a jornada de um profissional inativo.
+
 ## Registro da rodada
 
 | Campo                          | Preencher |

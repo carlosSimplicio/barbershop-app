@@ -43,7 +43,7 @@ WHERE p.user_id = u.id AND p.establishment_id = u.establishment_id
 RETURNING p.user_id, p.name, u.email, u.active;
 
 -- name: LockProfessionalUser :one
-SELECT u.id
+SELECT u.active, u.credential_version
 FROM users AS u
 WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
 FOR UPDATE OF u;

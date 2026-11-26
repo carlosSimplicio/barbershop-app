@@ -107,6 +107,14 @@ type ProfessionalService struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ProfessionalWorkPeriod struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	ProfessionalID  pgtype.UUID `json:"professional_id"`
+	Weekday         int16       `json:"weekday"`
+	StartMinute     int16       `json:"start_minute"`
+	EndMinute       int16       `json:"end_minute"`
+}
+
 type Service struct {
 	ID              pgtype.UUID        `json:"id"`
 	EstablishmentID pgtype.UUID        `json:"establishment_id"`

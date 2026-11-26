@@ -1,0 +1,21 @@
+.page {
+  display: grid;
+  width: min(100%, 46rem);
+  align-content: start;
+  gap: var(--space-5);
+  margin-inline: auto;
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 2.8rem);
+}

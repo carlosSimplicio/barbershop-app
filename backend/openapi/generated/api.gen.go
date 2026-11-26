@@ -305,6 +305,33 @@ type ProfessionalServicesResponse struct {
 	Professional ProfessionalServicesIdentity  `json:"professional"`
 }
 
+// ProfessionalWeeklyScheduleRequest defines model for ProfessionalWeeklyScheduleRequest.
+type ProfessionalWeeklyScheduleRequest struct {
+	Periods []ProfessionalWorkPeriod `json:"periods"`
+}
+
+// ProfessionalWeeklyScheduleResponse defines model for ProfessionalWeeklyScheduleResponse.
+type ProfessionalWeeklyScheduleResponse struct {
+	CanWrite       bool                     `json:"can_write"`
+	Periods        []ProfessionalWorkPeriod `json:"periods"`
+	ProfessionalId openapi_types.UUID       `json:"professional_id"`
+
+	// TimeZone Identificador IANA do fuso do estabelecimento.
+	TimeZone string `json:"time_zone"`
+}
+
+// ProfessionalWorkPeriod defines model for ProfessionalWorkPeriod.
+type ProfessionalWorkPeriod struct {
+	// EndTime Fim local no formato HH:mm. Use 24:00 para a meia-noite ao fim do dia.
+	EndTime string `json:"end_time"`
+
+	// StartTime Início local no formato HH:mm.
+	StartTime string `json:"start_time"`
+
+	// Weekday Dia ISO da semana, de segunda-feira a domingo.
+	Weekday int `json:"weekday"`
+}
+
 // PublicEstablishmentProfileResponse defines model for PublicEstablishmentProfileResponse.
 type PublicEstablishmentProfileResponse struct {
 	Address      *string                    `json:"address,omitempty"`
@@ -465,6 +492,9 @@ type PostProfessionalReactivationJSONRequestBody = ReactivateProfessionalRequest
 // PutProfessionalServiceJSONRequestBody defines body for PutProfessionalService for application/json ContentType.
 type PutProfessionalServiceJSONRequestBody = ProfessionalServiceRequest
 
+// PutProfessionalWeeklyScheduleJSONRequestBody defines body for PutProfessionalWeeklySchedule for application/json ContentType.
+type PutProfessionalWeeklyScheduleJSONRequestBody = ProfessionalWeeklyScheduleRequest
+
 // PostServicesJSONRequestBody defines body for PostServices for application/json ContentType.
 type PostServicesJSONRequestBody = CreateServiceRequest
 
@@ -542,6 +572,12 @@ type ServerInterface interface {
 	// PutProfessionalService Define um vínculo explícito de serviço para o profissional
 	// (PUT /professionals/{professional_id}/services/{service_id})
 	PutProfessionalService(c *gin.Context, professionalId openapi_types.UUID, serviceId openapi_types.UUID)
+	// GetProfessionalWeeklySchedule Consulta a jornada semanal do profissional
+	// (GET /professionals/{professional_id}/weekly-schedule)
+	GetProfessionalWeeklySchedule(c *gin.Context, professionalId openapi_types.UUID)
+	// PutProfessionalWeeklySchedule Substitui a jornada semanal completa do profissional
+	// (PUT /professionals/{professional_id}/weekly-schedule)
+	PutProfessionalWeeklySchedule(c *gin.Context, professionalId openapi_types.UUID)
 	// GetPublicEstablishment Consulta o perfil informativo de um estabelecimento publicável
 	// (GET /public/establishments/{slug})
 	GetPublicEstablishment(c *gin.Context, slug string)
@@ -982,6 +1018,56 @@ func (siw *ServerInterfaceWrapper) PutProfessionalService(c *gin.Context) {
 	siw.Handler.PutProfessionalService(c, professionalId, serviceId)
 }
 
+// GetProfessionalWeeklySchedule operation middleware
+func (siw *ServerInterfaceWrapper) GetProfessionalWeeklySchedule(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetProfessionalWeeklySchedule(c, professionalId)
+}
+
+// PutProfessionalWeeklySchedule operation middleware
+func (siw *ServerInterfaceWrapper) PutProfessionalWeeklySchedule(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "professional_id" -------------
+	var professionalId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "professional_id", c.Param("professional_id"), &professionalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter professional_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PutProfessionalWeeklySchedule(c, professionalId)
+}
+
 // GetPublicEstablishment operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicEstablishment(c *gin.Context) {
 
@@ -1227,6 +1313,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/professionals/:professional_id", wrapper.PatchProfessional)
 	router.GET(options.BaseURL+"/professionals/:professional_id/services", wrapper.GetProfessionalServices)
 	router.PUT(options.BaseURL+"/professionals/:professional_id/services/:service_id", wrapper.PutProfessionalService)
+	router.GET(options.BaseURL+"/professionals/:professional_id/weekly-schedule", wrapper.GetProfessionalWeeklySchedule)
+	router.PUT(options.BaseURL+"/professionals/:professional_id/weekly-schedule", wrapper.PutProfessionalWeeklySchedule)
 	router.POST(options.BaseURL+"/professionals/:professional_id/deactivation", wrapper.PostProfessionalDeactivation)
 	router.POST(options.BaseURL+"/professionals/:professional_id/reactivation", wrapper.PostProfessionalReactivation)
 	router.GET(options.BaseURL+"/services", wrapper.GetServices)

@@ -8,6 +8,7 @@ import (
 	"barbershop-app/backend/internal/onboarding"
 	"barbershop-app/backend/internal/professionals"
 	"barbershop-app/backend/internal/professionals/offerings"
+	"barbershop-app/backend/internal/professionals/schedule"
 	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,6 +16,7 @@ import (
 
 type Handler struct {
 	professionalServices *offerings.Handler
+	professionalSchedule *schedule.Handler
 	catalog              *catalog.Handler
 	health               *health.Handler
 	authentication       *auth.Handler
@@ -23,8 +25,17 @@ type Handler struct {
 	professionals        *professionals.Handler
 }
 
-func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, catalogHandler *catalog.Handler, professionalServicesHandler *offerings.Handler) *Handler {
-	return &Handler{professionalServices: professionalServicesHandler, catalog: catalogHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
+func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, catalogHandler *catalog.Handler, professionalServicesHandler *offerings.Handler, professionalScheduleHandler *schedule.Handler) *Handler {
+	return &Handler{
+		health:               healthHandler,
+		authentication:       authenticationHandler,
+		onboarding:           onboardingHandler,
+		establishment:        establishmentHandler,
+		professionals:        professionalsHandler,
+		catalog:              catalogHandler,
+		professionalServices: professionalServicesHandler,
+		professionalSchedule: professionalScheduleHandler,
+	}
 }
 
 func (handler *Handler) GetHealth(httpContext *gin.Context) {
@@ -141,4 +152,12 @@ func (handler *Handler) GetProfessionalServices(httpContext *gin.Context, profes
 
 func (handler *Handler) PutProfessionalService(httpContext *gin.Context, professionalID, offeringID uuid.UUID) {
 	handler.professionalServices.PutProfessionalService(httpContext, professionalID, offeringID)
+}
+
+func (handler *Handler) GetProfessionalWeeklySchedule(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionalSchedule.GetProfessionalWeeklySchedule(httpContext, professionalID)
+}
+
+func (handler *Handler) PutProfessionalWeeklySchedule(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionalSchedule.PutProfessionalWeeklySchedule(httpContext, professionalID)
 }
