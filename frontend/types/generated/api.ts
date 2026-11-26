@@ -284,6 +284,28 @@ export interface paths {
         patch: operations["patchProfessional"];
         trace?: never;
     };
+    "/professionals/{professional_id}/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Consulta catálogo e vínculos de um profissional do estabelecimento
+         * @description Exclusivo ao proprietário. Inclui serviços e profissionais inativos; ausência ou inatividade do vínculo resulta em associated false. Leitura permanece disponível sem trial ativo.
+         */
+        get: operations["getProfessionalServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals/{professional_id}/deactivation": {
         parameters: {
             query?: never;
@@ -406,6 +428,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ProfessionalServicesResponse: {
+            professional: components["schemas"]["ProfessionalServicesIdentity"];
+            items: components["schemas"]["ProfessionalServiceResponse"][];
+            limit: number;
+            offset: number;
+            has_more: boolean;
+            can_write: boolean;
+        };
+        ProfessionalServicesIdentity: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            active: boolean;
+        };
+        ProfessionalServiceResponse: components["schemas"]["ServiceResponse"] & {
+            /** @description Estado do vínculo, independente do estado ativo dos cadastros. */
+            associated: boolean;
+        };
         ServiceStatusRequest: {
             active: boolean;
         };
@@ -1267,6 +1307,36 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getProfessionalServices: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página por criação e ID decrescentes, com vínculo explícito e direito atual de escrita */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalServicesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalServerError"];
         };
     };

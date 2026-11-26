@@ -97,7 +97,7 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 ## Agenda e disponibilidade
 
 - Cada agendamento possui exatamente um serviço e um profissional.
-- O proprietário define explicitamente quais serviços cada profissional oferece; um profissional não oferece automaticamente todos os serviços do estabelecimento.
+- O proprietário define explicitamente quais serviços cada profissional oferece; um profissional não oferece automaticamente todos os serviços do estabelecimento. A API já consulta, por profissional do próprio estabelecimento, o catálogo paginado com serviços ativos e inativos e um indicador de associação independente da atividade do serviço. Profissionais inativos também podem ser consultados. Vínculo ausente ou inativo aparece como não associado; a consulta permanece disponível sem trial ativo, com escrita indisponível. Alteração dos vínculos e gestão no painel permanecem pendentes nesta etapa.
 - Exiba e aceite novos agendamentos somente para pares ativos de profissional e serviço pertencentes ao mesmo estabelecimento.
 - A associação determina elegibilidade, mas não redefine preço ou duração do serviço. A eventual comissão específica continua configurada separadamente para o par profissional-serviço.
 - Preço e duração pertencem ao serviço e são iguais para todos os profissionais associados; não crie sobrescritas por profissional no MVP.

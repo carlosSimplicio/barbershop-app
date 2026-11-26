@@ -557,6 +557,53 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}/services:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getProfessionalServices
+      summary: Consulta catálogo e vínculos de um profissional do estabelecimento
+      description: Exclusivo ao proprietário. Inclui serviços e profissionais inativos; ausência ou inatividade do vínculo resulta em associated false. Leitura permanece disponível sem trial ativo.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
+      responses:
+        "200":
+          description: Página por criação e ID decrescentes, com vínculo explícito e direito atual de escrita
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalServicesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals/{professional_id}/deactivation:
     parameters:
       - name: professional_id
@@ -841,6 +888,44 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    ProfessionalServicesResponse:
+      type: object
+      required: [professional, items, limit, offset, has_more, can_write]
+      properties:
+        professional:
+          $ref: "#/components/schemas/ProfessionalServicesIdentity"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfessionalServiceResponse"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        has_more:
+          type: boolean
+        can_write:
+          type: boolean
+    ProfessionalServicesIdentity:
+      type: object
+      required: [id, name, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        active:
+          type: boolean
+    ProfessionalServiceResponse:
+      allOf:
+        - $ref: "#/components/schemas/ServiceResponse"
+        - type: object
+          required: [associated]
+          properties:
+            associated:
+              type: boolean
+              description: Estado do vínculo, independente do estado ativo dos cadastros.
     ServiceStatusRequest:
       type: object
       additionalProperties: false

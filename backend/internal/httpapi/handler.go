@@ -7,22 +7,24 @@ import (
 	"barbershop-app/backend/internal/health"
 	"barbershop-app/backend/internal/onboarding"
 	"barbershop-app/backend/internal/professionals"
+	"barbershop-app/backend/internal/professionals/offerings"
 	api "barbershop-app/backend/openapi/generated"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type Handler struct {
-	catalog        *catalog.Handler
-	health         *health.Handler
-	authentication *auth.Handler
-	onboarding     *onboarding.Handler
-	establishment  *establishment.Handler
-	professionals  *professionals.Handler
+	professionalServices *offerings.Handler
+	catalog              *catalog.Handler
+	health               *health.Handler
+	authentication       *auth.Handler
+	onboarding           *onboarding.Handler
+	establishment        *establishment.Handler
+	professionals        *professionals.Handler
 }
 
-func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, catalogHandler *catalog.Handler) *Handler {
-	return &Handler{catalog: catalogHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
+func NewHandler(healthHandler *health.Handler, authenticationHandler *auth.Handler, onboardingHandler *onboarding.Handler, establishmentHandler *establishment.Handler, professionalsHandler *professionals.Handler, catalogHandler *catalog.Handler, professionalServicesHandler *offerings.Handler) *Handler {
+	return &Handler{professionalServices: professionalServicesHandler, catalog: catalogHandler, health: healthHandler, authentication: authenticationHandler, onboarding: onboardingHandler, establishment: establishmentHandler, professionals: professionalsHandler}
 }
 
 func (handler *Handler) GetHealth(httpContext *gin.Context) {
@@ -131,4 +133,8 @@ func (handler *Handler) PostProfessionalDeactivation(httpContext *gin.Context, p
 
 func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, professionalID uuid.UUID) {
 	handler.professionals.PostProfessionalReactivation(httpContext, professionalID)
+}
+
+func (handler *Handler) GetProfessionalServices(httpContext *gin.Context, professionalID uuid.UUID, parameters api.GetProfessionalServicesParams) {
+	handler.professionalServices.GetProfessionalServices(httpContext, professionalID, parameters)
 }
