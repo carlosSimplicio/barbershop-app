@@ -117,6 +117,25 @@ test("edita vários períodos, aceita meia-noite e confirma a semana enviada ap�
   );
 });
 
+test("exibe o fuso da API e confirma o salvamento mesmo sem suporte no Intl", async () => {
+  const timeZone = { time_zone: "Factory" };
+  const edited = { ...morning, end_time: "11:00" };
+  vi.mocked(getProfessionalWeeklySchedule).mockResolvedValue(
+    week([morning], timeZone),
+  );
+  vi.mocked(putProfessionalWeeklySchedule).mockResolvedValue(
+    week([edited], timeZone),
+  );
+  render(<WeeklyScheduleEditor professionalId={professionalId} />);
+  expect(await screen.findByText("Factory")).toBeVisible();
+  const end = within(day()).getByRole("textbox", { name: /Fim/ });
+  fireEvent.change(end, { target: { value: "11:00" } });
+  save();
+
+  expect(await screen.findByText("Jornada salva")).toBeVisible();
+  expect(end).toHaveValue("11:00");
+});
+
 test("envia uma semana vazia e mantém um único envio pendente", async () => {
   vi.mocked(getProfessionalWeeklySchedule).mockResolvedValue(week([morning]));
   const pending = deferred();
@@ -200,7 +219,7 @@ test("preserva o rascunho após confirmações inválidas e falha temporária at
   const edited = { ...morning, end_time: "11:00" };
   vi.mocked(putProfessionalWeeklySchedule)
     .mockResolvedValueOnce(week([afternoon]))
-    .mockResolvedValueOnce(week([edited], { time_zone: "+01:00" }))
+    .mockResolvedValueOnce(week([edited], { time_zone: " " }))
     .mockRejectedValueOnce(new Error("network"))
     .mockResolvedValueOnce(week([edited]));
   render(<WeeklyScheduleEditor professionalId={professionalId} />);

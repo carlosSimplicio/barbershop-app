@@ -82,7 +82,7 @@ export function parseWeeklySchedule(
     value.professional_id !== professionalId ||
     !("time_zone" in value) ||
     typeof value.time_zone !== "string" ||
-    !isTimeZone(value.time_zone) ||
+    value.time_zone.trim() === "" ||
     !("can_write" in value) ||
     typeof value.can_write !== "boolean" ||
     !("periods" in value) ||
@@ -116,17 +116,6 @@ export function sameWorkPeriods(left: WorkPeriod[], right: WorkPeriod[]) {
 
 function isLocalTime(value: string) {
   return value.length === midnightEnd.length && localTimePattern.test(value);
-}
-
-function isTimeZone(value: string) {
-  // Intl also accepts numeric offsets, while the API returns IANA names.
-  if (!/^[A-Za-z]/.test(value)) return false;
-  try {
-    new Intl.DateTimeFormat("pt-BR", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function isWorkPeriod(value: unknown): value is WorkPeriod {
