@@ -4,7 +4,7 @@ Roteiro manual das funcionalidades já entregues. Execute os fluxos na ordem ind
 
 As referências são [escopo implementado](implementation-scope.md), [regras do produto](product.md), [arquitetura](architecture.md), [operação](operations.md) e [OpenAPI](../backend/openapi/openapi.yaml). Atualize este roteiro quando uma nova funcionalidade for entregue.
 
-Agenda, disponibilidade, clientes, associação profissional–serviço, comissões, atendimentos, financeiro e contratação/renovação de assinatura ainda não estão entregues. Os limites de agenda já podem ser configurados, mas sua aplicação depende desses fluxos futuros. A página pública atual é informativa.
+Agenda, disponibilidade, clientes, comissões, atendimentos, financeiro e contratação/renovação de assinatura ainda não estão entregues. A associação profissional–serviço já está disponível pela API e no painel. Os limites de agenda já podem ser configurados, mas sua aplicação depende desses fluxos futuros. A página pública atual é informativa.
 
 ## Como executar e preparar os dados
 
@@ -154,6 +154,21 @@ Pré-condição: sessão do profissional A aberta em outro perfil e proprietári
 - [ ] Conferir paginação pela API com `limit=1` e offsets sucessivos; para validar os controles do painel, preparar mais de 20 serviços fictícios. Ativos e inativos devem continuar listados.
 - [ ] Durante operação pendente, conferir bloqueio de outros envios, paginação e atualização da lista. Nenhuma ação deve mostrar contagem fictícia de agendamentos afetados.
 
+### Associar serviços aos profissionais
+
+Pré-condição: proprietário A com trial ativo, profissionais e serviços cadastrados e migration `00010_professional_services.sql` aplicada. O [roteiro operacional](operations.md#validação-local-dos-serviços-do-profissional) detalha os cenários.
+
+- [ ] Em Profissionais, abrir a edição, alterar o nome sem salvar e abrir “Serviços”: conferir modal própria identificando o profissional, preço BRL, duração e estados ativo/inativo e associado/não associado. Novos profissionais e serviços não devem adquirir vínculos automaticamente.
+- [ ] Conferir carregamento, vazio, atualização e paginação, incluindo serviços inativos. Pela API, consultar `GET /professionals/{professional_id}/services` com `limit=1` e offsets sucessivos; no painel, usar mais de 20 serviços para conferir que somente a página solicitada é carregada.
+- [ ] Associar, remover e reassociar um serviço: cada ação deve enviar um único `PUT /professionals/{professional_id}/services/{service_id}` com `associated` booleano explícito. Somente `200` válido, com serviço e estado correspondentes, confirma sucesso e atualiza o item, sem atualização otimista ou GET adicional obrigatório. Repetir o estado pela API deve ser seguro; remover vínculo ausente não deve criar registro.
+- [ ] Pela API, enviar `{"Associated":true}`, `{"ASSOCIATED":false}` e `{"associated":true,"Associated":false}`: esperar `400`, sem alterar o vínculo. Somente a chave exata `associated` é aceita; ausência, `null`, campos extras e valores não booleanos também devem ser recusados.
+- [ ] Fechar e reabrir a modal: os vínculos confirmados devem permanecer salvos, e o nome em edição deve continuar como rascunho, sem PATCH. Preço, duração, credenciais e estado dos cadastros não devem mudar.
+- [ ] Cadastrar um segundo profissional de A com e-mail fictício exclusivo e configurar conjuntos distintos de serviços: as alterações de um profissional não devem afetar o outro.
+- [ ] Desativar e reativar serviço/profissional: preservar os vínculos. Consultar e alterar associações de cadastros inativos deve continuar permitido com escrita ativa, sem ativá-los; a modal deve explicar que inatividade impede novos agendamentos. Agenda e comissões permanecem fora deste fluxo.
+- [ ] Durante PUT lento, tentar envio duplicado, ação em outro serviço, paginação, atualização e fechamento por ×, Escape ou “Fechar”: manter controles bloqueados e enviar somente a operação iniciada. Ao terminar, inclusive em falha, liberar os controles.
+- [ ] Simular erro de rede, `5xx` e resposta fora do contrato no PUT: mostrar erro seguro, permitir fechar ou tentar novamente e preservar sucessos anteriores. “Tentar novamente” deve repetir o mesmo estado desejado, sem repetição automática, GET de confirmação ou anúncio de rollback. Falha temporária de leitura deve permitir nova tentativa sem declarar logout.
+- [ ] Conferir Tab/Shift+Tab, fundo inerte, anúncios de sucesso/erro, temas e tela estreita. ×, Escape e “Fechar” devem atuar somente na modal superior e retornar foco a “Serviços”, preservando o rascunho; fechar o editor deve retornar ao lápis/lista. Confirmação de estado e gestão de serviços não podem abrir juntas. Ao receber `401`, retirar o conteúdo protegido e descartar respostas atrasadas ou da identidade anterior.
+
 ## Fluxo 9 — Sessões, logout e recuperação do proprietário
 
 Use duas sessões independentes do proprietário A. Evite sequências de login inválido até concluir este fluxo; rate limiting será validado ao final.
@@ -181,6 +196,7 @@ Cadastre e confirme B em outro perfil. Preserve IDs fictícios de A e B apenas p
 - [ ] Como B, conferir configurações, lista de profissionais e catálogo: mostrar somente dados de B. Alternar de conta no mesmo perfil e conferir ausência de dados remanescentes de A.
 - [ ] Como B, consultar IDs de profissional e serviço de A: esperar `404`, igual ao caso de UUID válido inexistente, sem revelar dados do recurso.
 - [ ] Como B, tentar editar, desativar e reativar o profissional de A e editar ou alterar estado do serviço de A: recusar sem modificar A.
+- [ ] Como B, consultar os serviços do profissional de A e tentar associar/remover pares com profissional ou serviço de A: esperar `404`, como para recurso inexistente, sem alterar vínculos. Repetir GET/PUT sem sessão (`401`) e com profissional já tendo trocado a senha (`403`), mantendo origem e CSRF válidos no PUT. Conferir separadamente recusa sem efeito para origem não confiável ou CSRF ausente/inválido.
 - [ ] Conferir que consulta/alteração de estabelecimento e upload de logo derivam o tenant da sessão, sem aceitar um identificador enviado pelo cliente para operar A como B.
 - [ ] Sem sessão, consultar recursos protegidos: esperar `401`. Com o profissional já tendo trocado a senha, consultar e tentar modificar configurações, profissionais e serviços: esperar `403`.
 - [ ] Como proprietário, tentar consultar/editar seu próprio ID pelas rotas de profissionais: não tratar o proprietário como perfil profissional válido.
@@ -227,6 +243,8 @@ Execute somente o par do serviço necessário ao cenário; não pare ambos ao me
 
 Deixe este fluxo para depois das escritas de A. Use exclusivamente o estabelecimento fictício descartável A e a preparação SQL abaixo para simular a passagem do tempo; B deve permanecer ativo como controle. Essa preparação altera a janela no banco local e não é uma operação disponível no produto nem uma forma de renovar o trial.
 
+Antes da preparação, em outra aba autenticada de A, abra a edição de um profissional, altere o nome sem salvar e abra “Serviços”. Mantenha essa modal aberta, sem recarregar a aba, para testar a recusa de escrita após a expiração.
+
 Abra o PostgreSQL local com o comando abaixo. `POSTGRES_USER` e `POSTGRES_DB` são lidos dentro do container, sem imprimir seus valores:
 
 ```sh
@@ -250,6 +268,7 @@ COMMIT;
 
 - [ ] Recarregar `/testes` e consultar o estabelecimento: trial deve aparecer expirado; login, consulta de identidade e logout continuam funcionando.
 - [ ] Reabrir configurações, profissionais e serviços: todos os dados e o logo permanecem consultáveis, com indicação de modo somente leitura e controles de escrita bloqueados.
+- [ ] Na aba mantida com a modal de serviços aberta, tentar alterar um vínculo após a preparação: esperar `403 read_only`, preservar vínculo e rascunho do nome e bloquear os demais formulários da página. Reabrir a modal: consulta e vínculos anteriores permanecem disponíveis, `can_write` deve ser `false` e “Associar”/“Remover” devem ficar desabilitados.
 - [ ] Pela API, tentar salvar configurações, substituir logo, cadastrar/editar/desativar/reativar profissional e cadastrar/editar/ativar/desativar serviço: esperar recusa `read_only`, sem qualquer alteração.
 - [ ] Deixar uma página aberta antes da expiração e tentar gravar depois: a recusa deve atualizar os direitos de toda a página, bloqueando os demais formulários.
 - [ ] Abrir perfil e logo públicos de A sem sessão: permanecer disponíveis e informativos após expiração.
@@ -284,6 +303,7 @@ Estes comandos são verificações a executar no host; este documento não regis
 
 - [ ] Executar `make test-unit`: testes unitários do Go e Vitest devem passar.
 - [ ] Executar `make test-integration`: fluxos HTTP reais, migrations e PostgreSQL devem passar, incluindo isolamento, autorização, sessões, tokens de uso único/expiração e recusas de escrita.
+- [ ] Na integração de serviços por profissional, conferir unicidade e FKs compostas de tenant, idempotência sem nova versão da linha, preservação da identidade/datas do par e escritas concorrentes no mesmo par e em pares diferentes. A regressão com bloqueio coordenado deve garantir que `updated_at` acompanha a ordem das transições, mesmo quando o comando que aguardou começou antes. A remoção lógica e as transições dos cadastros devem preservar os registros relacionados.
 - [ ] Na integração, conferir os cenários já existentes de sessão expirada, trial ausente, bloqueio de fuso após marcador operacional e slug reservado legado preservado sem publicação. Eles exigem fixtures específicas e complementam os caminhos criados pela interface.
 - [ ] Na integração, conferir os cenários de concorrência e rollback já existentes: confirmação/reenvio, recuperação concorrente, login versus desativação, troca de senha em andamento versus reativação, reativações concorrentes, associação concorrente de logo, atualização parcial e snapshot consistente de configurações. Esses cenários complementam a validação manual e não exigem introduzir E2E.
 - [ ] Executar `make check`: geração e comparação de artefatos, `gofmt`, `go vet -tags=integration ./...`, testes Go e integração, Prettier, ESLint, tipos e Vitest devem passar. O comando já repete as suítes anteriores; pode ser usado como execução consolidada.

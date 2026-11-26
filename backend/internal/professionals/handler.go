@@ -2,7 +2,6 @@ package professionals
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,8 +19,6 @@ import (
 	"github.com/google/uuid"
 	openapiTypes "github.com/oapi-codegen/runtime/types"
 )
-
-const maxProfessionalRequestBytes int64 = 8 * 1024
 
 type Registry interface {
 	Reactivate(context.Context, auth.Principal, string, string) (Professional, error)
@@ -277,9 +274,7 @@ func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, p
 }
 
 func decodeProfessionalRequest(httpContext *gin.Context, input any) bool {
-	decoder := json.NewDecoder(http.MaxBytesReader(httpContext.Writer, httpContext.Request.Body, maxProfessionalRequestBytes))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(input); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+	if err := httpserver.DecodeJSONRequest(httpContext, input, MaxRequestBytes); err != nil {
 		writeError(httpContext, http.StatusBadRequest, "invalid_request", "Verifique os dados informados.")
 		return false
 	}

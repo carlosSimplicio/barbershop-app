@@ -29,6 +29,7 @@ import (
 	"barbershop-app/backend/internal/platform/ratelimit"
 	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
+	"barbershop-app/backend/internal/professionals/offerings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -125,6 +126,8 @@ func run() error {
 	publicEstablishmentLogos := establishment.NewPublicLogoService(publicEstablishmentResolver, publicLogoStore, logoStorage)
 	catalogStore := catalog.NewPostgresStore(pool)
 	catalogService := catalog.NewService(catalogStore, writeEntitlements)
+	professionalServicesStore := offerings.NewPostgresStore(pool)
+	professionalServices := offerings.NewService(professionalServicesStore, writeEntitlements)
 	professionalStore := professionals.NewPostgresStore(pool)
 	professionalService := professionals.NewService(professionalStore, passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, emailSender, configuration.PublicAppURL)
@@ -136,6 +139,7 @@ func run() error {
 		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads, publicEstablishments, publicEstablishmentLogos),
 		professionals.NewHandler(professionalService),
 		catalog.NewHandler(catalogService),
+		offerings.NewHandler(professionalServices),
 	)
 	authMiddleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, configuration.TrustedOrigins)
 	server := httpserver.New(configuration.HTTPAddress, logger, handler, configuration.TrustedProxyCIDRs, authMiddleware.Handle())

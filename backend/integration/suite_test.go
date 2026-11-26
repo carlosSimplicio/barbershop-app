@@ -40,6 +40,7 @@ import (
 	"barbershop-app/backend/internal/platform/ratelimit"
 	"barbershop-app/backend/internal/platform/storage"
 	"barbershop-app/backend/internal/professionals"
+	"barbershop-app/backend/internal/professionals/offerings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -188,6 +189,8 @@ func newTestApplication(t *testing.T) *testApplication {
 	publicEstablishmentLogos := establishment.NewPublicLogoService(publicEstablishmentResolver, publicLogoStore, logoStorage)
 	catalogStore := catalog.NewPostgresStore(integrationPool)
 	catalogService := catalog.NewService(catalogStore, writeEntitlements)
+	professionalServicesStore := offerings.NewPostgresStore(integrationPool)
+	professionalServices := offerings.NewService(professionalServicesStore, writeEntitlements)
 	professionalStore := professionals.NewPostgresStore(integrationPool)
 	professionalService := professionals.NewService(professionalStore, passwords, writeEntitlements)
 	passwordRecovery := passwordrecovery.NewPasswordRecoveryRequestService(authStore, rateLimitStore, rateKeys, messages, trustedOrigin)
@@ -199,6 +202,7 @@ func newTestApplication(t *testing.T) *testApplication {
 		establishment.NewHandler(establishments, establishmentSettings, establishmentLogoUploads, publicEstablishments, publicEstablishmentLogos),
 		professionals.NewHandler(professionalService),
 		catalog.NewHandler(catalogService),
+		offerings.NewHandler(professionalServices),
 	)
 	middleware := auth.NewMiddleware(authStore, accessTokens, csrfTokens, []string{trustedOrigin})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
