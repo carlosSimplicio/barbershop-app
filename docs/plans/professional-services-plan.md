@@ -8,7 +8,7 @@ Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Se
 
 - [x] 1. Persistência e integridade dos vínculos.
 - [x] 2. Consulta paginada pela API.
-- [ ] 3. Mutação idempotente pela API.
+- [x] 3. Mutação idempotente pela API.
 - [ ] 4. Consulta na modal do profissional.
 - [ ] 5. Associação e remoção pelo painel.
 

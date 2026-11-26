@@ -285,3 +285,13 @@ func TestProfessionalReactivationRequiresCSRF(t *testing.T) {
 		t.Fatal("professional reactivation bypasses CSRF")
 	}
 }
+
+func TestProfessionalServicesMutationRequiresCSRFAtBothIDs(t *testing.T) {
+	path := "/api/v1/professionals/00000000-0000-4000-8000-000000000001/services/00000000-0000-4000-8000-000000000002"
+	if !requiresCSRF(http.MethodPut, path) {
+		t.Fatal("professional service mutation bypasses CSRF")
+	}
+	if requiresCSRF(http.MethodGet, path) {
+		t.Fatal("read requires CSRF")
+	}
+}

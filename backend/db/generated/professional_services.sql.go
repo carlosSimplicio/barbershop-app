@@ -95,3 +95,38 @@ func (q *Queries) ListProfessionalOfferings(ctx context.Context, arg ListProfess
 	}
 	return items, nil
 }
+
+const setProfessionalOffering = `-- name: SetProfessionalOffering :one
+INSERT INTO professional_services (establishment_id, professional_id, service_id, active)
+SELECT $1, $2, $3, $4::boolean
+WHERE $4::boolean OR EXISTS (
+    SELECT 1 FROM professional_services AS existing
+    WHERE existing.establishment_id = $1
+      AND existing.professional_id = $2
+      AND existing.service_id = $3
+)
+ON CONFLICT (establishment_id, professional_id, service_id)
+DO UPDATE SET active = EXCLUDED.active,
+    updated_at = CASE WHEN professional_services.active IS DISTINCT FROM EXCLUDED.active
+        THEN statement_timestamp() ELSE professional_services.updated_at END
+RETURNING active
+`
+
+type SetProfessionalOfferingParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	ProfessionalID  pgtype.UUID `json:"professional_id"`
+	ServiceID       pgtype.UUID `json:"service_id"`
+	Associated      bool        `json:"associated"`
+}
+
+func (q *Queries) SetProfessionalOffering(ctx context.Context, arg SetProfessionalOfferingParams) (bool, error) {
+	row := q.db.QueryRow(ctx, setProfessionalOffering,
+		arg.EstablishmentID,
+		arg.ProfessionalID,
+		arg.ServiceID,
+		arg.Associated,
+	)
+	var active bool
+	err := row.Scan(&active)
+	return active, err
+}

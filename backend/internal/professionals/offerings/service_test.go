@@ -92,3 +92,42 @@ func TestListEmptyCatalogIsArrayAndAcceptsPaginationBounds(t *testing.T) {
 		t.Fatalf("page=%#v err=%v", result, err)
 	}
 }
+
+func (stub *storeStub) Set(_ context.Context, tenant, professionalID, offeringID string, associated bool) (Offering, error) {
+	stub.queried = true
+	stub.tenant = tenant
+	stub.professionalID = professionalID
+	return Offering{Offering: catalog.Offering{ID: offeringID}, Associated: associated}, stub.listErr
+}
+func TestSetRequiresOwnerInputAndWriteBeforePersistence(t *testing.T) {
+	unavailable := errors.New("unavailable")
+	yes := true
+	for _, test := range []struct {
+		role           string
+		associated     *bool
+		writeErr, want error
+	}{
+		{"professional", &yes, nil, ErrForbidden}, {"owner", nil, nil, ErrInvalidRequest}, {"owner", &yes, entitlements.ErrReadOnly, entitlements.ErrReadOnly}, {"owner", &yes, unavailable, unavailable},
+	} {
+		store := &storeStub{}
+		_, err := NewService(store, &writesStub{err: test.writeErr}).Set(context.Background(), auth.Principal{Role: test.role}, "professional", "offering", test.associated)
+		if !errors.Is(err, test.want) || store.queried {
+			t.Fatalf("error=%v persisted=%v want=%v", err, store.queried, test.want)
+		}
+	}
+}
+func TestSetPassesExplicitStateAndTenantAndPropagatesMissingTarget(t *testing.T) {
+	for _, associated := range []bool{true, false} {
+		store := &storeStub{}
+		writes := &writesStub{}
+		record, err := NewService(store, writes).Set(context.Background(), auth.Principal{Role: "owner", EstablishmentID: "tenant"}, "professional", "offering", &associated)
+		if err != nil || record.ID != "offering" || record.Associated != associated || store.tenant != "tenant" || store.professionalID != "professional" || writes.tenant != "tenant" {
+			t.Fatalf("record=%+v err=%v store=%+v", record, err, store)
+		}
+	}
+	yes := true
+	_, err := NewService(&storeStub{listErr: ErrNotFound}, &writesStub{}).Set(context.Background(), auth.Principal{Role: "owner"}, "professional", "offering", &yes)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing target=%v", err)
+	}
+}

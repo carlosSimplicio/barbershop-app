@@ -306,6 +306,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/professionals/{professional_id}/services/{service_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Define um vínculo explícito de serviço para o profissional
+         * @description Exclusivo ao proprietário com direito de escrita, origem confiável e CSRF. Corpo limitado a 8 KiB. Permite cadastros inativos sem ativá-los. Repete o estado com segurança, preservando identidade e datas de transições; remover vínculo ausente retorna associated false sem criar registro.
+         */
+        put: operations["putProfessionalService"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/professionals/{professional_id}/deactivation": {
         parameters: {
             query?: never;
@@ -428,6 +451,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ProfessionalServiceRequest: {
+            /** @description Estado desejado obrigatório; ausência e null são recusados. */
+            associated: boolean;
+        };
         ProfessionalServicesResponse: {
             professional: components["schemas"]["ProfessionalServicesIdentity"];
             items: components["schemas"]["ProfessionalServiceResponse"][];
@@ -1331,6 +1358,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfessionalServicesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    putProfessionalService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfessionalServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Serviço e estado confirmado do vínculo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalServiceResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];

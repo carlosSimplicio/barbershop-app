@@ -185,7 +185,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [ ] Criar persistência para clientes.
 - [x] Criar persistência para serviços, com preço exato em centavos, tenant e queries de catálogo; integração com API e painel consta no escopo 10.
 - [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries de criação e listagem, integradas aos fluxos entregues da API.
-- [x] Criar persistência para associações profissional-serviço com unicidade, FKs de tenant e queries de consulta integradas à API; mutações e painel constam no escopo 9.
+- [x] Criar persistência para associações profissional-serviço com unicidade, FKs de tenant e queries de consulta e mutação idempotente integradas à API; painel consta no escopo 9.
 - [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
 - [ ] Criar persistência para planos, preços, trials, assinaturas, períodos e futuros adicionais.
@@ -326,11 +326,13 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Oferecer cadastro em modal reutilizável aberta pelo botão `+` à direita do título de Profissionais, com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [x] Consultar pela API o catálogo paginado com vínculos explícitos por profissional, incluindo inativos e leitura sem trial ativo.
-- [ ] Associar explicitamente serviços oferecidos por cada profissional; mutações da API e painel pendentes.
+- [x] Definir um único vínculo pela API idempotente, com CSRF, escrita central, inativos e preservação do par; painel pendente.
+- [ ] Associar explicitamente serviços oferecidos por cada profissional pelo painel.
 - [ ] Permitir comissão específica por associação profissional-serviço sem alterar preço ou duração do serviço.
 - [ ] Exibir quantidade de agendamentos futuros afetados antes da desativação.
 - [x] Preservar perfil, identidade, e-mail e hash existentes após desativação, sem exclusão física.
-- [ ] Integrar a preservação dos futuros vínculos, agendamentos e histórico financeiro após desativação.
+- [x] Preservar vínculos profissional-serviço após desativação/reativação de seus cadastros.
+- [ ] Integrar a preservação de futuros agendamentos e histórico financeiro após desativação.
 - [ ] Alertar o proprietário sobre agendamentos futuros de profissional desativado, sem cancelamento automático.
 
 ## 10. Administração de serviços

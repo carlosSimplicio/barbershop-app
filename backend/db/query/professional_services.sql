@@ -14,3 +14,18 @@ LEFT JOIN professional_services AS ps
 WHERE s.establishment_id = sqlc.arg(establishment_id)
 ORDER BY s.created_at DESC, s.id DESC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: SetProfessionalOffering :one
+INSERT INTO professional_services (establishment_id, professional_id, service_id, active)
+SELECT sqlc.arg(establishment_id), sqlc.arg(professional_id), sqlc.arg(service_id), sqlc.arg(associated)::boolean
+WHERE sqlc.arg(associated)::boolean OR EXISTS (
+    SELECT 1 FROM professional_services AS existing
+    WHERE existing.establishment_id = sqlc.arg(establishment_id)
+      AND existing.professional_id = sqlc.arg(professional_id)
+      AND existing.service_id = sqlc.arg(service_id)
+)
+ON CONFLICT (establishment_id, professional_id, service_id)
+DO UPDATE SET active = EXCLUDED.active,
+    updated_at = CASE WHEN professional_services.active IS DISTINCT FROM EXCLUDED.active
+        THEN statement_timestamp() ELSE professional_services.updated_at END
+RETURNING active;

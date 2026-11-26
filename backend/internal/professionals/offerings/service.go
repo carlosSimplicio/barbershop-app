@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	ErrForbidden     = errors.New("professional services forbidden")
-	ErrNotFound      = errors.New("professional or service not found")
-	ErrInvalidLimit  = errors.New("invalid professional services limit")
-	ErrInvalidOffset = errors.New("invalid professional services offset")
+	ErrInvalidRequest = errors.New("invalid professional services request")
+	ErrForbidden      = errors.New("professional services forbidden")
+	ErrNotFound       = errors.New("professional or service not found")
+	ErrInvalidLimit   = errors.New("invalid professional services limit")
+	ErrInvalidOffset  = errors.New("invalid professional services offset")
 )
 
 type Professional struct {
@@ -38,6 +39,7 @@ type Page struct {
 }
 
 type Store interface {
+	Set(context.Context, string, string, string, bool) (Offering, error)
 	GetProfessional(context.Context, string, string) (Professional, error)
 	List(context.Context, string, string, int32, int32) ([]Offering, error)
 }
@@ -85,4 +87,17 @@ func (service *Service) List(ctx context.Context, principal auth.Principal, prof
 		items = []Offering{}
 	}
 	return Page{Professional: professional, Items: items, Limit: limit, Offset: offset, HasMore: hasMore, CanWrite: writeErr == nil}, nil
+}
+
+func (service *Service) Set(ctx context.Context, principal auth.Principal, professionalID, offeringID string, associated *bool) (Offering, error) {
+	if principal.Role != "owner" {
+		return Offering{}, ErrForbidden
+	}
+	if associated == nil {
+		return Offering{}, ErrInvalidRequest
+	}
+	if err := service.writes.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Offering{}, err
+	}
+	return service.store.Set(ctx, principal.EstablishmentID, professionalID, offeringID, *associated)
 }

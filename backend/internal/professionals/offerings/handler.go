@@ -10,6 +10,7 @@ import (
 	"barbershop-app/backend/internal/entitlements"
 	"barbershop-app/backend/internal/platform/httpserver"
 	"barbershop-app/backend/internal/platform/pagination"
+	"barbershop-app/backend/internal/professionals"
 	api "barbershop-app/backend/openapi/generated"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,8 @@ func (handler *Handler) GetProfessionalServices(httpContext *gin.Context, profes
 func writeError(httpContext *gin.Context, err error) {
 	status, code, message := http.StatusInternalServerError, "internal_error", "Não foi possível concluir a operação."
 	switch {
+	case errors.Is(err, ErrInvalidRequest):
+		status, code, message = http.StatusBadRequest, "invalid_request", "Verifique os dados informados."
 	case errors.Is(err, ErrForbidden):
 		status, code, message = http.StatusForbidden, "forbidden", "Você não pode administrar os serviços deste profissional."
 	case errors.Is(err, ErrNotFound):
@@ -59,4 +62,31 @@ func writeError(httpContext *gin.Context, err error) {
 		slog.Error("professional_services_operation_failed", "request_id", httpserver.RequestID(httpContext))
 	}
 	httpContext.JSON(status, api.ErrorResponse{Code: code, Message: message, RequestId: httpserver.RequestID(httpContext)})
+}
+
+func decodeAssociationRequest(httpContext *gin.Context) (*bool, error) {
+	var input struct {
+		Associated *bool `json:"associated"`
+	}
+	if err := httpserver.DecodeJSONRequest(httpContext, &input, professionals.MaxRequestBytes); err != nil || input.Associated == nil {
+		return nil, ErrInvalidRequest
+	}
+	return input.Associated, nil
+}
+func (handler *Handler) PutProfessionalService(httpContext *gin.Context, professionalID, offeringID uuid.UUID) {
+	principal, ok := auth.RequirePrincipal(httpContext)
+	if !ok {
+		return
+	}
+	associated, err := decodeAssociationRequest(httpContext)
+	if err != nil {
+		writeError(httpContext, err)
+		return
+	}
+	record, err := handler.service.Set(httpContext.Request.Context(), principal, professionalID.String(), offeringID.String(), associated)
+	if err != nil {
+		writeError(httpContext, err)
+		return
+	}
+	httpContext.JSON(http.StatusOK, record)
 }

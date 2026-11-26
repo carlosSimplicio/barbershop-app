@@ -138,3 +138,7 @@ func (handler *Handler) PostProfessionalReactivation(httpContext *gin.Context, p
 func (handler *Handler) GetProfessionalServices(httpContext *gin.Context, professionalID uuid.UUID, parameters api.GetProfessionalServicesParams) {
 	handler.professionalServices.GetProfessionalServices(httpContext, professionalID, parameters)
 }
+
+func (handler *Handler) PutProfessionalService(httpContext *gin.Context, professionalID, offeringID uuid.UUID) {
+	handler.professionalServices.PutProfessionalService(httpContext, professionalID, offeringID)
+}

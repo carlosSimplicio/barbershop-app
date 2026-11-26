@@ -604,6 +604,52 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /professionals/{professional_id}/services/{service_id}:
+    parameters:
+      - name: professional_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: service_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: putProfessionalService
+      summary: Define um vínculo explícito de serviço para o profissional
+      description: Exclusivo ao proprietário com direito de escrita, origem confiável e CSRF. Corpo limitado a 8 KiB. Permite cadastros inativos sem ativá-los. Repete o estado com segurança, preservando identidade e datas de transições; remover vínculo ausente retorna associated false sem criar registro.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfessionalServiceRequest"
+      responses:
+        "200":
+          description: Serviço e estado confirmado do vínculo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals/{professional_id}/deactivation:
     parameters:
       - name: professional_id
@@ -888,6 +934,14 @@ components:
       in: header
       name: X-CSRF-Token
   schemas:
+    ProfessionalServiceRequest:
+      type: object
+      additionalProperties: false
+      required: [associated]
+      properties:
+        associated:
+          type: boolean
+          description: Estado desejado obrigatório; ausência e null são recusados.
     ProfessionalServicesResponse:
       type: object
       required: [professional, items, limit, offset, has_more, can_write]
