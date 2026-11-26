@@ -5,15 +5,23 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { Button, Feedback } from "@/components/ui";
+import type { AuthPrincipal } from "@/lib/auth/session-api/session-api";
 
 import { useAuthSession } from "../auth-provider/auth-provider";
+
+export function canAccessProfessionalPanel(principal: AuthPrincipal) {
+  return (
+    principal.role === "professional" &&
+    principal.password_change_required === false
+  );
+}
 
 export function SessionGuard({
   children,
   require,
 }: {
   children: ReactNode;
-  require: "authenticated" | "anonymous" | "owner";
+  require: "authenticated" | "anonymous" | "owner" | "professional";
 }) {
   const { state, reload } = useAuthSession();
   const router = useRouter();
@@ -21,18 +29,17 @@ export function SessionGuard({
     require === "anonymous"
       ? state.status === "anonymous"
       : state.status === "authenticated" &&
-        (require === "authenticated" || state.principal.role === "owner");
+        (require === "authenticated" ||
+          (require === "owner" && state.principal.role === "owner") ||
+          (require === "professional" &&
+            canAccessProfessionalPanel(state.principal)));
 
   useEffect(() => {
     if (state.status === "authenticated" && !allowed) {
-      router.replace(
-        require === "anonymous" && state.principal.role === "owner"
-          ? "/painel"
-          : "/testes",
-      );
+      router.replace(state.principal.role === "owner" ? "/painel" : "/testes");
     }
     if (state.status === "anonymous" && !allowed) router.replace("/login");
-  }, [allowed, require, router, state]);
+  }, [allowed, router, state]);
 
   if (state.status === "unavailable") {
     return (

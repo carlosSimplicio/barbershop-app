@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Button } from "@/components/ui";
+import { canAccessProfessionalPanel } from "@/components/session/session-guard/session-guard";
+import { ActionLink, Button } from "@/components/ui";
 
 import styles from "../styles/testing-panel.module.css";
 
@@ -36,6 +37,11 @@ export function SessionPanel() {
       <Button disabled={transitioning} onClick={() => void reload()}>
         Consultar sessão novamente
       </Button>
+      {canAccessProfessionalPanel(principal) ? (
+        <ActionLink href="/painel/minha-jornada" variant="secondary">
+          Minha jornada
+        </ActionLink>
+      ) : null}
     </section>
   );
 }

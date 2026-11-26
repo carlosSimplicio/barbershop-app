@@ -44,6 +44,35 @@ test("mostra apenas dados não sensíveis do principal autenticado", async () =>
   expect(replace).not.toHaveBeenCalled();
 });
 
+test("oferece Minha jornada ao profissional com a senha atualizada", async () => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    sessionResponse("professional"),
+  );
+  renderPage();
+
+  expect(
+    await screen.findByRole("link", { name: "Minha jornada" }),
+  ).toHaveAttribute("href", "/painel/minha-jornada");
+});
+
+test.each([
+  ["proprietário", sessionResponse("owner"), "Proprietário"],
+  ["troca pendente", sessionResponse("professional", true), "Profissional"],
+  ["visitante", errorResponse(401), null],
+] as const)("oculta Minha jornada para %s", async (_state, response, role) => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+  renderPage();
+
+  if (role) {
+    await screen.findByText(role);
+  } else {
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  }
+  expect(
+    screen.queryByRole("link", { name: "Minha jornada" }),
+  ).not.toBeInTheDocument();
+});
+
 test("mostra a troca obrigatória apenas para o profissional com senha temporária", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
     sessionResponse("professional", true),

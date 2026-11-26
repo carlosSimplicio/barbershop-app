@@ -370,8 +370,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 
 ## 12. Jornada, bloqueios e disponibilidade
 
-- [ ] Permitir ao proprietário e ao profissional configurar a jornada semanal recorrente do profissional.
-- [ ] Aceitar múltiplos períodos não sobrepostos no mesmo dia.
+- [x] Permitir ao proprietário e ao profissional configurar a jornada semanal recorrente do profissional.
+- [x] Aceitar múltiplos períodos não sobrepostos no mesmo dia.
 - [ ] Permitir bloqueios pontuais de intervalos pelo proprietário e pelo próprio profissional.
 - [ ] Gerar inícios de slots a cada 15 minutos, sem buffer entre atendimentos.
 - [ ] Calcular disponibilidade usando jornada, bloqueios, duração do serviço e agendamentos `scheduled`.
