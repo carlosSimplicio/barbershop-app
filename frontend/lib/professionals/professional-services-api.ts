@@ -20,3 +20,21 @@ export function listProfessionalServices(
     { signal },
   );
 }
+
+export function setProfessionalService(
+  professionalId: string,
+  serviceId: string,
+  request: components["schemas"]["ProfessionalServiceRequest"],
+  signal?: AbortSignal,
+) {
+  return apiFetch<ProfessionalService>(
+    `/api/v1/professionals/${encodeURIComponent(professionalId)}/services/${encodeURIComponent(serviceId)}`,
+    {
+      method: "PUT",
+      csrf: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal,
+    },
+  );
+}

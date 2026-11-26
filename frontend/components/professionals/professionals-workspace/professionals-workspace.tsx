@@ -116,8 +116,9 @@ function ProfessionalsRequest() {
     setSecondaryPanel(null);
   }
   if (view.status === "unauthorized") return null;
-  const canWrite =
-    !busy && !readOnly && view.status === "success" && view.page.can_write;
+  const writeAllowed =
+    !readOnly && view.status === "success" && view.page.can_write;
+  const canWrite = !busy && writeAllowed;
   return (
     <OwnerPanelPage
       title="Profissionais"
@@ -206,7 +207,9 @@ function ProfessionalsRequest() {
                   {secondaryPanel === "services" ? (
                     <ProfessionalServicesPanel
                       professional={record}
-                      canWrite={canWrite}
+                      canWrite={writeAllowed}
+                      onReadOnly={onReadOnly}
+                      onBusyChange={trackOperation}
                       onClose={() => setSecondaryPanel(null)}
                       onUnauthorized={onUnauthorized}
                       returnFocusRef={servicesAction}

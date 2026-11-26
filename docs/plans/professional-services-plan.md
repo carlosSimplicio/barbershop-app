@@ -10,7 +10,7 @@ Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Se
 - [x] 2. Consulta paginada pela API.
 - [x] 3. Mutação idempotente pela API.
 - [x] 4. Consulta na modal do profissional.
-- [ ] 5. Associação e remoção pelo painel.
+- [x] 5. Associação e remoção pelo painel.
 
 ### 1. Persistir vínculos sem cruzar estabelecimentos
 
@@ -104,3 +104,9 @@ Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Se
 - Executar `make check` e `make build`; incluem geração verificável, formato Go, `go vet -tags=integration ./...`, unitários, integração do backend com Testcontainers/PostgreSQL real, Prettier, ESLint, tipos e builds. Registrar qualquer impedimento de execução. Não introduzir E2E ou integração de frontend.
 - Revisar o diff e os fluxos de catálogo, edição de nome, desativação/reativação e associações, conferindo isolamento, CSRF do caminho com dois IDs, concorrência, direitos de escrita e preservação dos registros.
 - Comparar OpenAPI, artefatos gerados, migrations, código, testes, documentos e checklists; manter explícito que a elegibilidade de agenda será aplicada quando os fluxos de disponibilidade e agendamento forem entregues.
+
+## Resultado das verificações
+
+- `make check` aprovado: geração verificável, formato, análise estática, unitários, integração do backend e 401 testes Vitest em 74 arquivos, além de ESLint, Prettier e tipos.
+- `make build` aprovado para backend e frontend. O Next.js instalado emitiu um aviso preexistente de vulnerabilidade e interrompeu a primeira execução para apresentar o lembrete; a repetição concluiu com o aviso. Atualização de dependências não foi incluída neste plano.
+- Conferência nativa em Chrome via Playwright, autorizada pelo usuário por ausência de navegador conectado, com scripts temporários e respostas de API controladas: teclado, foco, modais sobrepostas, temas, tela estreita, paginação, envio único, associação/remoção, nova tentativa com o mesmo estado, reabertura, profissionais com conjuntos distintos, inativos, desativação/reativação e leitura após expiração. Não foram adicionados E2E nem integração de frontend. O backend foi verificado com Testcontainers/PostgreSQL real; o banco de desenvolvimento não foi alterado.

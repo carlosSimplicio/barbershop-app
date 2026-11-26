@@ -12,7 +12,10 @@ import {
   listProfessionals,
   updateProfessional,
 } from "@/lib/professionals/professionals-api";
-import { listProfessionalServices } from "@/lib/professionals/professional-services-api";
+import {
+  listProfessionalServices,
+  setProfessionalService,
+} from "@/lib/professionals/professional-services-api";
 import { ProfessionalsWorkspace } from "./professionals-workspace";
 
 vi.mock("@/components/session/auth-provider/auth-provider", () => ({
@@ -28,6 +31,7 @@ vi.mock("@/lib/professionals/professionals-api", () => ({
 }));
 vi.mock("@/lib/professionals/professional-services-api", () => ({
   listProfessionalServices: vi.fn(),
+  setProfessionalService: vi.fn(),
 }));
 const record = {
   id: "professional-id",
@@ -127,4 +131,64 @@ test("consulta serviços de inativo em modo somente leitura", async () => {
     await screen.findByRole("dialog", { name: "Serviços de Ana" }),
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Reativar Ana" })).toBeDisabled();
+});
+
+test("salva vínculo sem publicar o nome editado e propaga read_only ao workspace", async () => {
+  const offering = {
+    id: "offering",
+    name: "Corte",
+    price_cents: 0,
+    duration_minutes: 30,
+    active: false,
+    associated: false,
+  };
+  vi.mocked(listProfessionalServices).mockResolvedValue({
+    state: "success",
+    status: 200,
+    data: {
+      professional: record,
+      items: [offering],
+      limit: 20,
+      offset: 0,
+      has_more: false,
+      can_write: true,
+    },
+  });
+  vi.mocked(setProfessionalService)
+    .mockResolvedValueOnce({
+      state: "success",
+      status: 200,
+      data: { ...offering, associated: true },
+    })
+    .mockResolvedValueOnce({
+      state: "error",
+      status: 403,
+      error: { code: "read_only", message: "raw", request_id: "id" },
+    });
+  render(<ProfessionalsWorkspace />);
+  fireEvent.click(await screen.findByRole("button", { name: "Editar Ana" }));
+  const name = await screen.findByLabelText("Nome do profissional");
+  fireEvent.change(name, { target: { value: "Nome em edição" } });
+  fireEvent.click(screen.getByRole("button", { name: "Serviços" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Associar Corte" }),
+  );
+  expect(await screen.findByText("Serviço associado")).toBeVisible();
+  expect(name).toHaveValue("Nome em edição");
+  expect(screen.getByRole("button", { name: "Editar Ana" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Remover Corte" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Remover Corte" }),
+    ).toBeDisabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
+  expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+  expect(name).toHaveValue("Nome em edição");
+  expect(
+    screen.getByRole("button", { name: "Adicionar profissional" }),
+  ).toBeDisabled();
+  expect(updateProfessional).not.toHaveBeenCalled();
+  expect(listProfessionals).toHaveBeenCalledOnce();
+  expect(listProfessionalServices).toHaveBeenCalledOnce();
 });

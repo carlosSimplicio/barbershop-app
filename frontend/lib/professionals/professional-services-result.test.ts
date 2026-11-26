@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   isProfessionalService,
+  classifyProfessionalServiceOperation,
   isProfessionalServicesPage,
 } from "./professional-services-result";
 
@@ -46,4 +47,51 @@ test("valida o estado do vínculo separadamente dos cadastros e protege formata�
     { ...page, items: [{ ...offering, associated: null }] },
   ])
     expect(isProfessionalServicesPage(invalid)).toBe(false);
+});
+
+test("só confirma 200 válido com serviço e estado solicitados", () => {
+  expect(
+    classifyProfessionalServiceOperation(
+      { state: "success", status: 200, data: offering },
+      offering.id,
+      false,
+    ),
+  ).toEqual({ state: "confirmed", record: offering });
+  for (const result of [
+    { state: "success" as const, status: 201, data: offering },
+    {
+      state: "success" as const,
+      status: 200,
+      data: { ...offering, id: "other" },
+    },
+    {
+      state: "success" as const,
+      status: 200,
+      data: { ...offering, associated: true },
+    },
+    {
+      state: "success" as const,
+      status: 200,
+      data: { ...offering, price_cents: 1.5 },
+    },
+    {
+      state: "error" as const,
+      status: 500,
+      error: { code: "internal_error", message: "raw", request_id: "id" },
+    },
+  ])
+    expect(
+      classifyProfessionalServiceOperation(result, offering.id, false),
+    ).toEqual({ state: "rejected" });
+  expect(
+    classifyProfessionalServiceOperation(
+      {
+        state: "error",
+        status: 403,
+        error: { code: "forbidden", message: "raw", request_id: "id" },
+      },
+      offering.id,
+      false,
+    ),
+  ).toEqual({ state: "forbidden" });
 });
