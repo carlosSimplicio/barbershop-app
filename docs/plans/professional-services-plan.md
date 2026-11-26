@@ -110,3 +110,13 @@ Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Se
 - `make check` aprovado: geração verificável, formato, análise estática, unitários, integração do backend e 401 testes Vitest em 74 arquivos, além de ESLint, Prettier e tipos.
 - `make build` aprovado para backend e frontend. O Next.js instalado emitiu um aviso preexistente de vulnerabilidade e interrompeu a primeira execução para apresentar o lembrete; a repetição concluiu com o aviso. Atualização de dependências não foi incluída neste plano.
 - Conferência nativa em Chrome via Playwright, autorizada pelo usuário por ausência de navegador conectado, com scripts temporários e respostas de API controladas: teclado, foco, modais sobrepostas, temas, tela estreita, paginação, envio único, associação/remoção, nova tentativa com o mesmo estado, reabertura, profissionais com conjuntos distintos, inativos, desativação/reativação e leitura após expiração. Não foram adicionados E2E nem integração de frontend. O backend foi verificado com Testcontainers/PostgreSQL real; o banco de desenvolvimento não foi alterado.
+
+## Correções posteriores à revisão
+
+Correções dos três pontos técnicos do [review da implementação](professional-services-review.md):
+
+- [ ] Calcular a data da transição após adquirir o bloqueio do par e preservar sua ordem.
+- [x] Recusar variações de caixa da chave `associated` e combinações com propriedades extras, com regressões unitárias e HTTP, preservando o decoder estrutural compartilhado.
+- [ ] Evitar nova versão física da linha em repetições do estado e confirmar o no-op sem consulta adicional.
+
+A regressão da chave JSON reproduziu a aceitação indevida antes da correção. Nesta etapa, passaram unitários Go, `go vet -tags=integration ./...`, integração de vínculos sem cache e `git diff --check`.

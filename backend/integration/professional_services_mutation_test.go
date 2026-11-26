@@ -156,7 +156,7 @@ func TestProfessionalServicesMutationRejectsInvalidBodyWithoutWriting(t *testing
 	app := newTestApplication(t)
 	id := createManagementProfessional(t, app)
 	offering := createCatalogOffering(t, app, "Corte", 100)
-	for _, body := range []string{`{}`, `null`, `{"associated":null}`, `{"associated":1}`, `{"associated":"true"}`, `{"associated":true,"active":true}`, `{"associated":true} {}`, `{"associated":`, `{"associated":true}` + strings.Repeat(" ", 8192)} {
+	for _, body := range []string{`{}`, `null`, `{"associated":null}`, `{"associated":1}`, `{"associated":"true"}`, `{"Associated":true}`, `{"ASSOCIATED":false}`, `{"associated":true,"Associated":false}`, `{"associated":true,"active":true}`, `{"associated":true} {}`, `{"associated":`, `{"associated":true}` + strings.Repeat(" ", 8192)} {
 		request, err := http.NewRequestWithContext(context.Background(), http.MethodPut, app.server.URL+"/api/v1/professionals/"+id+"/services/"+offering.ID, strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)

@@ -1,6 +1,7 @@
 package offerings
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -65,13 +66,17 @@ func writeError(httpContext *gin.Context, err error) {
 }
 
 func decodeAssociationRequest(httpContext *gin.Context) (*bool, error) {
-	var input struct {
-		Associated *bool `json:"associated"`
-	}
-	if err := httpserver.DecodeJSONRequest(httpContext, &input, professionals.MaxRequestBytes); err != nil || input.Associated == nil {
+	// Decode keys first because struct decoding also accepts case-insensitive names,
+	// while the OpenAPI contract requires exactly "associated" and no extra fields.
+	var input map[string]json.RawMessage
+	if err := httpserver.DecodeJSONRequest(httpContext, &input, professionals.MaxRequestBytes); err != nil || len(input) != 1 {
 		return nil, ErrInvalidRequest
 	}
-	return input.Associated, nil
+	var associated *bool
+	if err := json.Unmarshal(input["associated"], &associated); err != nil || associated == nil {
+		return nil, ErrInvalidRequest
+	}
+	return associated, nil
 }
 func (handler *Handler) PutProfessionalService(httpContext *gin.Context, professionalID, offeringID uuid.UUID) {
 	principal, ok := auth.RequirePrincipal(httpContext)

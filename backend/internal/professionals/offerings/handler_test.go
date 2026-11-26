@@ -10,7 +10,7 @@ import (
 )
 
 func TestAssociationBodyRequiresOneBoundedBoolean(t *testing.T) {
-	for _, body := range []string{``, `{}`, `null`, `{"associated":null}`, `{"associated":1}`, `{"associated":"true"}`, `{"associated":[]}`, `{"associated":true,"extra":1}`, `{"associated":true} {}`, `{"associated":`, strings.Repeat(" ", 8192) + `{"associated":true}`} {
+	for _, body := range []string{``, `{}`, `null`, `{"associated":null}`, `{"associated":1}`, `{"associated":"true"}`, `{"associated":[]}`, `{"Associated":true}`, `{"ASSOCIATED":false}`, `{"associated":true,"Associated":false}`, `{"associated":true,"extra":1}`, `{"associated":true} {}`, `{"associated":`, strings.Repeat(" ", 8192) + `{"associated":true}`} {
 		t.Run(body[:min(len(body), 40)], func(t *testing.T) {
 			httpContext, _ := gin.CreateTestContext(httptest.NewRecorder())
 			httpContext.Request = httptest.NewRequest("PUT", "/", strings.NewReader(body))
