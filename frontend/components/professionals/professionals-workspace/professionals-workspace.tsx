@@ -24,9 +24,10 @@ import {
   ProfessionalsListPanel,
   type ProfessionalsView,
 } from "../professionals-list-panel/professionals-list-panel";
+import { WeeklyScheduleEditor } from "../weekly-schedule-editor/weekly-schedule-editor";
 import styles from "./professionals-workspace.module.css";
 
-type SecondaryPanel = "status" | "services" | null;
+type SecondaryPanel = "status" | "services" | "schedule" | null;
 
 export function ProfessionalsWorkspace() {
   const { state } = useAuthSession();
@@ -48,6 +49,7 @@ function ProfessionalsRequest() {
   const [readOnly, setReadOnly] = useState(false);
   const [secondaryPanel, setSecondaryPanel] = useState<SecondaryPanel>(null);
   const servicesAction = useRef<HTMLButtonElement>(null);
+  const scheduleAction = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const list = useRef<HTMLElement>(null);
@@ -114,6 +116,9 @@ function ProfessionalsRequest() {
     if (pendingOperations > 0 || secondaryPanel) return;
     setSelected(null);
     setSecondaryPanel(null);
+  }
+  function closeSchedule() {
+    if (!busy) setSecondaryPanel(null);
   }
   if (view.status === "unauthorized") return null;
   const writeAllowed =
@@ -203,7 +208,33 @@ function ProfessionalsRequest() {
                     >
                       Serviços
                     </Button>
+                    <Button
+                      aria-haspopup="dialog"
+                      ref={scheduleAction}
+                      disabled={busy || !!secondaryPanel}
+                      onClick={() => setSecondaryPanel("schedule")}
+                    >
+                      Jornada
+                    </Button>
                   </ModalActions>
+                  {secondaryPanel === "schedule" ? (
+                    <Modal
+                      open
+                      title={`Jornada de ${record.name}`}
+                      onClose={closeSchedule}
+                      closeDisabled={busy}
+                      returnFocusRef={scheduleAction}
+                    >
+                      <WeeklyScheduleEditor
+                        professionalId={record.id}
+                        canWrite={writeAllowed}
+                        onBusyChange={trackOperation}
+                        onClose={closeSchedule}
+                        onReadOnly={onReadOnly}
+                        onUnauthorized={onUnauthorized}
+                      />
+                    </Modal>
+                  ) : null}
                   {secondaryPanel === "services" ? (
                     <ProfessionalServicesPanel
                       professional={record}
