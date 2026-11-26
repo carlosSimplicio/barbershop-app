@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthSession } from "@/components/session/auth-provider/auth-provider";
-import { Feedback, IconButton, Modal } from "@/components/ui";
+import {
+  Button,
+  Feedback,
+  IconButton,
+  Modal,
+  ModalActions,
+} from "@/components/ui";
 import { OwnerPanelPage } from "@/components/session/owner-panel-shell/owner-panel-page";
 import { DEFAULT_PAGE_SIZE, FIRST_PAGE_OFFSET } from "@/lib/api/pagination";
 import {
@@ -10,6 +16,7 @@ import {
   type Professional,
 } from "@/lib/professionals/professionals-api";
 import { isProfessionalList } from "@/lib/professionals/professional-operation-result";
+import { ProfessionalServicesPanel } from "../professional-services-panel/professional-services-panel";
 import { ProfessionalStatusAction } from "../professional-status-action/professional-status-action";
 import { CreateProfessionalForm } from "../create-professional-form/create-professional-form";
 import { EditProfessionalPanel } from "../edit-professional-panel/edit-professional-panel";
@@ -18,6 +25,8 @@ import {
   type ProfessionalsView,
 } from "../professionals-list-panel/professionals-list-panel";
 import styles from "./professionals-workspace.module.css";
+
+type SecondaryPanel = "status" | "services" | null;
 
 export function ProfessionalsWorkspace() {
   const { state } = useAuthSession();
@@ -37,7 +46,8 @@ function ProfessionalsRequest() {
   const [version, setVersion] = useState(0);
   const [pendingOperations, setPendingOperations] = useState(0);
   const [readOnly, setReadOnly] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [secondaryPanel, setSecondaryPanel] = useState<SecondaryPanel>(null);
+  const servicesAction = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const list = useRef<HTMLElement>(null);
@@ -101,9 +111,9 @@ function ProfessionalsRequest() {
     setVersion((value) => value + 1);
   }
   function closeEditor() {
-    if (pendingOperations > 0) return;
+    if (pendingOperations > 0 || secondaryPanel) return;
     setSelected(null);
-    setConfirming(false);
+    setSecondaryPanel(null);
   }
   if (view.status === "unauthorized") return null;
   const canWrite =
@@ -116,7 +126,7 @@ function ProfessionalsRequest() {
         <IconButton
           aria-label="Adicionar profissional"
           aria-haspopup="dialog"
-          disabled={!canWrite || confirming}
+          disabled={!canWrite || !!secondaryPanel}
           onClick={() => setCreating(true)}
         >
           <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -135,7 +145,7 @@ function ProfessionalsRequest() {
           fallbackFocusRef={list}
         >
           <CreateProfessionalForm
-            canWrite={canWrite && !confirming}
+            canWrite={canWrite && !secondaryPanel}
             onCreated={() => {
               setOffset(FIRST_PAGE_OFFSET);
               refresh();
@@ -158,36 +168,58 @@ function ProfessionalsRequest() {
             returnFocusRef={origin}
             title="Editar profissional"
             onClose={closeEditor}
-            closeDisabled={pendingOperations > 0}
+            closeDisabled={busy || !!secondaryPanel}
             fallbackFocusRef={list}
           >
             <EditProfessionalPanel
               professionalId={selected}
-              canWrite={canWrite && !confirming}
-              blocked={busy || confirming}
+              canWrite={canWrite && !secondaryPanel}
+              blocked={busy || !!secondaryPanel}
               onRecordConfirmed={acceptRecord}
               onClose={closeEditor}
               onReadOnly={onReadOnly}
               onUnauthorized={onUnauthorized}
               onBusyChange={trackOperation}
               renderActions={(record, disabled, onChanged) => (
-                <ProfessionalStatusAction
-                  record={record}
-                  canWrite={canWrite}
-                  disabled={disabled}
-                  onOpenChange={setConfirming}
-                  onBusyChange={trackOperation}
-                  onReadOnly={onReadOnly}
-                  onUnauthorized={onUnauthorized}
-                  onChanged={onChanged}
-                />
+                <>
+                  <ProfessionalStatusAction
+                    record={record}
+                    canWrite={canWrite}
+                    disabled={disabled || !!secondaryPanel}
+                    onOpenChange={(open) =>
+                      setSecondaryPanel(open ? "status" : null)
+                    }
+                    onBusyChange={trackOperation}
+                    onReadOnly={onReadOnly}
+                    onUnauthorized={onUnauthorized}
+                    onChanged={onChanged}
+                  />
+                  <ModalActions>
+                    <Button
+                      ref={servicesAction}
+                      disabled={busy || !!secondaryPanel}
+                      onClick={() => setSecondaryPanel("services")}
+                    >
+                      Serviços
+                    </Button>
+                  </ModalActions>
+                  {secondaryPanel === "services" ? (
+                    <ProfessionalServicesPanel
+                      professional={record}
+                      canWrite={canWrite}
+                      onClose={() => setSecondaryPanel(null)}
+                      onUnauthorized={onUnauthorized}
+                      returnFocusRef={servicesAction}
+                    />
+                  ) : null}
+                </>
               )}
             />
           </Modal>
         ) : null}
         <ProfessionalsListPanel
           view={view}
-          busy={busy || confirming}
+          busy={busy || !!secondaryPanel}
           listRef={list}
           onRefresh={refresh}
           onPageChange={(next) => {
