@@ -115,8 +115,10 @@ Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Se
 
 Correções dos três pontos técnicos do [review da implementação](professional-services-review.md):
 
-- [ ] Calcular a data da transição após adquirir o bloqueio do par e preservar sua ordem.
+- [x] Calcular a data da transição após adquirir o bloqueio do par e preservar sua ordem, com regressão HTTP de espera coordenada no PostgreSQL real.
 - [x] Recusar variações de caixa da chave `associated` e combinações com propriedades extras, com regressões unitárias e HTTP, preservando o decoder estrutural compartilhado.
 - [ ] Evitar nova versão física da linha em repetições do estado e confirmar o no-op sem consulta adicional.
 
 A regressão da chave JSON reproduziu a aceitação indevida antes da correção. Nesta etapa, passaram unitários Go, `go vet -tags=integration ./...`, integração de vínculos sem cache e `git diff --check`.
+
+Na etapa de ordenação das datas, passaram a integração de vínculos sem cache, incluindo a regressão com bloqueio coordenado, os unitários Go, `go vet -tags=integration ./...`, formato Go e `git diff --check`; o SQL foi regenerado com `sqlc`.

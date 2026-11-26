@@ -107,8 +107,10 @@ WHERE $4::boolean OR EXISTS (
 )
 ON CONFLICT (establishment_id, professional_id, service_id)
 DO UPDATE SET active = EXCLUDED.active,
+    -- Evaluate after the conflict lock, keeping transition order even if the clock moves back.
     updated_at = CASE WHEN professional_services.active IS DISTINCT FROM EXCLUDED.active
-        THEN statement_timestamp() ELSE professional_services.updated_at END
+        THEN GREATEST(clock_timestamp(), professional_services.updated_at + INTERVAL '1 microsecond')
+        ELSE professional_services.updated_at END
 RETURNING active
 `
 
