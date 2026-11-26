@@ -108,7 +108,8 @@ O fluxo público permite escolher profissional, serviço, dia e horário. O pain
 - Preço e duração pertencem ao serviço e são iguais para todos os profissionais associados; não crie sobrescritas por profissional no MVP.
 - Cada profissional possui jornada semanal recorrente própria, editável por ele ou pelo proprietário.
 - A API já permite ao proprietário consultar a jornada de profissionais ativos e inativos do próprio estabelecimento. O profissional consulta somente a própria jornada depois da troca obrigatória de senha, quando exigida. A consulta permanece disponível após a expiração do trial e informa o fuso do estabelecimento e o direito de escrita.
-- Permita vários períodos no mesmo dia, como `08:00–12:00` e `13:00–18:00`, sem sobreposição entre períodos.
+- A API salva a semana inteira com direito de escrita para os mesmos papéis e profissionais da consulta. Profissionais novos e existentes começam com jornada vazia. Enviar uma semana vazia limpa os períodos. A última gravação aceita prevalece e uma semana inválida preserva a anterior.
+- A jornada aceita vários períodos por dia, como `08:00–12:00` e `13:00–18:00`, com precisão de minuto, início anterior ao fim e sem sobreposição. Períodos adjacentes são válidos. Para trabalhar após a meia-noite, use `24:00` no fim do primeiro período e `00:00` no início de outro no dia seguinte. Alterar a jornada preserva o fuso e não inicia os dados operacionais do estabelecimento.
 - Proprietário e profissional podem criar bloqueios pontuais para compromissos, folgas ou outras indisponibilidades.
 - Serviço exige nome não vazio após remover espaços nas extremidades, com até 120 pontos de código Unicode e sem caractere nulo (`U+0000`); nomes repetidos são permitidos no mesmo estabelecimento.
 - Cada serviço possui preço obrigatório de R$ 0,00 a R$ 99.999,99, com até duas casas decimais, representado em centavos inteiros; aceite zero para serviços gratuitos.

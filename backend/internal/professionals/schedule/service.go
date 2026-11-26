@@ -10,7 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-var ErrNotFound = errors.New("professional schedule not found")
+var (
+	ErrNotFound       = errors.New("professional schedule not found")
+	ErrStalePrincipal = errors.New("professional authentication is no longer current")
+)
 
 type Period struct {
 	Weekday     int16
@@ -26,6 +29,8 @@ type Week struct {
 
 type Store interface {
 	Read(context.Context, string, uuid.UUID) (Week, error)
+	CheckTarget(context.Context, string, uuid.UUID) error
+	Replace(context.Context, auth.Principal, uuid.UUID, []Period) (Week, error)
 }
 
 type WriteEntitlements interface {
@@ -54,6 +59,28 @@ func (service *Service) Read(ctx context.Context, principal auth.Principal, prof
 		return Week{}, writeErr
 	}
 	week.CanWrite = writeErr == nil
+	return week, nil
+}
+
+func (service *Service) Replace(ctx context.Context, principal auth.Principal, professionalID uuid.UUID, input []periodInput) (Week, error) {
+	if !canAccess(principal, professionalID) {
+		return Week{}, ErrNotFound
+	}
+	if err := service.store.CheckTarget(ctx, principal.EstablishmentID, professionalID); err != nil {
+		return Week{}, err
+	}
+	if err := service.writes.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Week{}, err
+	}
+	periods, err := validatePeriods(input)
+	if err != nil {
+		return Week{}, err
+	}
+	week, err := service.store.Replace(ctx, principal, professionalID, periods)
+	if err != nil {
+		return Week{}, err
+	}
+	week.CanWrite = true
 	return week, nil
 }
 

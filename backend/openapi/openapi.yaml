@@ -682,6 +682,44 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
+    put:
+      operationId: putProfessionalWeeklySchedule
+      summary: Substitui a jornada semanal completa do profissional
+      description: Exige origem confiável, CSRF e direito de escrita. O proprietário pode salvar a jornada de profissionais ativos e inativos do próprio estabelecimento. O profissional pode salvar a própria jornada após a troca obrigatória de senha, quando exigida. Envie um array vazio para limpar a semana. Campos desconhecidos, repetidos ou nulos são recusados. O corpo tem limite de 655360 bytes (640 KiB). Divida períodos à meia-noite usando 24:00 no fim e 00:00 no início do próximo dia. Períodos adjacentes são aceitos; sobreposição invalida toda a semana.
+      tags: [professionals]
+      security:
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfessionalWeeklyScheduleRequest"
+      responses:
+        "200":
+          description: Semana gravada, com os períodos em ordem de dia e início
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalWeeklyScheduleResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          description: Corpo acima de 655360 bytes. Código request_too_large.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /professionals/{professional_id}/deactivation:
     parameters:
       - name: professional_id
@@ -984,6 +1022,16 @@ components:
           type: string
           pattern: '^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
           description: Fim local no formato HH:mm. Use 24:00 para a meia-noite ao fim do dia.
+    ProfessionalWeeklyScheduleRequest:
+      type: object
+      additionalProperties: false
+      required: [periods]
+      properties:
+        periods:
+          type: array
+          maxItems: 10080
+          items:
+            $ref: "#/components/schemas/ProfessionalWorkPeriod"
     ProfessionalWeeklyScheduleResponse:
       type: object
       required: [professional_id, time_zone, can_write, periods]

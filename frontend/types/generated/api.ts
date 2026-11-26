@@ -343,7 +343,11 @@ export interface paths {
          * @description O proprietário consulta profissionais ativos e inativos do próprio estabelecimento. O profissional consulta somente a própria jornada após a troca obrigatória de senha, quando exigida. A leitura permanece disponível em modo somente leitura.
          */
         get: operations["getProfessionalWeeklySchedule"];
-        put?: never;
+        /**
+         * Substitui a jornada semanal completa do profissional
+         * @description Exige origem confiável, CSRF e direito de escrita. O proprietário pode salvar a jornada de profissionais ativos e inativos do próprio estabelecimento. O profissional pode salvar a própria jornada após a troca obrigatória de senha, quando exigida. Envie um array vazio para limpar a semana. Campos desconhecidos, repetidos ou nulos são recusados. O corpo tem limite de 655360 bytes (640 KiB). Divida períodos à meia-noite usando 24:00 no fim e 00:00 no início do próximo dia. Períodos adjacentes são aceitos; sobreposição invalida toda a semana.
+         */
+        put: operations["putProfessionalWeeklySchedule"];
         post?: never;
         delete?: never;
         options?: never;
@@ -480,6 +484,9 @@ export interface components {
             start_time: string;
             /** @description Fim local no formato HH:mm. Use 24:00 para a meia-noite ao fim do dia. */
             end_time: string;
+        };
+        ProfessionalWeeklyScheduleRequest: {
+            periods: components["schemas"]["ProfessionalWorkPeriod"][];
         };
         ProfessionalWeeklyScheduleResponse: {
             /** Format: uuid */
@@ -1461,6 +1468,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    putProfessionalWeeklySchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfessionalWeeklyScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Semana gravada, com os períodos em ordem de dia e início */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalWeeklyScheduleResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Corpo acima de 655360 bytes. Código request_too_large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             500: components["responses"]["InternalServerError"];
         };
     };

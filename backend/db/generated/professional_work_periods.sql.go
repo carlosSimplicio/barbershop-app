@@ -11,6 +11,72 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteProfessionalWorkPeriods = `-- name: DeleteProfessionalWorkPeriods :exec
+DELETE FROM professional_work_periods
+WHERE establishment_id = $1 AND professional_id = $2
+`
+
+type DeleteProfessionalWorkPeriodsParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	ProfessionalID  pgtype.UUID `json:"professional_id"`
+}
+
+func (q *Queries) DeleteProfessionalWorkPeriods(ctx context.Context, arg DeleteProfessionalWorkPeriodsParams) error {
+	_, err := q.db.Exec(ctx, deleteProfessionalWorkPeriods, arg.EstablishmentID, arg.ProfessionalID)
+	return err
+}
+
+const getProfessionalSchedule = `-- name: GetProfessionalSchedule :many
+SELECT e.time_zone,
+       COALESCE(w.weekday, 0)::smallint AS weekday,
+       COALESCE(w.start_minute, 0)::smallint AS start_minute,
+       COALESCE(w.end_minute, 0)::smallint AS end_minute
+FROM professionals AS p
+JOIN users AS u ON (u.id, u.establishment_id) = (p.user_id, p.establishment_id)
+JOIN establishments AS e ON e.id = p.establishment_id
+LEFT JOIN professional_work_periods AS w
+    ON (w.professional_id, w.establishment_id) = (p.user_id, p.establishment_id)
+WHERE p.establishment_id = $1 AND p.user_id = $2 AND u.role = 'professional'
+ORDER BY w.weekday, w.start_minute
+`
+
+type GetProfessionalScheduleParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	UserID          pgtype.UUID `json:"user_id"`
+}
+
+type GetProfessionalScheduleRow struct {
+	TimeZone    string `json:"time_zone"`
+	Weekday     int16  `json:"weekday"`
+	StartMinute int16  `json:"start_minute"`
+	EndMinute   int16  `json:"end_minute"`
+}
+
+func (q *Queries) GetProfessionalSchedule(ctx context.Context, arg GetProfessionalScheduleParams) ([]GetProfessionalScheduleRow, error) {
+	rows, err := q.db.Query(ctx, getProfessionalSchedule, arg.EstablishmentID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProfessionalScheduleRow{}
+	for rows.Next() {
+		var i GetProfessionalScheduleRow
+		if err := rows.Scan(
+			&i.TimeZone,
+			&i.Weekday,
+			&i.StartMinute,
+			&i.EndMinute,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProfessionalScheduleTimeZone = `-- name: GetProfessionalScheduleTimeZone :one
 SELECT e.time_zone
 FROM professionals AS p
@@ -29,6 +95,33 @@ func (q *Queries) GetProfessionalScheduleTimeZone(ctx context.Context, arg GetPr
 	var time_zone string
 	err := row.Scan(&time_zone)
 	return time_zone, err
+}
+
+const insertProfessionalWorkPeriods = `-- name: InsertProfessionalWorkPeriods :exec
+INSERT INTO professional_work_periods (establishment_id, professional_id, weekday, start_minute, end_minute)
+SELECT $1::uuid, $2::uuid,
+       unnest($3::smallint[]),
+       unnest($4::smallint[]),
+       unnest($5::smallint[])
+`
+
+type InsertProfessionalWorkPeriodsParams struct {
+	EstablishmentID pgtype.UUID `json:"establishment_id"`
+	ProfessionalID  pgtype.UUID `json:"professional_id"`
+	Weekdays        []int16     `json:"weekdays"`
+	StartMinutes    []int16     `json:"start_minutes"`
+	EndMinutes      []int16     `json:"end_minutes"`
+}
+
+func (q *Queries) InsertProfessionalWorkPeriods(ctx context.Context, arg InsertProfessionalWorkPeriodsParams) error {
+	_, err := q.db.Exec(ctx, insertProfessionalWorkPeriods,
+		arg.EstablishmentID,
+		arg.ProfessionalID,
+		arg.Weekdays,
+		arg.StartMinutes,
+		arg.EndMinutes,
+	)
+	return err
 }
 
 const listProfessionalWorkPeriods = `-- name: ListProfessionalWorkPeriods :many

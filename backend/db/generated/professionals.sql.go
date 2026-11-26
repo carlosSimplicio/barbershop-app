@@ -174,7 +174,7 @@ func (q *Queries) ListProfessionalsByEstablishment(ctx context.Context, arg List
 }
 
 const lockProfessionalUser = `-- name: LockProfessionalUser :one
-SELECT u.id
+SELECT u.active, u.credential_version
 FROM users AS u
 WHERE u.id = $1 AND u.establishment_id = $2 AND u.role = 'professional'
 FOR UPDATE OF u
@@ -185,11 +185,16 @@ type LockProfessionalUserParams struct {
 	EstablishmentID pgtype.UUID `json:"establishment_id"`
 }
 
-func (q *Queries) LockProfessionalUser(ctx context.Context, arg LockProfessionalUserParams) (pgtype.UUID, error) {
+type LockProfessionalUserRow struct {
+	Active            bool  `json:"active"`
+	CredentialVersion int64 `json:"credential_version"`
+}
+
+func (q *Queries) LockProfessionalUser(ctx context.Context, arg LockProfessionalUserParams) (LockProfessionalUserRow, error) {
 	row := q.db.QueryRow(ctx, lockProfessionalUser, arg.ID, arg.EstablishmentID)
-	var id pgtype.UUID
-	err := row.Scan(&id)
-	return id, err
+	var i LockProfessionalUserRow
+	err := row.Scan(&i.Active, &i.CredentialVersion)
+	return i, err
 }
 
 const reactivateProfessionalUser = `-- name: ReactivateProfessionalUser :exec

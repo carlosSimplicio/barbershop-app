@@ -157,3 +157,7 @@ func (handler *Handler) PutProfessionalService(httpContext *gin.Context, profess
 func (handler *Handler) GetProfessionalWeeklySchedule(httpContext *gin.Context, professionalID uuid.UUID) {
 	handler.professionalSchedule.GetProfessionalWeeklySchedule(httpContext, professionalID)
 }
+
+func (handler *Handler) PutProfessionalWeeklySchedule(httpContext *gin.Context, professionalID uuid.UUID) {
+	handler.professionalSchedule.PutProfessionalWeeklySchedule(httpContext, professionalID)
+}
