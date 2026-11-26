@@ -6,6 +6,7 @@ import (
 
 	db "barbershop-app/backend/db/generated"
 	"barbershop-app/backend/internal/auth"
+	"barbershop-app/backend/internal/entitlements"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -92,6 +93,13 @@ func (store *PostgresStore) Replace(ctx context.Context, principal auth.Principa
 		if err := insertPeriods(ctx, queries, tenant, professional, periods); err != nil {
 			return Week{}, err
 		}
+	}
+	// Recheck after any write waits so expiration rolls back the replacement.
+	// Use the transaction connection to avoid waiting for another pool slot.
+	trials := entitlements.NewPostgresStore(transaction)
+	writeAccess := entitlements.NewService(trials)
+	if err := writeAccess.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+		return Week{}, err
 	}
 	if err := transaction.Commit(ctx); err != nil {
 		return Week{}, err

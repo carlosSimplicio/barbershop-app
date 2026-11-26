@@ -150,6 +150,36 @@ func TestWeeklyScheduleWriteSerializesConcurrentReplacementsAndReadsWholeWeek(t 
 	}
 }
 
+func TestWeeklyScheduleWriteRechecksTrialAfterWaitingForProfessionalLock(t *testing.T) {
+	app := newTestApplication(t)
+	id := createManagementProfessional(t, app)
+	initial := decodeSavedSchedule(t, sendScheduleBody(t, app, id, initialSchedule), id)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	gate, err := integrationPool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gate.Rollback(context.Background())
+	if _, err := gate.Exec(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, id); err != nil {
+		t.Fatal(err)
+	}
+
+	pending := startScheduleRequest(app.client, schedulePutRequest(t, ctx, app, id, strings.NewReader(secondSchedule)))
+	waitForBlockedDatabaseQuery(t, ctx, "LockProfessionalUser")
+	// Simulate expiration only after the request has passed the initial access check.
+	expireCatalogTrial(t)
+	if err := gate.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	assertScheduleError(t, finishScheduleRequest(t, ctx, pending), http.StatusForbidden, "read_only")
+	if got := readSchedule(t, app, id); got.CanWrite || !reflect.DeepEqual(got.Periods, initial.Periods) {
+		t.Fatalf("expired trial did not preserve the original week: %+v", got)
+	}
+}
+
 func TestWeeklyScheduleWriteRejectsSelfEditAuthenticatedBeforeReactivation(t *testing.T) {
 	app := newTestApplication(t)
 	id := createManagementProfessional(t, app)

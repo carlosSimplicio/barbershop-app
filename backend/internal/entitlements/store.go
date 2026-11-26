@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type trialQueries interface {
@@ -21,8 +20,8 @@ type PostgresStore struct {
 	queries trialQueries
 }
 
-func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
-	return &PostgresStore{queries: db.New(pool)}
+func NewPostgresStore(executor db.DBTX) *PostgresStore {
+	return &PostgresStore{queries: db.New(executor)}
 }
 
 func (store *PostgresStore) GetTrialWindow(ctx context.Context, establishmentID string) (*TrialWindow, error) {
