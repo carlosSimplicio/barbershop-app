@@ -160,6 +160,38 @@ func TestWeeklyScheduleWriteRejectsInvalidWeeksAndPreservesTimeZonePolicy(t *tes
 	}
 }
 
+func TestWeeklyScheduleWriteConfirmsIdenticalWeekWithoutRewritingPeriods(t *testing.T) {
+	app := newTestApplication(t)
+	id := createManagementProfessional(t, app)
+	periods := []api.ProfessionalWorkPeriod{
+		{Weekday: 1, StartTime: "08:00", EndTime: "12:00"},
+		{Weekday: 1, StartTime: "13:00", EndTime: "18:00"},
+	}
+	initial := saveSchedule(t, app, id, periods)
+	if _, err := integrationPool.Exec(context.Background(), `
+		CREATE FUNCTION reject_test_schedule_rewrite() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN
+			RAISE EXCEPTION 'the same week must not issue a write';
+		END;
+		$$;
+		CREATE TRIGGER reject_test_schedule_rewrite BEFORE INSERT OR DELETE OR UPDATE ON professional_work_periods
+		FOR EACH STATEMENT EXECUTE FUNCTION reject_test_schedule_rewrite()
+	`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := integrationPool.Exec(context.Background(), `
+			DROP TRIGGER reject_test_schedule_rewrite ON professional_work_periods;
+			DROP FUNCTION reject_test_schedule_rewrite()
+		`); err != nil {
+			t.Error(err)
+		}
+	})
+	if got := saveSchedule(t, app, id, []api.ProfessionalWorkPeriod{periods[1], periods[0]}); !reflect.DeepEqual(got, initial) {
+		t.Fatalf("repeated write = %+v, want %+v", got, initial)
+	}
+}
+
 func TestWeeklyScheduleWriteAcceptsEveryMinuteAndBoundsRequestBytes(t *testing.T) {
 	app := newTestApplication(t)
 	id := createManagementProfessional(t, app)

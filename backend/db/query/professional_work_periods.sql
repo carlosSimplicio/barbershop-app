@@ -4,12 +4,13 @@ FROM professional_work_periods
 WHERE establishment_id = $1 AND professional_id = $2
 ORDER BY weekday, start_minute;
 
--- name: GetProfessionalScheduleTimeZone :one
+-- name: LockProfessionalScheduleTimeZone :one
 SELECT e.time_zone
 FROM professionals AS p
 JOIN users AS u ON (u.id, u.establishment_id) = (p.user_id, p.establishment_id)
 JOIN establishments AS e ON e.id = p.establishment_id
-WHERE p.establishment_id = $1 AND p.user_id = $2 AND u.role = 'professional';
+WHERE p.establishment_id = $1 AND p.user_id = $2 AND u.role = 'professional'
+FOR SHARE OF e;
 
 -- name: GetProfessionalSchedule :many
 SELECT e.time_zone,

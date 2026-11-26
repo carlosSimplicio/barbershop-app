@@ -1486,7 +1486,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Semana gravada, com os períodos em ordem de dia e início */
+            /** @description Semana confirmada, com os períodos em ordem de dia e início e o fuso vigente no commit. Se os períodos já forem iguais aos enviados, são preservados. */
             200: {
                 headers: {
                     [name: string]: unknown;

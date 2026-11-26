@@ -3,6 +3,7 @@ package schedule
 import (
 	"context"
 	"errors"
+	"slices"
 
 	db "barbershop-app/backend/db/generated"
 	"barbershop-app/backend/internal/auth"
@@ -53,11 +54,17 @@ func (store *PostgresStore) CheckTarget(ctx context.Context, establishmentID str
 	if err != nil {
 		return err
 	}
-	_, err = getTimeZone(ctx, store.queries, tenant, pgtype.UUID{Bytes: professionalID, Valid: true})
+	_, err = store.queries.GetProfessional(ctx, db.GetProfessionalParams{
+		EstablishmentID: tenant,
+		UserID:          pgtype.UUID{Bytes: professionalID, Valid: true},
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
 	return err
 }
 
-func (store *PostgresStore) Replace(ctx context.Context, principal auth.Principal, professionalID uuid.UUID, periods []Period) (Week, error) {
+func (store *PostgresStore) Replace(ctx context.Context, principal auth.Principal, professionalID uuid.UUID, periods []Period, revalidateWrite func(context.Context, entitlements.Store) error) (Week, error) {
 	tenant, err := parseTenant(principal.EstablishmentID)
 	if err != nil {
 		return Week{}, err
@@ -82,23 +89,37 @@ func (store *PostgresStore) Replace(ctx context.Context, principal auth.Principa
 	if principal.Role == "professional" && (!user.Active || user.CredentialVersion != principal.CredentialVersion) {
 		return Week{}, ErrStalePrincipal
 	}
-	timeZone, err := getTimeZone(ctx, queries, tenant, professional)
+	current, err := queries.ListProfessionalWorkPeriods(ctx, db.ListProfessionalWorkPeriodsParams{EstablishmentID: tenant, ProfessionalID: professional})
 	if err != nil {
 		return Week{}, err
 	}
-	if err := queries.DeleteProfessionalWorkPeriods(ctx, db.DeleteProfessionalWorkPeriodsParams{EstablishmentID: tenant, ProfessionalID: professional}); err != nil {
-		return Week{}, err
-	}
-	if len(periods) > 0 {
-		if err := insertPeriods(ctx, queries, tenant, professional, periods); err != nil {
+	unchanged := slices.EqualFunc(current, periods, func(left db.ListProfessionalWorkPeriodsRow, right Period) bool {
+		return left.Weekday == right.Weekday && left.StartMinute == right.StartMinute && left.EndMinute == right.EndMinute
+	})
+	if !unchanged {
+		if err := queries.DeleteProfessionalWorkPeriods(ctx, db.DeleteProfessionalWorkPeriodsParams{EstablishmentID: tenant, ProfessionalID: professional}); err != nil {
 			return Week{}, err
 		}
+		if len(periods) > 0 {
+			if err := insertPeriods(ctx, queries, tenant, professional, periods); err != nil {
+				return Week{}, err
+			}
+		}
 	}
-	// Recheck after any write waits so expiration rolls back the replacement.
-	// Use the transaction connection to avoid waiting for another pool slot.
-	trials := entitlements.NewPostgresStore(transaction)
-	writeAccess := entitlements.NewService(trials)
-	if err := writeAccess.RequireWrite(ctx, principal.EstablishmentID); err != nil {
+	// Read the zone after the replacement so a settings update can finish while
+	// periods are written. The shared lock keeps that zone current until commit.
+	timeZone, err := queries.LockProfessionalScheduleTimeZone(ctx, db.LockProfessionalScheduleTimeZoneParams{
+		EstablishmentID: tenant,
+		UserID:          professional,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Week{}, ErrNotFound
+	}
+	if err != nil {
+		return Week{}, err
+	}
+	// Recheck after all lock waits using the existing transaction connection.
+	if err := revalidateWrite(ctx, entitlements.NewPostgresStore(transaction)); err != nil {
 		return Week{}, err
 	}
 	if err := transaction.Commit(ctx); err != nil {
@@ -110,17 +131,6 @@ func (store *PostgresStore) Replace(ctx context.Context, principal auth.Principa
 func parseTenant(establishmentID string) (pgtype.UUID, error) {
 	tenant, err := uuid.Parse(establishmentID)
 	return pgtype.UUID{Bytes: tenant, Valid: err == nil}, err
-}
-
-func getTimeZone(ctx context.Context, queries *db.Queries, tenant, professional pgtype.UUID) (string, error) {
-	timeZone, err := queries.GetProfessionalScheduleTimeZone(ctx, db.GetProfessionalScheduleTimeZoneParams{
-		EstablishmentID: tenant,
-		UserID:          professional,
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ErrNotFound
-	}
-	return timeZone, err
 }
 
 func insertPeriods(ctx context.Context, queries *db.Queries, tenant, professional pgtype.UUID, periods []Period) error {

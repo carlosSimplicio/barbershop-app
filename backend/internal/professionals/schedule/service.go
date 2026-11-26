@@ -30,11 +30,12 @@ type Week struct {
 type Store interface {
 	Read(context.Context, string, uuid.UUID) (Week, error)
 	CheckTarget(context.Context, string, uuid.UUID) error
-	Replace(context.Context, auth.Principal, uuid.UUID, []Period) (Week, error)
+	Replace(context.Context, auth.Principal, uuid.UUID, []Period, func(context.Context, entitlements.Store) error) (Week, error)
 }
 
 type WriteEntitlements interface {
 	RequireWrite(context.Context, string) error
+	RequireWriteWithStore(context.Context, string, entitlements.Store) error
 }
 
 type Service struct {
@@ -76,7 +77,9 @@ func (service *Service) Replace(ctx context.Context, principal auth.Principal, p
 	if err != nil {
 		return Week{}, err
 	}
-	week, err := service.store.Replace(ctx, principal, professionalID, periods)
+	week, err := service.store.Replace(ctx, principal, professionalID, periods, func(ctx context.Context, store entitlements.Store) error {
+		return service.writes.RequireWriteWithStore(ctx, principal.EstablishmentID, store)
+	})
 	if err != nil {
 		return Week{}, err
 	}

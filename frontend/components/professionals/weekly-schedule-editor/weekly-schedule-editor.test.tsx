@@ -85,6 +85,9 @@ test("edita vários períodos, aceita meia-noite e confirma a semana enviada ap�
     mondayControls.getByRole("button", { name: /Adicionar período/ }),
   );
   expect(mondayControls.getAllByRole("textbox")).toHaveLength(4);
+  expect(
+    mondayControls.getByRole("textbox", { name: /Início do período 2/ }),
+  ).toHaveFocus();
   fireEvent.click(
     mondayControls.getAllByRole("button", { name: /Remover período/ })[1],
   );
@@ -160,7 +163,85 @@ test("envia uma semana vazia e mantém um único envio pendente", async () => {
   );
   await act(async () => pending.resolve(week()));
   expect(await screen.findByText("Jornada salva")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   expect(onBusyChange.mock.calls).toEqual([[true], [false]]);
+});
+
+test("mantém a semana inteira ao editar páginas e leva o foco ao campo inválido", async () => {
+  const minute = (value: number) => `08:${String(value).padStart(2, "0")}`;
+  const periods = Array.from({ length: 21 }, (_, index) => ({
+    weekday: 1,
+    start_time: minute(index),
+    end_time: minute(index + 1),
+  }));
+  const edited = [
+    ...periods.slice(0, -1),
+    { ...periods[20], end_time: "08:22" },
+  ];
+  vi.mocked(getProfessionalWeeklySchedule).mockResolvedValue(week(periods));
+  vi.mocked(putProfessionalWeeklySchedule).mockResolvedValue(week(edited));
+  render(<WeeklyScheduleEditor professionalId={professionalId} />);
+  await screen.findByText("America/Sao_Paulo");
+  const monday = within(day());
+  const pagination = monday.getByRole("combobox", {
+    name: /Página de períodos/,
+  });
+  expect(monday.getAllByRole("textbox")).toHaveLength(40);
+
+  fireEvent.change(pagination, { target: { value: "1" } });
+  const lastEnd = () =>
+    monday.getByRole("textbox", { name: /Fim do período 21/ });
+  fireEvent.change(lastEnd(), { target: { value: "08:19" } });
+  fireEvent.change(pagination, { target: { value: "0" } });
+  save();
+  expect(pagination).toHaveValue("1");
+  expect(lastEnd()).toHaveFocus();
+  expect(putProfessionalWeeklySchedule).not.toHaveBeenCalled();
+
+  fireEvent.change(lastEnd(), { target: { value: "08:22" } });
+  fireEvent.change(pagination, { target: { value: "0" } });
+  save();
+  expect(await screen.findByText("Jornada salva")).toBeVisible();
+  expect(putProfessionalWeeklySchedule).toHaveBeenCalledExactlyOnceWith(
+    professionalId,
+    { periods: edited },
+    expect.any(AbortSignal),
+  );
+
+  fireEvent.click(monday.getByRole("button", { name: /Adicionar período/ }));
+  expect(pagination).toHaveValue("1");
+  expect(
+    monday.getByRole("textbox", { name: /Início do período 22/ }),
+  ).toHaveFocus();
+});
+
+test("só permite salvar a semana original de novo após uma tentativa sem confirmação", async () => {
+  vi.mocked(getProfessionalWeeklySchedule).mockResolvedValue(week([morning]));
+  vi.mocked(putProfessionalWeeklySchedule)
+    .mockRejectedValueOnce(new Error("network"))
+    .mockResolvedValueOnce(week([morning]));
+  render(<WeeklyScheduleEditor professionalId={professionalId} />);
+  const end = await screen.findByDisplayValue("12:00");
+  const saveButton = screen.getByRole("button", { name: "Salvar" });
+  expect(saveButton).toBeDisabled();
+  fireEvent.change(end, { target: { value: "11:00" } });
+  fireEvent.change(end, { target: { value: "12:00" } });
+  expect(saveButton).toBeDisabled();
+  fireEvent.submit(screen.getByRole("form", { name: "Jornada semanal" }));
+  expect(putProfessionalWeeklySchedule).not.toHaveBeenCalled();
+
+  fireEvent.change(end, { target: { value: "11:00" } });
+  save();
+  await screen.findByText("Não foi possível salvar a jornada");
+  fireEvent.change(end, { target: { value: "12:00" } });
+  save();
+  expect(await screen.findByText("Jornada salva")).toBeVisible();
+  expect(putProfessionalWeeklySchedule).toHaveBeenLastCalledWith(
+    professionalId,
+    { periods: [morning] },
+    expect.any(AbortSignal),
+  );
+  expect(saveButton).toBeDisabled();
 });
 
 test("aponta intervalos invertidos e sobreposição localmente", async () => {
@@ -269,7 +350,9 @@ test("401 no salvamento retira a semana protegida", async () => {
       onUnauthorized={onUnauthorized}
     />,
   );
-  await screen.findByText("America/Sao_Paulo");
+  fireEvent.change(await screen.findByDisplayValue("12:00"), {
+    target: { value: "11:00" },
+  });
   save();
   await act(async () => {});
   expect(screen.queryByRole("form")).not.toBeInTheDocument();
@@ -307,7 +390,9 @@ test("descarta resultado de gravação obsoleta ao trocar de sessão", async () 
       onUnauthorized={onUnauthorized}
     />,
   );
-  await screen.findByDisplayValue("08:00");
+  fireEvent.change(await screen.findByDisplayValue("12:00"), {
+    target: { value: "11:00" },
+  });
   save();
   const signal = vi.mocked(putProfessionalWeeklySchedule).mock.calls[0][2];
   rerender(

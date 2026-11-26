@@ -332,6 +332,7 @@ Use um profissional fictício do estabelecimento A com a troca obrigatória de s
 - [ ] Depois de trocar a senha, acesse “Minha jornada” por `/testes`, confira os períodos salvos pelo proprietário e altere um horário. Salve, reabra a jornada como proprietário e confirme a alteração. Remova todos os períodos no outro perfil, salve e confira que a semana vazia persiste nos dois acessos.
 - [ ] Tente salvar períodos sobrepostos e um intervalo passando da meia-noite. Confira a mensagem de validação e a preservação da semana gravada. Atrase um salvamento para conferir que não há envio duplicado e que a modal bloqueia seu fechamento e as demais operações do painel até a resposta.
 - [ ] Repita os dois acessos em telas estreitas (320 px e 375 px). Percorra início, fim, adicionar, remover e salvar por teclado e toque. Confira alvos de toque, foco visível, campos e ações sem rolagem horizontal e os botões “Salvar” e “Cancelar” alinhados na modal.
+- [ ] Com mais de 20 períodos em um dia, altere um horário, troque de página e volte para confirmar o rascunho. Adicione um período e confira o foco em “Início”, inclusive se for criada uma nova página. Tente salvar com um campo inválido em outra página e confira a abertura da página e o foco no campo. Corrija e salve a semana inteira. Após confirmar, confira que “Salvar” fica desabilitado até uma nova edição.
 - [ ] Após a expiração simulada do trial, confira a consulta nos dois acessos e o salvamento desabilitado. O proprietário também deve conseguir abrir a jornada de um profissional inativo.
 
 ## Registro da rodada

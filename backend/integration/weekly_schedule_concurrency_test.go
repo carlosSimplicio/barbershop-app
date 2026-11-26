@@ -14,6 +14,8 @@ import (
 	"time"
 
 	api "barbershop-app/backend/openapi/generated"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -82,15 +84,8 @@ func TestWeeklyScheduleWriteRollsBackEntireWeekOnInsertFailure(t *testing.T) {
 	}
 }
 
-func TestWeeklyScheduleWriteSerializesConcurrentReplacementsAndReadsWholeWeek(t *testing.T) {
-	app := newTestApplication(t)
-	id := createManagementProfessional(t, app)
-	initial := decodeSavedSchedule(t, sendScheduleBody(t, app, id, initialSchedule), id)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Pause the first insert after its transaction has executed the DELETE.
-	// Readers must still see the old week and the second writer must wait.
+func blockScheduleTestInsert(t *testing.T, ctx context.Context) pgx.Tx {
+	t.Helper()
 	if _, err := integrationPool.Exec(ctx, `
 		CREATE FUNCTION gate_test_schedule() RETURNS trigger LANGUAGE plpgsql AS $$
 		BEGIN
@@ -115,10 +110,23 @@ func TestWeeklyScheduleWriteSerializesConcurrentReplacementsAndReadsWholeWeek(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer gate.Rollback(context.Background())
+	t.Cleanup(func() { _ = gate.Rollback(context.Background()) })
 	if _, err := gate.Exec(ctx, `SELECT pg_advisory_xact_lock(874637)`); err != nil {
 		t.Fatal(err)
 	}
+	return gate
+}
+
+func TestWeeklyScheduleWriteSerializesConcurrentReplacementsAndReadsWholeWeek(t *testing.T) {
+	app := newTestApplication(t)
+	id := createManagementProfessional(t, app)
+	initial := decodeSavedSchedule(t, sendScheduleBody(t, app, id, initialSchedule), id)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Pause the first insert after its transaction has executed the DELETE.
+	// Readers must still see the old week and the second writer must wait.
+	gate := blockScheduleTestInsert(t, ctx)
 
 	first := startScheduleRequest(app.client, schedulePutRequest(t, ctx, app, id, strings.NewReader(firstSchedule)))
 	waitForBlockedDatabaseQuery(t, ctx, "InsertProfessionalWorkPeriods")
@@ -147,6 +155,26 @@ func TestWeeklyScheduleWriteSerializesConcurrentReplacementsAndReadsWholeWeek(t 
 	}
 	if got := readSchedule(t, app, id); !reflect.DeepEqual(got, secondWeek) {
 		t.Fatalf("read after concurrent writes = %+v, want last accepted week %+v", got, secondWeek)
+	}
+}
+
+func TestWeeklyScheduleWriteConfirmsTimeZoneAfterConcurrentSettingsUpdate(t *testing.T) {
+	app := newTestApplication(t)
+	id := createManagementProfessional(t, app)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	gate := blockScheduleTestInsert(t, ctx)
+
+	pending := startScheduleRequest(app.client, schedulePutRequest(t, ctx, app, id, strings.NewReader(firstSchedule)))
+	waitForBlockedDatabaseQuery(t, ctx, "InsertProfessionalWorkPeriods")
+	const updatedZone = "America/Manaus"
+	assertStatus(t, app.request(t, http.MethodPatch, "/api/v1/establishment/settings", map[string]string{"time_zone": updatedZone}), http.StatusNoContent)
+	if err := gate.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	confirmed := decodeSavedSchedule(t, finishScheduleRequest(t, ctx, pending), id)
+	if got := readSchedule(t, app, id); confirmed.TimeZone != updatedZone || !reflect.DeepEqual(got, confirmed) {
+		t.Fatalf("schedule confirmation = %+v, read = %+v, updated time zone = %s", confirmed, got, updatedZone)
 	}
 }
 

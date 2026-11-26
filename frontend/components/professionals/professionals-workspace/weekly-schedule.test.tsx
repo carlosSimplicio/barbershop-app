@@ -176,6 +176,9 @@ test("coordena serviços e estado com a modal de jornada e bloqueia fechamento d
   const controls = within(dialog);
   expect(services).toBeDisabled();
   expect(deactivate).toBeDisabled();
+  fireEvent.change(await controls.findByDisplayValue("12:00"), {
+    target: { value: "11:00" },
+  });
   fireEvent.click(await controls.findByRole("button", { name: "Salvar" }));
   expect(controls.getByRole("button", { name: "Cancelar" })).toBeDisabled();
   expect(controls.getByRole("button", { name: "Fechar modal" })).toBeDisabled();

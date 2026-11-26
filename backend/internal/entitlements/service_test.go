@@ -57,6 +57,26 @@ func TestRequireWriteFailsClosedWhenTrialLookupFails(t *testing.T) {
 	}
 }
 
+func TestRequireWriteWithStoreUsesTheConfiguredClockAndAlternateStore(t *testing.T) {
+	const oneHour = time.Hour
+	now := time.Date(2026, time.October, 22, 12, 0, 0, 0, time.UTC)
+	defaultStore := &trialStoreStub{trial: &TrialWindow{StartsAt: now.Add(-oneHour), EndsAt: now.Add(oneHour)}}
+	transactionStore := &trialStoreStub{trial: &TrialWindow{StartsAt: now.Add(-oneHour), EndsAt: now}}
+	service := NewService(defaultStore)
+	service.now = func() time.Time { return now }
+
+	ctx := context.Background()
+	if err := service.RequireWriteWithStore(ctx, testEstablishmentID, transactionStore); !errors.Is(err, ErrReadOnly) {
+		t.Fatalf("transactional write error = %v, want ErrReadOnly", err)
+	}
+	if transactionStore.establishmentID != testEstablishmentID || defaultStore.establishmentID != "" {
+		t.Fatal("transactional write must query only the supplied store")
+	}
+	if err := service.RequireWrite(ctx, testEstablishmentID); err != nil {
+		t.Fatalf("ordinary write error = %v, want active trial", err)
+	}
+}
+
 type trialStoreStub struct {
 	establishmentID string
 	trial           *TrialWindow

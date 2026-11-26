@@ -28,7 +28,11 @@ func NewService(store Store) *Service {
 }
 
 func (service *Service) RequireWrite(ctx context.Context, establishmentID string) error {
-	trial, err := service.store.GetTrialWindow(ctx, establishmentID)
+	return service.RequireWriteWithStore(ctx, establishmentID, service.store)
+}
+
+func (service *Service) RequireWriteWithStore(ctx context.Context, establishmentID string, store Store) error {
+	trial, err := store.GetTrialWindow(ctx, establishmentID)
 	if err != nil {
 		return fmt.Errorf("get write entitlement: %w", err)
 	}

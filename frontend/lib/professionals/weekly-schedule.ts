@@ -1,7 +1,14 @@
 import type { WeeklySchedule, WorkPeriod } from "./weekly-schedule-api";
 
+export type WorkPeriodTimeField = "start_time" | "end_time";
+
 type Validation =
-  { valid: true; periods: WorkPeriod[] } | { valid: false; message: string };
+  | { valid: true; periods: WorkPeriod[] }
+  | {
+      valid: false;
+      message: string;
+      target?: { period: WorkPeriod; field: WorkPeriodTimeField };
+    };
 
 export const WEEKDAYS = [
   "Segunda-feira",
@@ -31,30 +38,29 @@ export function validateWorkPeriods(input: readonly WorkPeriod[]): Validation {
       message: `A semana permite até ${maxPeriods.toLocaleString("pt-BR")} períodos.`,
     };
   }
-  const periods: WorkPeriod[] = [];
-  for (const { weekday, start_time, end_time } of input) {
+  for (const period of input) {
+    const { weekday, start_time, end_time } = period;
     const day = WEEKDAYS[weekday - 1];
     if (!day) {
       return { valid: false, message: "Confira os dias da semana." };
     }
-    if (
-      !isLocalTime(start_time) ||
-      (!isLocalTime(end_time) && end_time !== midnightEnd)
-    ) {
+    const validStart = isLocalTime(start_time);
+    if (!validStart || (!isLocalTime(end_time) && end_time !== midnightEnd)) {
       return {
         valid: false,
         message: `${day}: informe os horários no formato HH:mm. Use 24:00 somente no fim.`,
+        target: { period, field: validStart ? "end_time" : "start_time" },
       };
     }
     if (start_time >= end_time) {
       return {
         valid: false,
         message: `${day}: o início do período precisa ser anterior ao fim.`,
+        target: { period, field: "end_time" },
       };
     }
-    periods.push({ weekday, start_time, end_time });
   }
-  periods.sort(compareWorkPeriods);
+  const periods = [...input].sort(compareWorkPeriods);
   for (let index = 1; index < periods.length; index++) {
     const previous = periods[index - 1];
     const current = periods[index];
@@ -65,10 +71,18 @@ export function validateWorkPeriods(input: readonly WorkPeriod[]): Validation {
       return {
         valid: false,
         message: `${WEEKDAYS[current.weekday - 1]}: há sobreposição de períodos no mesmo dia.`,
+        target: { period: current, field: "start_time" },
       };
     }
   }
-  return { valid: true, periods };
+  return {
+    valid: true,
+    periods: periods.map(({ weekday, start_time, end_time }) => ({
+      weekday,
+      start_time,
+      end_time,
+    })),
+  };
 }
 
 export function parseWeeklySchedule(
@@ -102,7 +116,10 @@ export function parseWeeklySchedule(
   };
 }
 
-export function sameWorkPeriods(left: WorkPeriod[], right: WorkPeriod[]) {
+export function sameWorkPeriods(
+  left: readonly WorkPeriod[],
+  right: readonly WorkPeriod[],
+) {
   return (
     left.length === right.length &&
     left.every(

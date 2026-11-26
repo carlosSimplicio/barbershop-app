@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useEffectEvent,
   useRef,
   useState,
   type FormEvent,
 } from "react";
-import { Button, Feedback, ModalActions, TextField } from "@/components/ui";
+import { Button, Feedback, ModalActions } from "@/components/ui";
 import { useMutationRequest } from "@/lib/api/use-mutation-request/use-mutation-request";
 import {
   WEEKDAYS,
@@ -15,13 +16,19 @@ import {
   parseWeeklySchedule,
   sameWorkPeriods,
   validateWorkPeriods,
+  type WorkPeriodTimeField,
 } from "@/lib/professionals/weekly-schedule";
 import {
   getProfessionalWeeklySchedule,
   putProfessionalWeeklySchedule,
-  type WeeklySchedule,
   type WorkPeriod,
 } from "@/lib/professionals/weekly-schedule-api";
+import {
+  WeeklyScheduleDay,
+  pageOfPeriod,
+  type DraftPeriod,
+  type PeriodFocus,
+} from "./weekly-schedule-day";
 import styles from "./weekly-schedule-editor.module.css";
 
 type Props = {
@@ -35,8 +42,12 @@ type Props = {
 };
 type View =
   | { status: "loading" | "error" | "missing" | "unauthorized" }
-  | { status: "ready"; week: WeeklySchedule };
-type DraftPeriod = WorkPeriod & { id: number };
+  | {
+      status: "ready";
+      timeZone: string;
+      canWrite: boolean;
+      confirmedDraft: DraftPeriod[][];
+    };
 type Notice = { variant: "success" | "error"; title: string; message: string };
 
 const saveError: Notice = {
@@ -44,6 +55,14 @@ const saveError: Notice = {
   title: "Não foi possível salvar a jornada",
   message: "Confira o rascunho e use Salvar para tentar novamente.",
 };
+
+function toDraft(periods: readonly WorkPeriod[]) {
+  const days: DraftPeriod[][] = WEEKDAYS.map(() => []);
+  periods.forEach((period, id) => {
+    days[period.weekday - 1].push({ ...period, id });
+  });
+  return days;
+}
 
 export function WeeklyScheduleEditor(props: Props) {
   return (
@@ -64,8 +83,11 @@ function WeeklyScheduleRequest({
 }: Props) {
   const [view, setView] = useState<View>({ status: "loading" });
   const [reload, setReload] = useState(0);
-  const [draft, setDraft] = useState<DraftPeriod[]>([]);
+  const [draft, setDraft] = useState<DraftPeriod[][]>([]);
+  const [pages, setPages] = useState(() => WEEKDAYS.map(() => 0));
+  const [focusTarget, setFocusTarget] = useState<PeriodFocus | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [retrySave, setRetrySave] = useState(false);
   const nextId = useRef(0);
   const { begin, isPending, submitting } = useMutationRequest(onBusyChange);
   function invalidate() {
@@ -96,9 +118,15 @@ function WeeklyScheduleRequest({
           setView({ status: "error" });
           return;
         }
-        setDraft(week.periods.map((period, id) => ({ ...period, id })));
+        const confirmedDraft = toDraft(week.periods);
+        setDraft(confirmedDraft);
         nextId.current = week.periods.length;
-        setView({ status: "ready", week });
+        setView({
+          status: "ready",
+          timeZone: week.time_zone,
+          canWrite: week.can_write,
+          confirmedDraft,
+        });
       })
       .catch(() => {
         if (!controller.signal.aborted) setView({ status: "error" });
@@ -106,23 +134,105 @@ function WeeklyScheduleRequest({
     return () => controller.abort();
   }, [professionalId, reload]);
 
-  const writable = canWrite && view.status === "ready" && view.week.can_write;
-  function edit(change: (previous: DraftPeriod[]) => DraftPeriod[]) {
-    if (!writable || isPending()) return;
-    setNotice(null);
-    setDraft(change);
-  }
+  const writable = canWrite && view.status === "ready" && view.canWrite;
+  const hasChanges =
+    view.status === "ready" &&
+    draft.some(
+      (periods, index) =>
+        periods !== view.confirmedDraft[index] &&
+        !sameWorkPeriods(periods, view.confirmedDraft[index]),
+    );
+  const editDay = useCallback(
+    (weekday: number, change: (previous: DraftPeriod[]) => DraftPeriod[]) => {
+      if (!writable || isPending()) return false;
+      setNotice(null);
+      setFocusTarget(null);
+      setDraft((days) =>
+        days.map((periods, index) =>
+          index === weekday - 1 ? change(periods) : periods,
+        ),
+      );
+      return true;
+    },
+    [isPending, writable],
+  );
+  const selectPage = useCallback((weekday: number, page: number) => {
+    setFocusTarget(null);
+    setPages((previous) =>
+      previous.map((current, index) =>
+        index === weekday - 1 ? page : current,
+      ),
+    );
+  }, []);
+  const addPeriod = useCallback(
+    (weekday: number, page: number) => {
+      const id = nextId.current;
+      if (
+        !editDay(weekday, (periods) => [
+          ...periods,
+          { id, weekday, start_time: "", end_time: "" },
+        ])
+      )
+        return;
+      nextId.current++;
+      selectPage(weekday, page);
+      setFocusTarget({ id, weekday, field: "start_time" });
+    },
+    [editDay, selectPage],
+  );
+  const editPeriod = useCallback(
+    (period: DraftPeriod, field: WorkPeriodTimeField, value: string) => {
+      editDay(period.weekday, (periods) =>
+        periods.map((current) =>
+          current.id === period.id ? { ...current, [field]: value } : current,
+        ),
+      );
+    },
+    [editDay],
+  );
+  const removePeriod = useCallback(
+    (period: DraftPeriod) => {
+      editDay(period.weekday, (periods) =>
+        periods.filter((current) => current.id !== period.id),
+      );
+    },
+    [editDay],
+  );
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (view.status !== "ready" || !writable || isPending()) return;
-    const input = validateWorkPeriods(draft);
+    if (
+      view.status !== "ready" ||
+      !writable ||
+      isPending() ||
+      (!hasChanges && !retrySave)
+    )
+      return;
+    const input = validateWorkPeriods(draft.flat());
     if (!input.valid) {
       setNotice({
         variant: "error",
         title: "Confira os períodos",
         message: input.message,
       });
+      if (input.target) {
+        const { period, field } = input.target;
+        const day = draft[period.weekday - 1];
+        const index = day.findIndex((candidate) => candidate === period);
+        if (index >= 0) {
+          selectPage(period.weekday, pageOfPeriod(index));
+          setFocusTarget({ id: day[index].id, weekday: period.weekday, field });
+        }
+      }
+      return;
+    }
+    if (
+      !retrySave &&
+      sameWorkPeriods(input.periods, view.confirmedDraft.flat())
+    ) {
+      setDraft(view.confirmedDraft);
+      setFocusTarget(null);
+      setNotice(null);
       return;
     }
 
@@ -145,7 +255,7 @@ function WeeklyScheduleRequest({
         result.status === 403 &&
         result.error.code === "read_only"
       ) {
-        setView({ status: "ready", week: { ...view.week, can_write: false } });
+        setView({ ...view, canWrite: false });
         setNotice({
           variant: "error",
           title: "A jornada não foi salva",
@@ -159,18 +269,31 @@ function WeeklyScheduleRequest({
           ? parseWeeklySchedule(result.data, professionalId)
           : null;
       if (!confirmed || !sameWorkPeriods(confirmed.periods, input.periods)) {
+        setRetrySave(true);
         setNotice(saveError);
         return;
       }
-      setView({ status: "ready", week: confirmed });
-      setDraft((periods) => [...periods].sort(compareWorkPeriods));
+      const confirmedDraft = draft.map((periods) =>
+        [...periods].sort(compareWorkPeriods),
+      );
+      setView({
+        status: "ready",
+        timeZone: confirmed.time_zone,
+        canWrite: confirmed.can_write,
+        confirmedDraft,
+      });
+      setDraft(confirmedDraft);
+      setRetrySave(false);
       setNotice({
         variant: "success",
         title: "Jornada salva",
         message: "Os horários foram atualizados.",
       });
     } catch {
-      if (!request.signal.aborted) setNotice(saveError);
+      if (!request.signal.aborted) {
+        setRetrySave(true);
+        setNotice(saveError);
+      }
     } finally {
       request.finish();
     }
@@ -224,7 +347,10 @@ function WeeklyScheduleRequest({
   }
 
   const saveButton = (
-    <Button type="submit" disabled={!writable || submitting}>
+    <Button
+      type="submit"
+      disabled={!writable || submitting || (!hasChanges && !retrySave)}
+    >
       {submitting ? "Salvando…" : "Salvar"}
     </Button>
   );
@@ -236,7 +362,7 @@ function WeeklyScheduleRequest({
       onSubmit={save}
     >
       <p>
-        Fuso horário: <strong>{view.week.time_zone}</strong>
+        Fuso horário: <strong>{view.timeZone}</strong>
       </p>
       {writable ? (
         <p>
@@ -250,86 +376,21 @@ function WeeklyScheduleRequest({
       )}
       {WEEKDAYS.map((day, dayIndex) => {
         const weekday = dayIndex + 1;
-        const periods = draft.filter((period) => period.weekday === weekday);
         return (
-          <fieldset className={styles.day} key={day}>
-            <legend>{day}</legend>
-            {periods.map((period, index) => {
-              const label = `do período ${index + 1} de ${day}`;
-              return (
-                <div className={styles.period} key={period.id}>
-                  <TextField
-                    aria-label={`Início ${label}`}
-                    label="Início"
-                    placeholder="HH:mm"
-                    maxLength={5}
-                    readOnly={!writable || submitting}
-                    value={period.start_time}
-                    onChange={(event) => {
-                      const start_time = event.currentTarget.value;
-                      edit((current) =>
-                        current.map((item) =>
-                          item.id === period.id
-                            ? { ...item, start_time }
-                            : item,
-                        ),
-                      );
-                    }}
-                  />
-                  <TextField
-                    aria-label={`Fim ${label}`}
-                    label="Fim"
-                    placeholder="HH:mm"
-                    maxLength={5}
-                    readOnly={!writable || submitting}
-                    value={period.end_time}
-                    onChange={(event) => {
-                      const end_time = event.currentTarget.value;
-                      edit((current) =>
-                        current.map((item) =>
-                          item.id === period.id ? { ...item, end_time } : item,
-                        ),
-                      );
-                    }}
-                  />
-                  {writable ? (
-                    <Button
-                      aria-label={`Remover período ${index + 1} de ${day}`}
-                      type="button"
-                      variant="secondary"
-                      disabled={submitting}
-                      onClick={() =>
-                        edit((current) =>
-                          current.filter((item) => item.id !== period.id),
-                        )
-                      }
-                    >
-                      Remover
-                    </Button>
-                  ) : null}
-                </div>
-              );
-            })}
-            {writable ? (
-              <Button
-                aria-label={`Adicionar período em ${day}`}
-                type="button"
-                variant="secondary"
-                disabled={submitting}
-                onClick={() => {
-                  const id = nextId.current++;
-                  edit((current) => [
-                    ...current,
-                    { id, weekday, start_time: "", end_time: "" },
-                  ]);
-                }}
-              >
-                Adicionar período
-              </Button>
-            ) : periods.length === 0 ? (
-              <p>Nenhum período.</p>
-            ) : null}
-          </fieldset>
+          <WeeklyScheduleDay
+            key={day}
+            day={day}
+            weekday={weekday}
+            periods={draft[dayIndex]}
+            page={pages[dayIndex]}
+            focusTarget={focusTarget?.weekday === weekday ? focusTarget : null}
+            writable={writable}
+            submitting={submitting}
+            onPageChange={selectPage}
+            onAdd={addPeriod}
+            onEdit={editPeriod}
+            onRemove={removePeriod}
+          />
         );
       })}
       {notice ? (

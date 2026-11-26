@@ -25,6 +25,10 @@ func (require writeEntitlementsFunc) RequireWrite(ctx context.Context, tenant st
 	return require(ctx, tenant)
 }
 
+func (require writeEntitlementsFunc) RequireWriteWithStore(ctx context.Context, tenant string, _ entitlements.Store) error {
+	return require(ctx, tenant)
+}
+
 func TestReadScheduleReportsRightsAndKeepsInfrastructureErrors(t *testing.T) {
 	tenant, id := uuid.NewString(), uuid.New()
 	principal := auth.Principal{Role: "professional", UserID: id.String(), EstablishmentID: tenant}
