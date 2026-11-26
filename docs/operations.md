@@ -144,6 +144,7 @@ Os roteiros abaixo detalham os procedimentos por área.
 - A migration `00006_establishment_settings.sql` preserva os estabelecimentos existentes e cria os novos campos como opcionais. Seu `Down` recusa rollback enquanto houver dados de configuração, para evitar apagá-los silenciosamente.
 - A migration `00007_establishment_operational_lock.sql` preserva estabelecimentos existentes e inicia o marcador como nulo. Seu `Down` recusa rollback enquanto houver marcador, para não reabilitar alteração de fuso após a criação de dados operacionais.
 - A migration `00008_establishment_logos.sql` preserva estabelecimentos existentes e inicia `logo_id` como nulo. Seu `Down` recusa rollback quando existe metadado de logo, pois o volume local não possui backup no escopo inicial e apagar as referências do banco poderia deixar arquivos órfãos.
+- A migration `00011_professional_weekly_schedule.sql` preserva os cadastros e vínculos existentes e começa com jornadas vazias. Seu `Down` recusa rollback enquanto houver períodos gravados para preservar as jornadas configuradas.
 
 ### Diagnóstico de slugs legados em conflito
 

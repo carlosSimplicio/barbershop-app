@@ -186,7 +186,8 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Criar persistência para serviços, com preço exato em centavos, tenant e queries de catálogo; integração com API e painel consta no escopo 10.
 - [x] Criar perfil persistido de profissionais com vínculo ao estabelecimento e queries de criação e listagem, integradas aos fluxos entregues da API.
 - [x] Criar persistência para associações profissional-serviço com unicidade, FKs de tenant e queries de consulta e mutação idempotente integradas à API; painel consta no escopo 9.
-- [ ] Criar persistência para jornadas, períodos de trabalho, bloqueios, agendamentos e histórico de alterações.
+- [x] Persistir períodos da jornada semanal recorrente, com isolamento de tenant e consulta ordenada.
+- [ ] Criar persistência para bloqueios, agendamentos e histórico de alterações.
 - [ ] Criar persistência para atendimentos, receitas, comissões, despesas, categorias e auditoria financeira.
 - [ ] Criar persistência para planos, preços, trials, assinaturas, períodos e futuros adicionais.
 - [ ] Usar tipos monetários exatos e nunca ponto flutuante binário para valores financeiros.
