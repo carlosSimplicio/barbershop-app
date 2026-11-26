@@ -4,6 +4,14 @@ Permitir ao proprietário consultar e configurar quais serviços cada profission
 
 Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Serviços” dentro da edição do profissional; configuração permitida para profissionais e serviços ativos ou inativos; cada ação “Associar” ou “Remover” salva imediatamente um único vínculo. Inatividade continua impedindo a elegibilidade para novos agendamentos. Essas decisões complementam a documentação e devem entrar nela nas entregas correspondentes. Comissões, jornada, disponibilidade, agendamento público e alertas de impacto futuro permanecem fora deste plano.
 
+## Progresso
+
+- [x] 1. Persistência e integridade dos vínculos.
+- [ ] 2. Consulta paginada pela API.
+- [ ] 3. Mutação idempotente pela API.
+- [ ] 4. Consulta na modal do profissional.
+- [ ] 5. Associação e remoção pelo painel.
+
 ### 1. Persistir vínculos sem cruzar estabelecimentos
 
 - **O que:** criar a estrutura relacional das associações, com estado ativo e identidade estável do par profissional-serviço.

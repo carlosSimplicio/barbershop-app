@@ -97,6 +97,16 @@ type Professional struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ProfessionalService struct {
+	ID              pgtype.UUID        `json:"id"`
+	EstablishmentID pgtype.UUID        `json:"establishment_id"`
+	ProfessionalID  pgtype.UUID        `json:"professional_id"`
+	ServiceID       pgtype.UUID        `json:"service_id"`
+	Active          bool               `json:"active"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Service struct {
 	ID              pgtype.UUID        `json:"id"`
 	EstablishmentID pgtype.UUID        `json:"establishment_id"`
