@@ -113,12 +113,12 @@ Decisões confirmadas pelo usuário: gestão em modal própria, aberta por “Se
 
 ## Correções posteriores à revisão
 
-Correções dos três pontos técnicos do [review da implementação](professional-services-review.md):
+Os três pontos técnicos do [review da implementação](professional-services-review.md) foram corrigidos:
 
 - [x] Calcular a data da transição após adquirir o bloqueio do par e preservar sua ordem, com regressão HTTP de espera coordenada no PostgreSQL real.
 - [x] Recusar variações de caixa da chave `associated` e combinações com propriedades extras, com regressões unitárias e HTTP, preservando o decoder estrutural compartilhado.
-- [ ] Evitar nova versão física da linha em repetições do estado e confirmar o no-op sem consulta adicional.
+- [x] Evitar nova versão física da linha em repetições do estado e confirmar o no-op sem consulta adicional, preservando a remoção de vínculo ausente; a integração verifica identidade, datas e `ctid`.
 
-A regressão da chave JSON reproduziu a aceitação indevida antes da correção. Nesta etapa, passaram unitários Go, `go vet -tags=integration ./...`, integração de vínculos sem cache e `git diff --check`.
+As regressões reproduziram os três achados antes das correções e passaram na execução focada posterior; o artefato SQL foi regenerado com `sqlc`.
 
-Na etapa de ordenação das datas, passaram a integração de vínculos sem cache, incluindo a regressão com bloqueio coordenado, os unitários Go, `go vet -tags=integration ./...`, formato Go e `git diff --check`; o SQL foi regenerado com `sqlc`.
+Verificações posteriores às correções aprovadas: geração completa com comparação dos hashes dos artefatos antes/depois, `gofmt`, `git diff --check`, unitários Go, `go vet -tags=integration ./...`, suíte completa de integração sem cache e build do backend. No frontend, passaram Prettier, ESLint, tipos e os 401 testes em 74 arquivos. Build do frontend e conferência no navegador não foram repetidos nesta correção de backend.

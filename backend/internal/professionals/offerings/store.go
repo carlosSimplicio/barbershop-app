@@ -94,10 +94,10 @@ func (store *PostgresStore) Set(ctx context.Context, establishmentID, profession
 		return Offering{}, err
 	}
 	active, err := queries.SetProfessionalOffering(ctx, db.SetProfessionalOfferingParams{EstablishmentID: establishmentUUID, ProfessionalID: professionalUUID, ServiceID: offeringUUID, Associated: associated})
-	// Removing an absent pair is a no-op. A concurrent first association can follow
-	// this read; uniqueness serializes all writes once the pair exists.
-	if errors.Is(err, pgx.ErrNoRows) && !associated {
-		active = false
+	// A skipped conflict update holds the pair lock with the desired state already
+	// persisted. Removing an absent pair is also a no-op, ordered before any concurrent insert.
+	if errors.Is(err, pgx.ErrNoRows) {
+		active = associated
 		err = nil
 	}
 	if err != nil {

@@ -326,7 +326,7 @@ Dentro de cada fase, implemente capacidades completas em fatias verticais pequen
 - [x] Oferecer cadastro em modal reutilizável aberta pelo botão `+` à direita do título de Profissionais, com validação de conveniência, CSRF, tratamento seguro de erros, limpeza da senha temporária e atualização da lista; o backend mantém a validação autoritativa e o bloqueio de escrita após o trial.
 - [ ] Configurar comissão padrão percentual ou fixa por profissional.
 - [x] Consultar pela API o catálogo paginado com vínculos explícitos por profissional, incluindo inativos e leitura sem trial ativo.
-- [x] Definir um único vínculo pela API idempotente, com CSRF, escrita central, inativos, chave JSON exata, preservação do par e datas de transição ordenadas sob concorrência.
+- [x] Definir um único vínculo pela API idempotente, com CSRF, escrita central, inativos, chave JSON exata, preservação do par e datas de transição ordenadas sob concorrência, sem nova versão da linha em repetições do estado.
 - [x] Consultar os vínculos por profissional em modal própria no painel, com paginação, cancelamento, preservação do rascunho e foco.
 - [x] Associar explicitamente serviços oferecidos por cada profissional pelo painel, salvando um vínculo por ação, inclusive inativos, com direitos compartilhados e nova tentativa explícita.
 - [ ] Permitir comissão específica por associação profissional-serviço sem alterar preço ou duração do serviço.

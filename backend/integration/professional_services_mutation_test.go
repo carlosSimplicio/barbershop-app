@@ -16,6 +16,7 @@ import (
 
 type professionalPairState struct {
 	ID                   string
+	TupleID              string
 	Active               bool
 	CreatedAt, UpdatedAt time.Time
 }
@@ -23,7 +24,7 @@ type professionalPairState struct {
 func readProfessionalPair(t *testing.T, professionalID, offeringID string) professionalPairState {
 	t.Helper()
 	var state professionalPairState
-	if err := integrationPool.QueryRow(context.Background(), `SELECT id,active,created_at,updated_at FROM professional_services WHERE professional_id=$1 AND service_id=$2`, professionalID, offeringID).Scan(&state.ID, &state.Active, &state.CreatedAt, &state.UpdatedAt); err != nil {
+	if err := integrationPool.QueryRow(context.Background(), `SELECT id,ctid::text,active,created_at,updated_at FROM professional_services WHERE professional_id=$1 AND service_id=$2`, professionalID, offeringID).Scan(&state.ID, &state.TupleID, &state.Active, &state.CreatedAt, &state.UpdatedAt); err != nil {
 		t.Fatal(err)
 	}
 	return state
@@ -56,7 +57,7 @@ func TestProfessionalServicesMutationIsIdempotentAndPreservesCatalogAndCredentia
 	original := readProfessionalPair(t, id, offering.ID)
 	setProfessionalPair(t, app, id, offering.ID, true)
 	if readProfessionalPair(t, id, offering.ID) != original {
-		t.Fatal("repeated association changed identity/dates")
+		t.Fatal("repeated association rewrote row or changed identity/dates")
 	}
 	setProfessionalPair(t, app, id, offering.ID, false)
 	removed := readProfessionalPair(t, id, offering.ID)
@@ -65,7 +66,7 @@ func TestProfessionalServicesMutationIsIdempotentAndPreservesCatalogAndCredentia
 	}
 	setProfessionalPair(t, app, id, offering.ID, false)
 	if readProfessionalPair(t, id, offering.ID) != removed {
-		t.Fatal("repeated removal changed dates")
+		t.Fatal("repeated removal rewrote row or changed dates")
 	}
 	setProfessionalPair(t, app, id, offering.ID, true)
 	restored := readProfessionalPair(t, id, offering.ID)
